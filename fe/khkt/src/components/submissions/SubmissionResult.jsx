@@ -1,32 +1,90 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import './SubmissionResult.css';
 
-// Math rendering hook
+// Math rendering hook using MathJax
 function useMathRenderer() {
-  const [katexLib, setKatexLib] = useState(null);
+  const [mathjaxLoaded, setMathjaxLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
 
-    async function loadKatex() {
+    async function loadMathJax() {
       try {
-        const katexModule = await import('katex');
-        await import('katex/dist/katex.min.css');
-        if (mounted) {
-          setKatexLib(katexModule.default || katexModule);
-          setLoading(false);
+        // Check if MathJax is already loaded and configured
+        if (window.MathJax && window.MathJax.typesetPromise) {
+          if (mounted) {
+            setMathjaxLoaded(true);
+            setLoading(false);
+          }
+          return;
         }
-      } catch {
-        console.warn('KaTeX not installed. Run: npm install katex');
+
+        // Configure MathJax before loading
+        window.MathJax = {
+          tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            processEscapes: true,
+            processEnvironments: true,
+            autoload: {
+              color: [],
+              colorv2: ['color'],
+            },
+            packages: {'[+]': ['ams', 'newcommand', 'configMacros']},
+          },
+          options: {
+            skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            ignoreHtmlClass: '.*',
+            processHtmlClass: 'math-content',
+          },
+          startup: {
+            ready: () => {
+              if (window.MathJax && window.MathJax.startup && window.MathJax.startup.defaultReady) {
+                window.MathJax.startup.defaultReady();
+                if (mounted) {
+                  setMathjaxLoaded(true);
+                  setLoading(false);
+                }
+              }
+            },
+          },
+        };
+
+        // Load MathJax script
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+        script.async = true;
+        script.onload = () => {
+          // MathJax will call startup.ready() when ready
+          if (mounted && window.MathJax && !window.MathJax.startup) {
+            // If startup wasn't called, set loaded manually
+            setTimeout(() => {
+              if (mounted && window.MathJax && window.MathJax.typesetPromise) {
+                setMathjaxLoaded(true);
+                setLoading(false);
+              }
+            }, 100);
+          }
+        };
+        script.onerror = () => {
+          console.warn('Failed to load MathJax');
+          if (mounted) {
+            setMathjaxLoaded(false);
+            setLoading(false);
+          }
+        };
+        document.head.appendChild(script);
+      } catch (error) {
+        console.warn('MathJax loading error:', error);
         if (mounted) {
-          setKatexLib(null);
+          setMathjaxLoaded(false);
           setLoading(false);
         }
       }
     }
 
-    loadKatex();
+    loadMathJax();
 
     return () => {
       mounted = false;
@@ -34,25 +92,11 @@ function useMathRenderer() {
   }, []);
 
   const renderMath = (math, options = {}) => {
-    if (!katexLib) {
-      return `<span class="math-fallback">${math}</span>`;
-    }
-
-    try {
-      return katexLib.renderToString(math, {
-        throwOnError: false,
-        displayMode: options.displayMode || false,
-        strict: false,
-        trust: true,
-        ...options
-      });
-    } catch (error) {
-      console.warn('KaTeX render error:', error, math);
-      return `<span class="math-fallback">${math}</span>`;
-    }
+    // MathJax handles rendering automatically, just return the math expression
+    return math;
   };
 
-  return { renderMath, loading };
+  return { renderMath, loading, mathjaxLoaded };
 }
 
 /**
@@ -97,147 +141,56 @@ function autoDetectMath(text) {
 }
 
 /**
- * Render text with LaTeX math expressions
+ * Render text with LaTeX math expressions using MathJax
  * Supports inline math: $...$ and display math: $$...$$
  * @param {string} text - Text with LaTeX math
- * @param {Function} renderMathFn - Function to render math
+ * @param {Function} renderMathFn - Function to render math (not used with MathJax, kept for compatibility)
  * @returns {JSX.Element} Rendered text with math
  */
 function renderTextWithMath(text, renderMathFn) {
   if (!text) return null;
   
   // Auto-detect and convert math expressions if not already in LaTeX format
-  const processedText = autoDetectMath(text);
-
-  // Split text by LaTeX math expressions
-  const parts = [];
-  let lastIndex = 0;
+  let processedText = autoDetectMath(text);
   
-  // Match display math: $$...$$
-  const displayMathRegex = /\$\$([^$]+)\$\$/g;
-  let match;
-  
-  while ((match = displayMathRegex.exec(processedText)) !== null) {
-    // Add text before math
-    if (match.index > lastIndex) {
-      const textBefore = processedText.substring(lastIndex, match.index);
-      if (textBefore.trim()) {
-        parts.push({ type: 'text', content: textBefore });
-      }
+  // Fix common LaTeX issues that might cause "Math input error"
+  // Replace double backslashes with single backslash for LaTeX commands
+  processedText = processedText.replace(/\\\\+([a-zA-Z]+)/g, (match, command) => {
+    // Common LaTeX commands
+    const latexCommands = ['Delta', 'pm', 'sqrt', 'frac', 'cdot', 'times', 'div', 
+                          'alpha', 'beta', 'pi', 'theta', 'sin', 'cos', 'tan', 'log', 'ln',
+                          'sum', 'prod', 'int', 'lim', 'infty', 'partial', 'text'];
+    if (latexCommands.includes(command)) {
+      return '\\' + command;
     }
-    
-    // Add display math
-    parts.push({ type: 'display', content: match[1] });
-    lastIndex = match.index + match[0].length;
-  }
+    return match;
+  });
   
-  // Add remaining text
-  if (lastIndex < processedText.length) {
-    const remainingText = processedText.substring(lastIndex);
-    if (remainingText.trim()) {
-      // Process inline math in remaining text
-      const inlineParts = processInlineMath(remainingText);
-      parts.push(...inlineParts);
-    }
-  } else if (parts.length === 0) {
-    // No display math found, process inline math
-    const inlineParts = processInlineMath(processedText);
-    return (
-      <>
-        {inlineParts.map((part, index) => {
-          if (part.type === 'inline') {
-            return (
-              <span
-                key={index}
-                className="katex-inline"
-                dangerouslySetInnerHTML={{
-                  __html: renderMathFn(part.content, { displayMode: false }),
-                }}
-              />
-            );
-          } else {
-            return <span key={index}>{part.content}</span>;
-          }
-        })}
-      </>
-    );
-  }
-  
-  return (
-    <>
-      {parts.map((part, index) => {
-        if (part.type === 'display') {
-          return (
-            <div
-              key={index}
-              className="katex-display-wrapper"
-              dangerouslySetInnerHTML={{
-                __html: renderMathFn(part.content, { displayMode: true }),
-              }}
-            />
-          );
-        } else if (part.type === 'inline') {
-          return (
-            <span
-              key={index}
-              className="katex-inline"
-              dangerouslySetInnerHTML={{
-                __html: renderMathFn(part.content, { displayMode: false }),
-              }}
-            />
-          );
-        } else {
-          return <span key={index}>{part.content}</span>;
-        }
-      })}
-    </>
-  );
-}
-
-/**
- * Process inline math expressions: $...$
- * @param {string} text - Text with inline math
- * @returns {Array} Array of parts (text or inline math)
- */
-function processInlineMath(text) {
-  const parts = [];
-  let lastIndex = 0;
-  const inlineMathRegex = /\$([^$]+)\$/g;
-  let match;
-  
-  while ((match = inlineMathRegex.exec(text)) !== null) {
-    // Add text before math
-    if (match.index > lastIndex) {
-      const textBefore = text.substring(lastIndex, match.index);
-      if (textBefore.trim()) {
-        parts.push({ type: 'text', content: textBefore });
-      }
-    }
-    
-    // Add inline math
-    parts.push({ type: 'inline', content: match[1] });
-    lastIndex = match.index + match[0].length;
-  }
-  
-  // Add remaining text
-  if (lastIndex < text.length) {
-    const remainingText = text.substring(lastIndex);
-    if (remainingText.trim()) {
-      parts.push({ type: 'text', content: remainingText });
-    }
-  }
-  
-  // If no math found, return as text
-  if (parts.length === 0) {
-    return [{ type: 'text', content: text }];
-  }
-  
-  return parts;
+  // MathJax will automatically process math expressions in elements with class "math-content"
+  // We just need to return the text - MathJax will find and render $...$ and $$...$$ automatically
+  return <span className="math-content">{processedText}</span>;
 }
 
 function SubmissionResult({ submission }) {
-  const { renderMath } = useMathRenderer();
+  const { renderMath, loading: mathLoading, mathjaxLoaded } = useMathRenderer();
   const [showSolutions, setShowSolutions] = useState({}); // Track which solutions are shown
+  const containerRef = useRef(null);
+
+  // Re-render MathJax when content changes
+  useEffect(() => {
+    if (mathjaxLoaded && window.MathJax && window.MathJax.typesetPromise && containerRef.current) {
+      // Use setTimeout to ensure DOM is fully updated
+      const timeoutId = setTimeout(() => {
+        if (containerRef.current && window.MathJax && window.MathJax.typesetPromise) {
+          window.MathJax.typesetPromise([containerRef.current]).catch((err) => {
+            console.warn('MathJax typeset error:', err);
+          });
+        }
+      }, 200);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [submission, mathjaxLoaded, showSolutions]);
 
   if (!submission || !submission.ai_result) {
     return (
@@ -270,7 +223,7 @@ function SubmissionResult({ submission }) {
   };
 
   return (
-    <div className="submission-result">
+    <div className="submission-result" ref={containerRef}>
       {/* Score Display */}
       <div className="score-section">
         <div
@@ -286,7 +239,7 @@ function SubmissionResult({ submission }) {
       {ai_result.summary && (
         <div className="result-section">
           <h3>Tóm tắt</h3>
-          <div className="summary-text">
+          <div className="summary-text math-content">
             {renderTextWithMath(ai_result.summary, renderMath)}
           </div>
         </div>
@@ -298,7 +251,7 @@ function SubmissionResult({ submission }) {
           <h3>Lỗi đã mắc</h3>
           <ul className="mistakes-list">
             {ai_result.mistakes.map((mistake, index) => (
-              <li key={index} className="mistake-item">
+              <li key={index} className="mistake-item math-content">
                 {renderTextWithMath(mistake, renderMath)}
               </li>
             ))}
@@ -312,7 +265,7 @@ function SubmissionResult({ submission }) {
           <h3>Bước tiếp theo</h3>
           <ul className="next-steps-list">
             {ai_result.nextSteps.map((step, index) => (
-              <li key={index} className="step-item">
+              <li key={index} className="step-item math-content">
                 {renderTextWithMath(step, renderMath)}
               </li>
             ))}
@@ -334,14 +287,14 @@ function SubmissionResult({ submission }) {
                       <div className="practice-content">
                         <div className="practice-problem">
                           <span className="problem-label">Đề bài:</span>
-                          <div className="problem-text">
+                          <div className="problem-text math-content">
                             {renderTextWithMath(item.problem, renderMath)}
                           </div>
                         </div>
                         {item.solution && (
                           <div className="practice-solution">
                             <span className="solution-label">Lời giải:</span>
-                            <div className="solution-text">
+                            <div className="solution-text math-content">
                               {renderTextWithMath(item.solution, renderMath)}
                             </div>
                           </div>
@@ -368,7 +321,7 @@ function SubmissionResult({ submission }) {
                         <div className="practice-content">
                           <div className="practice-problem">
                             <span className="problem-label">Đề bài:</span>
-                            <div className="problem-text">
+                            <div className="problem-text math-content">
                               {renderTextWithMath(item.problem, renderMath)}
                             </div>
                           </div>
@@ -390,7 +343,7 @@ function SubmissionResult({ submission }) {
                               {isSolutionVisible && (
                                 <div className="practice-solution">
                                   <span className="solution-label">Lời giải:</span>
-                                  <div className="solution-text">
+                                  <div className="solution-text math-content">
                                     {renderTextWithMath(item.solution, renderMath)}
                                   </div>
                                 </div>

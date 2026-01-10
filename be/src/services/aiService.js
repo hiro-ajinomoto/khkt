@@ -105,6 +105,12 @@ CRITICAL: ALL MATHEMATICAL EXPRESSIONS MUST BE WRAPPED IN LaTeX FORMAT WITH $ SI
 - Every equation, formula, or mathematical expression MUST be wrapped in $...$ for inline math or $$...$$ for display math
 - Examples: "$x^2 - 5x + 6 = 0$" NOT "x^2 - 5x + 6 = 0"
 - If you mention an equation in mistakes or nextSteps, it MUST be in LaTeX format: "$x^2 - 5x + 6 = 0$"
+- NEVER use unicode math symbols like Δ, ±, ×, ÷, √ directly in text. ALWAYS use LaTeX commands: $\\Delta$, $\\pm$, $\\times$, $\\div$, $\\sqrt{}$
+- For discriminant, ALWAYS write "$\\Delta$" NOT "Delta" or "Δ" or "triangle" or "Delta"
+- For plus-minus, ALWAYS write "$\\pm$" NOT "±" or "plus-minus"
+- For multiplication, use "$\\cdot$" or "$\\times$" NOT "×" or "*"
+- IMPORTANT: When writing LaTeX in JSON, use double backslashes: "\\Delta" (which becomes \Delta in the string)
+- Example: "Tính $\\Delta$: $\\Delta = b^2 - 4ac$" (in JSON, this is written as "Tính $\\\\Delta$: $\\\\Delta = b^2 - 4ac$")
 
 CRITICAL: PROBLEM AND SOLUTION MUST BE COMPLETELY SEPARATE.
 - The "problem" field MUST contain ONLY the problem statement/question. DO NOT include any solution steps, answers, hints, or explanations in the "problem" field.
@@ -142,7 +148,7 @@ CRITICAL FORMATTING RULES FOR PRACTICE PROBLEMS:
 Example CORRECT format (this is what you MUST do):
 {
   "problem": "$6x+12$",
-  "solution": "Phân tích đa thức thành nhân tử:\n$6x+12 = 6x + 6 \\cdot 2 = 6(x+2)$"
+  "solution": "Phân tích đa thức thành nhân tử:\n$6x+12 = 6x + 6 \\cdot 2$\n$= 6(x+2)$"
 }
 
 Another CORRECT example:
@@ -154,7 +160,7 @@ Another CORRECT example:
 Another CORRECT example:
 {
   "problem": "$x^2 - 5x + 6 = 0$",
-  "solution": "Tìm giá trị của $x$:\n$x^2 - 5x + 6 = 0$\n$(x - 2)(x - 3) = 0$\nVậy $x = 2$ hoặc $x = 3$."
+  "solution": "Giải phương trình:\n$x^2 - 5x + 6 = 0$\n\nTính $\\Delta$:\n$\\Delta = (-5)^2 - 4 \\cdot 1 \\cdot 6$\n$\\Delta = 25 - 24$\n$\\Delta = 1$\n\nÁp dụng công thức nghiệm:\n$x = \\frac{5 \\pm \\sqrt{1}}{2}$\n$x = \\frac{5 \\pm 1}{2}$\n\nVậy $x = 3$ hoặc $x = 2$."
 }
 
 Example WRONG format (DO NOT DO THIS - problem contains instruction):
@@ -194,7 +200,13 @@ LaTeX math notation examples (MUST wrap in $ signs):
 - Subscript: "$x_1$", "$a_{i,j}$"
 - Plus-minus: "$\\pm$"
 - Multiplication: "$\\cdot$" or "$\\times$"
-- Greek letters: "$\\alpha$", "$\\beta$", "$\\pi$", "$\\theta$"`;
+- Greek letters: "$\\alpha$", "$\\beta$", "$\\pi$", "$\\theta$"
+- Discriminant (Delta): ALWAYS use "$\\Delta$" NOT "triangle" or "Delta" or "Δ" (unicode). Example: "Tính $\\Delta$:\n$\\Delta = b^2 - 4ac$"
+- Quadratic formula: "$x = \\frac{-b \\pm \\sqrt{\\Delta}}{2a}$" or "$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$"
+- When calculating discriminant, ALWAYS put each step on a new line for clarity:
+  "Tính $\\Delta$:\n$\\Delta = (-4)^2 - 4 \\cdot 1 \\cdot 3$\n$\\Delta = 16 - 12$\n$\\Delta = 4$"
+- When showing solutions, use: "$x = \\frac{4 \\pm \\sqrt{4}}{2} = \\frac{4 \\pm 2}{2}$" (use $\\pm$ not "±" or "plus-minus")
+- IMPORTANT: In solution field, put each major step on a new line using \\n for better readability`;
 
 /**
  * Sleep/delay utility for retry logic

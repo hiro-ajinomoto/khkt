@@ -83,50 +83,37 @@
   border-left: 4px solid #2196f3;
 }
 
-/* KaTeX font fixes */
-.katex {
-  font-family: 'KaTeX_Main', 'Times New Roman', serif;
-  font-size: 1.1em;
-  line-height: 1.2;
+/* MathJax styles */
+.math-content {
+  line-height: 2;
 }
 
-.katex * {
-  font-family: inherit;
+.MathJax {
+  font-size: 1.1em !important;
 }
 
-.katex .mathnormal {
-  font-family: 'KaTeX_Math', 'Times New Roman', serif;
+.MathJax_Display {
+  margin: 1rem 0 !important;
 }
 
-.katex .mathrm {
-  font-family: 'KaTeX_Main', 'Times New Roman', serif;
+.MathJax_SVG,
+.Mjax-svg {
+  display: inline-block !important;
+  vertical-align: middle !important;
 }
 
-.katex .mathit {
-  font-family: 'KaTeX_Math', 'Times New Roman', serif;
-  font-style: italic;
-}
-
-.katex .mathbf {
-  font-family: 'KaTeX_Main', 'Times New Roman', serif;
-  font-weight: bold;
-}
-
-.summary-text .katex,
-.summary-text .katex-inline {
+/* MathJax inline and display math */
+.summary-text .MathJax,
+.summary-text .MathJax_SVG {
   font-size: 1.05em;
 }
 
-.summary-text .katex-display {
-  margin: 1rem 0;
-}
-
-.katex-display-wrapper {
+.MathJax_Display {
   margin: 1rem 0;
   overflow-x: auto;
 }
 
-.katex-inline {
+.MathJax_SVG {
   display: inline-block;
   vertical-align: baseline;
 }
@@ -243,12 +230,12 @@
   word-break: break-word;
 }
 
-.problem-text .katex,
-.problem-text .katex-inline {
+.problem-text .MathJax,
+.problem-text .MathJax_SVG {
   font-size: 1.1em;
 }
 
-.problem-text .katex-display {
+.problem-text .MathJax_Display {
   margin: 0.5rem 0;
 }
 
@@ -273,17 +260,17 @@
 .solution-text {
   color: #555;
   font-size: 1rem;
-  line-height: 1.8;
-  white-space: pre-wrap;
+  line-height: 2;
+  white-space: pre-line;
   word-break: break-word;
 }
 
-.solution-text .katex,
-.solution-text .katex-inline {
+.solution-text .MathJax,
+.solution-text .MathJax_SVG {
   font-size: 1em;
 }
 
-.solution-text .katex-display {
+.solution-text .MathJax_Display {
   margin: 0.75rem 0;
 }
 
@@ -316,10 +303,10 @@
   box-shadow: 0 2px 6px rgba(76, 175, 80, 0.3);
 }
 
-.mistake-item .katex,
-.mistake-item .katex-inline,
-.step-item .katex,
-.step-item .katex-inline {
+.mistake-item .MathJax,
+.mistake-item .MathJax_SVG,
+.step-item .MathJax,
+.step-item .MathJax_SVG {
   font-size: 1em;
 }
 

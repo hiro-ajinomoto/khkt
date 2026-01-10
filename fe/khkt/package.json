@@ -10,10 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "mathjax-full": "^3.2.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-router-dom": "^7.11.0",
-    "katex": "^0.16.9"
+    "react-router-dom": "^7.11.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
