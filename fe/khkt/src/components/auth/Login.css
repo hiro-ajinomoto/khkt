@@ -61,6 +61,22 @@
   transition: border-color 0.2s;
   background-color: white !important;
   color: #333 !important;
+  -webkit-text-fill-color: #333 !important; /* Override Safari autofill and dark mode */
+}
+
+/* Force color in dark mode */
+@media (prefers-color-scheme: dark) {
+  .form-group input,
+  .form-group select {
+    color: #333 !important;
+    background-color: white !important;
+    -webkit-text-fill-color: #333 !important;
+  }
+  
+  .form-group input::placeholder {
+    color: #999 !important;
+    -webkit-text-fill-color: #999 !important;
+  }
 }
 
 .form-group input:focus,

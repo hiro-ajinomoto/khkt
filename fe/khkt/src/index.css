@@ -13,7 +13,7 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Force input text color */
+/* Force input text color - override dark mode */
 input[type="text"],
 input[type="password"],
 input[type="email"],
@@ -21,6 +21,8 @@ input[type="number"],
 textarea,
 select {
   color: #333 !important;
+  background-color: white !important;
+  -webkit-text-fill-color: #333 !important; /* Override Safari autofill */
 }
 
 input[type="text"]::placeholder,
@@ -29,6 +31,30 @@ input[type="email"]::placeholder,
 textarea::placeholder {
   color: #999 !important;
   opacity: 1 !important;
+  -webkit-text-fill-color: #999 !important;
+}
+
+/* Force input color even in dark mode */
+@media (prefers-color-scheme: dark) {
+  input[type="text"],
+  input[type="password"],
+  input[type="email"],
+  input[type="number"],
+  textarea,
+  select {
+    color: #333 !important;
+    background-color: white !important;
+    -webkit-text-fill-color: #333 !important;
+  }
+  
+  input[type="text"]::placeholder,
+  input[type="password"]::placeholder,
+  input[type="email"]::placeholder,
+  textarea::placeholder {
+    color: #999 !important;
+    opacity: 1 !important;
+    -webkit-text-fill-color: #999 !important;
+  }
 }
 
 a {
