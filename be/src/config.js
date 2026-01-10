@@ -28,4 +28,7 @@ export const config = {
     secret: process.env.JWT_SECRET || 'your-secret-key-change-in-production',
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   },
+  cors: {
+    origin: process.env.CORS_ORIGIN || '*', // For production, set to your frontend URL
+  },
 }
