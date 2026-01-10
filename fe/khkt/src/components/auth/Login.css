@@ -59,15 +59,20 @@
   font-size: 1rem;
   font-family: inherit;
   transition: border-color 0.2s;
-  background-color: white;
-  color: #333;
+  background-color: white !important;
+  color: #333 !important;
 }
 
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
   border-color: #667eea;
-  color: #333;
+  color: #333 !important;
+}
+
+.form-group input::placeholder {
+  color: #999 !important;
+  opacity: 1 !important;
 }
 
 .form-group input {

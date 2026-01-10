@@ -4,13 +4,31 @@
   font-weight: 400;
 
   color-scheme: light;
-  color: #333;
+  color: #333 !important;
   background-color: #ffffff;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Force input text color */
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="number"],
+textarea,
+select {
+  color: #333 !important;
+}
+
+input[type="text"]::placeholder,
+input[type="password"]::placeholder,
+input[type="email"]::placeholder,
+textarea::placeholder {
+  color: #999 !important;
+  opacity: 1 !important;
 }
 
 a {

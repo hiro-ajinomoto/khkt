@@ -21,7 +21,14 @@ server {
         try_files $uri $uri/ /index.html;
         index index.html;
         
-        # Cache static assets
+        # Don't cache index.html - always get fresh version
+        location = /index.html {
+            add_header Cache-Control "no-cache, no-store, must-revalidate";
+            add_header Pragma "no-cache";
+            add_header Expires "0";
+        }
+        
+        # Cache static assets (JS, CSS, images) - they are hashed by Vite
         location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
             expires 1y;
             add_header Cache-Control "public, immutable";
