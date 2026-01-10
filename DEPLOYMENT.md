@@ -8,9 +8,36 @@
 
 ---
 
-## 🏆 Phương án được đề xuất (TIỆN NHẤT)
+## 🏆 Phương án được đề xuất
 
-### **Option 1: Vercel (Frontend) + Railway (Backend)** ⭐ RECOMMENDED
+### **Option 0: EC2 (Full-stack trên một server)** ⭐⭐ RECOMMENDED FOR CONTROL
+
+#### Ưu điểm:
+- ✅ **Kiểm soát hoàn toàn** server và cấu hình
+- ✅ **Chi phí thấp** sau free tier (~$10-20/tháng)
+- ✅ **Deploy một lần** cả frontend và backend
+- ✅ **Không phụ thuộc** vào third-party services
+- ✅ **Dễ scale** khi cần (upgrade instance type)
+- ✅ **Free tier 12 tháng** đầu (t2.micro)
+
+#### Nhược điểm:
+- ❌ Cần kiến thức Linux/Server
+- ❌ Tự quản lý SSL, backup, monitoring
+- ❌ Cần setup ban đầu (15-20 phút)
+
+#### Chi phí:
+- **EC2 t2.micro**: Free 12 tháng đầu, sau đó ~$10/tháng
+- **EBS Storage**: 30GB free, sau đó ~$3/tháng
+- **MongoDB Atlas**: Free (M0) hoặc ~$9/tháng
+- **Tổng**: **~$0/tháng** (Free Tier) hoặc **~$20-30/tháng**
+
+#### Hướng dẫn:
+- Xem file **`EC2_QUICK_START.md`** để deploy trong 15-20 phút
+- Hoặc xem **`DEPLOY_EC2.md`** để hướng dẫn chi tiết
+
+---
+
+### **Option 1: Vercel (Frontend) + Railway (Backend)** ⭐ RECOMMENDED FOR EASE
 
 #### Ưu điểm:
 - ✅ **Miễn phí** cho dự án nhỏ/trung bình
@@ -110,16 +137,22 @@ npm run build
 
 | Phương án | Độ khó | Chi phí/tháng | Tốc độ deploy | Phù hợp |
 |-----------|--------|---------------|---------------|---------|
+| **EC2 (Full-stack)** | ⭐⭐ Trung bình | $0-30 | ⚡⚡ Nhanh | Production, Control |
 | **Vercel + Railway** | ⭐ Dễ | $0-10 | ⚡⚡⚡ Rất nhanh | MVP, Startup |
 | **Render.com** | ⭐ Dễ | $0-7 | ⚡⚡⚡ Rất nhanh | MVP, Prototype |
-| **AWS EC2** | ⭐⭐⭐ Khó | $25-50+ | ⚡ Chậm | Production lớn |
+| **AWS EC2 (Complex)** | ⭐⭐⭐ Khó | $25-50+ | ⚡ Chậm | Enterprise |
 | **Fly.io** | ⭐⭐ Trung bình | $0-20 | ⚡⚡ Nhanh | Modern apps |
 
 ---
 
 ## 🎯 Khuyến nghị
 
-### **Cho dự án hiện tại: Vercel + Railway** 
+### **Cho dự án hiện tại:**
+
+**Nếu muốn kiểm soát hoàn toàn và deploy một lần: EC2 (Full-stack)**
+- Xem **`EC2_QUICK_START.md`** để bắt đầu
+
+**Nếu muốn deploy nhanh và dễ dàng: Vercel + Railway** 
 
 **Lý do:**
 1. ✅ **Tiện nhất**: Deploy trong 15 phút
