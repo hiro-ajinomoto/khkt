@@ -9,6 +9,7 @@ import { getDB } from "../db.js";
 import { config } from "../config.js";
 import { gradeSubmissionWithAI } from "../services/aiService.js";
 import { uploadFileToS3 } from "../services/s3Service.js";
+import { authenticate } from "../middleware/auth.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -132,6 +133,60 @@ router.get("/mock", (req, res) => {
 });
 
 /**
+ * GET /submissions/my-submissions
+ * Get all submissions of the authenticated student
+ * Must be defined BEFORE /:id route to avoid conflicts
+ */
+router.get("/my-submissions", authenticate, async (req, res) => {
+  try {
+    // Only students can view their own submissions
+    if (req.user.role !== "student") {
+      return res
+        .status(403)
+        .json({ detail: "Only students can view their submissions" });
+    }
+
+    const db = getDB();
+    const studentId = ObjectId.createFromHexString(req.user.id);
+
+    // Get all submissions for this student
+    const submissions = await db
+      .collection("submissions")
+      .find({ student_id: studentId })
+      .sort({ created_at: -1 }) // Sort by newest first
+      .toArray();
+
+    // Get assignment details for each submission
+    const result = await Promise.all(
+      submissions.map(async (submission) => {
+        const assignment = await db.collection("assignments").findOne({
+          _id: submission.assignment_id,
+        });
+
+        return {
+          id: submission._id.toString(),
+          assignment_id: submission.assignment_id.toString(),
+          assignment_title: assignment
+            ? assignment.title
+            : "Unknown Assignment",
+          assignment_subject: assignment ? assignment.subject : null,
+          image_paths: submission.image_paths
+            ? submission.image_paths.map((path) => pathToUrl(path))
+            : [],
+          created_at: submission.created_at,
+          ai_result: submission.ai_result || null,
+        };
+      })
+    );
+
+    res.json(result);
+  } catch (error) {
+    console.error("Error fetching student submissions:", error);
+    res.status(500).json({ detail: "Failed to fetch submissions" });
+  }
+});
+
+/**
  * GET /submissions/:id
  * Get a submission by ID
  */
@@ -174,10 +229,11 @@ router.get("/:id", async (req, res) => {
  * POST /submissions
  * Create a new submission with image uploads
  */
-router.post("/", upload.array("files"), async (req, res) => {
+router.post("/", authenticate, upload.array("files"), async (req, res) => {
   try {
     const { assignment_id } = req.body;
     const files = req.files;
+    const studentId = ObjectId.createFromHexString(req.user.id);
 
     // Validation
     if (!assignment_id) {
@@ -203,6 +259,28 @@ router.post("/", upload.array("files"), async (req, res) => {
 
     if (!assignment) {
       return res.status(404).json({ detail: "Assignment not found" });
+    }
+
+    // Check if student is allowed to submit to this assignment
+    // Only students need this check
+    if (req.user.role === "student") {
+      const student = await db.collection("users").findOne({ _id: studentId });
+      if (!student || !student.class_name) {
+        return res
+          .status(403)
+          .json({ detail: "Student not assigned to a class" });
+      }
+
+      const assigned = await db.collection("assignment_classes").findOne({
+        assignment_id: assignmentObjectId,
+        class_name: student.class_name,
+      });
+
+      if (!assigned) {
+        return res
+          .status(403)
+          .json({ detail: "Assignment not assigned to your class" });
+      }
     }
 
     // Validate required fields in assignment
@@ -259,6 +337,7 @@ router.post("/", upload.array("files"), async (req, res) => {
     // Create submission document
     const submissionDoc = {
       assignment_id: assignmentObjectId,
+      student_id: studentId, // Store student ID
       image_paths: imageUrls, // Store S3 URLs instead of local paths
       created_at: new Date(),
       ai_result: null,
@@ -369,6 +448,7 @@ router.post("/", upload.array("files"), async (req, res) => {
     res.status(201).json({
       id: created._id.toString(),
       assignment_id: created.assignment_id.toString(),
+      student_id: created.student_id ? created.student_id.toString() : null,
       image_paths: created.image_paths
         ? created.image_paths.map((path) => pathToUrl(path))
         : [],

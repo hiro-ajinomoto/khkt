@@ -8,6 +8,7 @@ import AuthPage from './components/auth/AuthPage'
 import Login from './components/auth/Login'
 import Register from './components/auth/Register'
 import AdminDashboard from './components/admin/AdminDashboard'
+import MySubmissions from './components/submissions/MySubmissions'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import './App.css'
 
@@ -71,6 +72,14 @@ function AppRoutes() {
         } 
       />
       <Route path="/assignments/:id" element={<AssignmentDetail />} />
+      <Route 
+        path="/my-submissions" 
+        element={
+          <ProtectedRoute requiredRole="student">
+            <MySubmissions />
+          </ProtectedRoute>
+        } 
+      />
     </Routes>
   );
 }

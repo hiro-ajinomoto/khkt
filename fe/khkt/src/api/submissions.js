@@ -2,6 +2,8 @@
  * API service for submissions
  */
 
+import { getAuthHeader } from '../utils/auth';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 /**
@@ -12,6 +14,12 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000
  */
 export async function createSubmission(assignmentId, files) {
   try {
+    const authHeader = getAuthHeader();
+    
+    if (!authHeader) {
+      throw new Error('Authentication required');
+    }
+
     const formData = new FormData();
     formData.append('assignment_id', assignmentId);
     
@@ -22,8 +30,11 @@ export async function createSubmission(assignmentId, files) {
 
     const response = await fetch(`${API_BASE_URL}/submissions`, {
       method: 'POST',
+      headers: {
+        'Authorization': authHeader,
+        // Don't set Content-Type header - browser will set it with boundary for FormData
+      },
       body: formData,
-      // Don't set Content-Type header - browser will set it with boundary
     });
 
     if (!response.ok) {
@@ -63,6 +74,39 @@ export async function fetchSubmissionById(id) {
     return data;
   } catch (error) {
     console.error('Error fetching submission:', error);
+    throw error;
+  }
+}
+
+/**
+ * Fetch all submissions of the authenticated student
+ * @returns {Promise<Array>} Array of submission objects
+ */
+export async function fetchMySubmissions() {
+  try {
+    const authHeader = getAuthHeader();
+    
+    if (!authHeader) {
+      throw new Error('Authentication required');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/submissions/my-submissions`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authHeader,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || `Failed to fetch submissions: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching my submissions:', error);
     throw error;
   }
 }

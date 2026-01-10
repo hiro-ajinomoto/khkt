@@ -6,7 +6,7 @@ import './AssignmentsList.css';
 
 function AssignmentsList() {
   const navigate = useNavigate();
-  const { isAuthenticated, isAdmin, isTeacher, user, logout } = useAuth();
+  const { isAuthenticated, isAdmin, isTeacher, isStudent, user, logout } = useAuth();
   const [allAssignments, setAllAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -373,6 +373,14 @@ function AssignmentsList() {
         </div>
       </div>
       <div className="header-actions">
+        {isStudent && (
+          <button
+            onClick={() => navigate('/my-submissions')}
+            className="my-submissions-button"
+          >
+            📝 Bài đã nộp
+          </button>
+        )}
         {isTeacher && (
           <button
             onClick={() => navigate('/assignments/create')}
