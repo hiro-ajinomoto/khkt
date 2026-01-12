@@ -166,6 +166,30 @@ function renderTextWithMath(text, renderMathFn) {
     return match;
   });
   
+  // Fix common text errors from AI that should be LaTeX
+  // Replace "imes" with \times (multiplication) - handle both standalone and in expressions
+  processedText = processedText.replace(/\bimes\b/g, '\\times');
+  // Replace "riangle" with \Delta (delta/discriminant)
+  processedText = processedText.replace(/\briangle\b/g, '\\Delta');
+  // Replace Unicode multiplication × with \times
+  processedText = processedText.replace(/×/g, '\\times');
+  // Replace Unicode division ÷ with \div
+  processedText = processedText.replace(/÷/g, '\\div');
+  // Replace Unicode plus-minus ± with \pm
+  processedText = processedText.replace(/±/g, '\\pm');
+  // Replace Unicode delta Δ with \Delta
+  processedText = processedText.replace(/Δ/g, '\\Delta');
+  
+  // Fix patterns like "4imes1imes3" → "4 \times 1 \times 3" (inside math expressions)
+  // This handles cases where AI writes "imes" without spaces
+  processedText = processedText.replace(/(\d+|[a-zA-Z])\s*imes\s*(\d+|[a-zA-Z])/g, '$1 \\times $2');
+  
+  // Fix "riangle = " pattern
+  processedText = processedText.replace(/\briangle\s*=/g, '\\Delta =');
+  
+  // Fix "Tính riangle:" → "Tính $\\Delta$:"
+  processedText = processedText.replace(/Tính\s+riangle:/g, 'Tính $\\Delta$:');
+  
   // MathJax will automatically process math expressions in elements with class "math-content"
   // We just need to return the text - MathJax will find and render $...$ and $$...$$ automatically
   return <span className="math-content">{processedText}</span>;
