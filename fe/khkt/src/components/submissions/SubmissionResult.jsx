@@ -190,6 +190,40 @@ function renderTextWithMath(text, renderMathFn) {
   // Fix "Tính riangle:" → "Tính $\\Delta$:"
   processedText = processedText.replace(/Tính\s+riangle:/g, 'Tính $\\Delta$:');
   
+  // Remove tab characters and normalize whitespace
+  processedText = processedText.replace(/\t/g, ' ');
+  processedText = processedText.replace(/\s+/g, ' '); // Normalize multiple spaces
+  
+  // Fix "rac" → "frac" (common typo from AI)
+  processedText = processedText.replace(/\brac\{([^}]+)\}\{([^}]+)\}/g, '\\frac{$1}{$2}');
+  processedText = processedText.replace(/\brac(\d+)\s*×/g, '\\frac{$1}{1} \\times');
+  processedText = processedText.replace(/\brac(\d+)\s*=/g, '\\frac{$1}{1} =');
+  
+  // Fix "X = rac4 × (-2)2" → "X = \frac{4}{(-2)^2}"
+  processedText = processedText.replace(/=\s*rac(\d+)\s*×\s*\(([^)]+)\)(\d+)/g, '= \\frac{$1}{($2)^{$3}}');
+  
+  // Fix superscript patterns: "(-2)2" → "(-2)^2" (only if not already in LaTeX)
+  processedText = processedText.replace(/\(([^)]+)\)(\d+)(?![^$]*\$)/g, (match, base, exp) => {
+    // Check if we're in a math context (after =, Δ, or in $...$)
+    const before = processedText.substring(0, processedText.indexOf(match));
+    const mathContext = before.includes('=') || before.includes('Δ') || before.includes('$') || 
+                       before.match(/[a-zA-Z]\s*$/);
+    if (mathContext && !match.includes('^')) {
+      return `(${base})^{${exp}}`;
+    }
+    return match;
+  });
+  
+  // Fix "4\t ×" → "4 \times" (remove tab before ×)
+  processedText = processedText.replace(/(\d+)\s*\t\s*×/g, '$1 \\times');
+  processedText = processedText.replace(/(\d+)\s*\t\s*\\times/g, '$1 \\times');
+  
+  // Fix "4\t × 1" → "4 \times 1"
+  processedText = processedText.replace(/(\d+)\s*\t\s*×\s*(\d+)/g, '$1 \\times $2');
+  
+  // Ensure proper spacing around × in math expressions
+  processedText = processedText.replace(/(\d+)\s*×\s*(\d+)/g, '$1 \\times $2');
+  
   // MathJax will automatically process math expressions in elements with class "math-content"
   // We just need to return the text - MathJax will find and render $...$ and $$...$$ automatically
   return <span className="math-content">{processedText}</span>;
