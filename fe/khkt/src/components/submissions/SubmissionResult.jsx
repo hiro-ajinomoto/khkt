@@ -177,8 +177,8 @@ function renderTextWithMath(text, renderMathFn) {
   processedText = processedText.replace(/÷/g, '\\div');
   // Replace Unicode plus-minus ± with \pm
   processedText = processedText.replace(/±/g, '\\pm');
-  // Replace Unicode delta Δ with \Delta
-  processedText = processedText.replace(/Δ/g, '\\Delta');
+  // Replace Unicode delta Δ (Greek) and ∆ (mathematical operator) with \Delta
+  processedText = processedText.replace(/[Δ∆]/g, '\\Delta');
   
   // Fix patterns like "4imes1imes3" → "4 \times 1 \times 3" (inside math expressions)
   // This handles cases where AI writes "imes" without spaces
@@ -187,8 +187,11 @@ function renderTextWithMath(text, renderMathFn) {
   // Fix "riangle = " pattern
   processedText = processedText.replace(/\briangle\s*=/g, '\\Delta =');
   
-  // Fix "Tính riangle:" → "Tính $\\Delta$:"
-  processedText = processedText.replace(/Tính\s+riangle:/g, 'Tính $\\Delta$:');
+  // Fix "Tính riangle:" or "Tính ∆:" → "Tính $\\Delta$:"
+  processedText = processedText.replace(/Tính\s+(riangle|[Δ∆]):/g, 'Tính $\\Delta$:');
+  
+  // Fix "∆ = " → "$\\Delta = $"
+  processedText = processedText.replace(/([Δ∆])\s*=/g, '$\\Delta = ');
   
   // Remove tab characters and normalize whitespace
   processedText = processedText.replace(/\t/g, ' ');
@@ -223,6 +226,34 @@ function renderTextWithMath(text, renderMathFn) {
   
   // Ensure proper spacing around × in math expressions
   processedText = processedText.replace(/(\d+)\s*×\s*(\d+)/g, '$1 \\times $2');
+  
+  // Fix fraction patterns: "a / b" → "\frac{a}{b}" (in math context)
+  // Pattern: number / (number × number) or similar
+  processedText = processedText.replace(/(-?\d+)\s*/\s*\((\d+)\s*×\s*(\d+)\)/g, '\\frac{$1}{$2 \\times $3}');
+  processedText = processedText.replace(/(-?\d+)\s*/\s*\((\d+)\s*\\times\s*(\d+)\)/g, '\\frac{$1}{$2 \\times $3}');
+  
+  // Fix square root patterns: "√∆" → "\sqrt{\Delta}"
+  processedText = processedText.replace(/√([Δ∆])/g, '\\sqrt{\\Delta}');
+  processedText = processedText.replace(/√(\d+)/g, '\\sqrt{$1}');
+  processedText = processedText.replace(/√\(([^)]+)\)/g, '\\sqrt{$1}');
+  
+  // Fix quadratic formula patterns: "x = (-3 ± √∆) / 2"
+  processedText = processedText.replace(/x\s*=\s*\((-?\d+)\s*±\s*√([Δ∆])\)\s*/\s*(\d+)/g, 'x = \\frac{-$1 \\pm \\sqrt{\\Delta}}{$3}');
+  processedText = processedText.replace(/x\s*=\s*\((-?\d+)\s*±\s*√(\d+)\)\s*/\s*(\d+)/g, 'x = \\frac{-$1 \\pm \\sqrt{$2}}{$3}');
+  
+  // Wrap common math patterns that might not be wrapped yet
+  // Pattern: "∆ = number² - 4 × number × number = number"
+  if (!processedText.includes('$') && /[Δ∆]\s*=/.test(processedText)) {
+    processedText = processedText.replace(/([Δ∆]\s*=\s*[^=]+=\s*\d+)/g, '$$$1$$');
+  }
+  
+  // Wrap expressions like "x = -12 / (2 × 3) = -2" in math mode
+  processedText = processedText.replace(/(x\s*=\s*[^.]+\s*=\s*-?\d+\.?)/g, (match) => {
+    if (!match.includes('$')) {
+      return `$${match}$`;
+    }
+    return match;
+  });
   
   // MathJax will automatically process math expressions in elements with class "math-content"
   // We just need to return the text - MathJax will find and render $...$ and $$...$$ automatically
