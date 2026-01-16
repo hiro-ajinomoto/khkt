@@ -150,6 +150,15 @@ function autoDetectMath(text) {
 function renderTextWithMath(text, renderMathFn) {
   if (!text) return null;
   
+  // LaTeX command constants to avoid escape sequence issues
+  // Use String.fromCharCode or concatenation to avoid \t in \times being parsed as tab
+  const LATEX_TIMES = String.fromCharCode(92) + 'times'; // \times
+  const LATEX_DELTA = String.fromCharCode(92) + 'Delta'; // \Delta
+  const LATEX_DIV = String.fromCharCode(92) + 'div'; // \div
+  const LATEX_PM = String.fromCharCode(92) + 'pm'; // \pm
+  const LATEX_SQRT = String.fromCharCode(92) + 'sqrt'; // \sqrt
+  const LATEX_FRAC = String.fromCharCode(92) + 'frac'; // \frac
+  
   // Auto-detect and convert math expressions if not already in LaTeX format
   let processedText = autoDetectMath(text);
   
@@ -229,17 +238,26 @@ function renderTextWithMath(text, renderMathFn) {
   
   // Fix fraction patterns: "a / b" → "\frac{a}{b}" (in math context)
   // Pattern: number / (number × number) or similar
-  processedText = processedText.replace(/(-?\d+)\s*/\s*\((\d+)\s*×\s*(\d+)\)/g, String.raw`\frac{$1}{$2 \times $3}`);
-  processedText = processedText.replace(/(-?\d+)\s*/\s*\((\d+)\s*\\times\s*(\d+)\)/g, String.raw`\frac{$1}{$2 \times $3}`);
+  // Use RegExp constructor to avoid issues with / in regex
+  const fractionPattern = new RegExp('(-?\\d+)\\s*/\\s*\\((\\d+)\\s*×\\s*(\\d+)\\)', 'g');
+  processedText = processedText.replace(fractionPattern, function(match, num1, num2, num3) {
+    return LATEX_FRAC + '{' + num1 + '}{' + num2 + ' ' + LATEX_TIMES + ' ' + num3 + '}';
+  });
   
   // Fix square root patterns: "√∆" → "\sqrt{\Delta}"
-  processedText = processedText.replace(/√([Δ∆])/g, String.raw`\sqrt{\Delta}`);
-  processedText = processedText.replace(/√(\d+)/g, String.raw`\sqrt{$1}`);
-  processedText = processedText.replace(/√\(([^)]+)\)/g, String.raw`\sqrt{$1}`);
+  processedText = processedText.replace(/√([Δ∆])/g, LATEX_SQRT + '{' + LATEX_DELTA + '}');
+  processedText = processedText.replace(/√(\d+)/g, LATEX_SQRT + '{$1}');
+  processedText = processedText.replace(/√\(([^)]+)\)/g, LATEX_SQRT + '{$1}');
   
   // Fix quadratic formula patterns: "x = (-3 ± √∆) / 2"
-  processedText = processedText.replace(/x\s*=\s*\((-?\d+)\s*±\s*√([Δ∆])\)\s*/\s*(\d+)/g, 'x = ' + String.raw`\frac{-$1 \pm \sqrt{\Delta}}{$3}`);
-  processedText = processedText.replace(/x\s*=\s*\((-?\d+)\s*±\s*√(\d+)\)\s*/\s*(\d+)/g, 'x = ' + String.raw`\frac{-$1 \pm \sqrt{$2}}{$3}`);
+  const quadPattern1 = new RegExp('x\\s*=\\s*\\((-?\\d+)\\s*±\\s*√([Δ∆])\\)\\s*/\\s*(\\d+)', 'g');
+  processedText = processedText.replace(quadPattern1, function(match, num1, delta, num3) {
+    return 'x = ' + LATEX_FRAC + '{-' + num1 + ' ' + LATEX_PM + ' ' + LATEX_SQRT + '{' + LATEX_DELTA + '}}{' + num3 + '}';
+  });
+  const quadPattern2 = new RegExp('x\\s*=\\s*\\((-?\\d+)\\s*±\\s*√(\\d+)\\)\\s*/\\s*(\\d+)', 'g');
+  processedText = processedText.replace(quadPattern2, function(match, num1, num2, num3) {
+    return 'x = ' + LATEX_FRAC + '{-' + num1 + ' ' + LATEX_PM + ' ' + LATEX_SQRT + '{' + num2 + '}}{' + num3 + '}';
+  });
   
   // Wrap common math patterns that might not be wrapped yet
   // Pattern: "∆ = number² - 4 × number × number = number"
