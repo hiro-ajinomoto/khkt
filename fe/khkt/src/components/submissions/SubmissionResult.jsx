@@ -161,49 +161,49 @@ function renderTextWithMath(text, renderMathFn) {
                           'alpha', 'beta', 'pi', 'theta', 'sin', 'cos', 'tan', 'log', 'ln',
                           'sum', 'prod', 'int', 'lim', 'infty', 'partial', 'text'];
     if (latexCommands.includes(command)) {
-      return '\\' + command;
+      return `\\${command}`;
     }
     return match;
   });
   
   // Fix common text errors from AI that should be LaTeX
   // Replace "imes" with \times (multiplication) - handle both standalone and in expressions
-  processedText = processedText.replace(/\bimes\b/g, '\\times');
+  processedText = processedText.replace(/\bimes\b/g, String.raw`\times`);
   // Replace "riangle" with \Delta (delta/discriminant)
-  processedText = processedText.replace(/\briangle\b/g, '\\Delta');
+  processedText = processedText.replace(/\briangle\b/g, String.raw`\Delta`);
   // Replace Unicode multiplication × with \times
-  processedText = processedText.replace(/×/g, '\\times');
+  processedText = processedText.replace(/×/g, String.raw`\times`);
   // Replace Unicode division ÷ with \div
-  processedText = processedText.replace(/÷/g, '\\div');
+  processedText = processedText.replace(/÷/g, String.raw`\div`);
   // Replace Unicode plus-minus ± with \pm
-  processedText = processedText.replace(/±/g, '\\pm');
+  processedText = processedText.replace(/±/g, String.raw`\pm`);
   // Replace Unicode delta Δ (Greek) and ∆ (mathematical operator) with \Delta
-  processedText = processedText.replace(/[Δ∆]/g, '\\Delta');
+  processedText = processedText.replace(/[Δ∆]/g, String.raw`\Delta`);
   
   // Fix patterns like "4imes1imes3" → "4 \times 1 \times 3" (inside math expressions)
   // This handles cases where AI writes "imes" without spaces
-  processedText = processedText.replace(/(\d+|[a-zA-Z])\s*imes\s*(\d+|[a-zA-Z])/g, '$1 \\times $2');
+  processedText = processedText.replace(/(\d+|[a-zA-Z])\s*imes\s*(\d+|[a-zA-Z])/g, '$1 ' + String.raw`\times` + ' $2');
   
   // Fix "riangle = " pattern
-  processedText = processedText.replace(/\briangle\s*=/g, '\\Delta =');
+  processedText = processedText.replace(/\briangle\s*=/g, String.raw`\Delta =`);
   
-  // Fix "Tính riangle:" or "Tính ∆:" → "Tính $\\Delta$:"
-  processedText = processedText.replace(/Tính\s+(riangle|[Δ∆]):/g, 'Tính $\\Delta$:');
+  // Fix "Tính riangle:" or "Tính ∆:" → "Tính $\Delta$:"
+  processedText = processedText.replace(/Tính\s+(riangle|[Δ∆]):/g, 'Tính $' + String.raw`\Delta` + '$:');
   
-  // Fix "∆ = " → "$\\Delta = $"
-  processedText = processedText.replace(/([Δ∆])\s*=/g, '$\\Delta = ');
+  // Fix "∆ = " → "$\Delta = $"
+  processedText = processedText.replace(/([Δ∆])\s*=/g, '$' + String.raw`\Delta` + ' = ');
   
   // Remove tab characters and normalize whitespace
   processedText = processedText.replace(/\t/g, ' ');
   processedText = processedText.replace(/\s+/g, ' '); // Normalize multiple spaces
   
   // Fix "rac" → "frac" (common typo from AI)
-  processedText = processedText.replace(/\brac\{([^}]+)\}\{([^}]+)\}/g, '\\frac{$1}{$2}');
-  processedText = processedText.replace(/\brac(\d+)\s*×/g, '\\frac{$1}{1} \\times');
-  processedText = processedText.replace(/\brac(\d+)\s*=/g, '\\frac{$1}{1} =');
+  processedText = processedText.replace(/\brac\{([^}]+)\}\{([^}]+)\}/g, String.raw`\frac{$1}{$2}`);
+  processedText = processedText.replace(/\brac(\d+)\s*×/g, String.raw`\frac{$1}{1} \times`);
+  processedText = processedText.replace(/\brac(\d+)\s*=/g, String.raw`\frac{$1}{1} =`);
   
   // Fix "X = rac4 × (-2)2" → "X = \frac{4}{(-2)^2}"
-  processedText = processedText.replace(/=\s*rac(\d+)\s*×\s*\(([^)]+)\)(\d+)/g, '= \\frac{$1}{($2)^{$3}}');
+  processedText = processedText.replace(/=\s*rac(\d+)\s*×\s*\(([^)]+)\)(\d+)/g, '= ' + String.raw`\frac{$1}{($2)^{$3}}`);
   
   // Fix superscript patterns: "(-2)2" → "(-2)^2" (only if not already in LaTeX)
   processedText = processedText.replace(/\(([^)]+)\)(\d+)(?![^$]*\$)/g, (match, base, exp) => {
@@ -218,28 +218,28 @@ function renderTextWithMath(text, renderMathFn) {
   });
   
   // Fix "4\t ×" → "4 \times" (remove tab before ×)
-  processedText = processedText.replace(/(\d+)\s*\t\s*×/g, '$1 \\times');
-  processedText = processedText.replace(/(\d+)\s*\t\s*\\times/g, '$1 \\times');
+  processedText = processedText.replace(/(\d+)\s*\t\s*×/g, '$1 ' + String.raw`\times`);
+  processedText = processedText.replace(/(\d+)\s*\t\s*\\times/g, '$1 ' + String.raw`\times`);
   
   // Fix "4\t × 1" → "4 \times 1"
-  processedText = processedText.replace(/(\d+)\s*\t\s*×\s*(\d+)/g, '$1 \\times $2');
+  processedText = processedText.replace(/(\d+)\s*\t\s*×\s*(\d+)/g, '$1 ' + String.raw`\times` + ' $2');
   
   // Ensure proper spacing around × in math expressions
-  processedText = processedText.replace(/(\d+)\s*×\s*(\d+)/g, '$1 \\times $2');
+  processedText = processedText.replace(/(\d+)\s*×\s*(\d+)/g, '$1 ' + String.raw`\times` + ' $2');
   
   // Fix fraction patterns: "a / b" → "\frac{a}{b}" (in math context)
   // Pattern: number / (number × number) or similar
-  processedText = processedText.replace(/(-?\d+)\s*/\s*\((\d+)\s*×\s*(\d+)\)/g, '\\frac{$1}{$2 \\times $3}');
-  processedText = processedText.replace(/(-?\d+)\s*/\s*\((\d+)\s*\\times\s*(\d+)\)/g, '\\frac{$1}{$2 \\times $3}');
+  processedText = processedText.replace(/(-?\d+)\s*/\s*\((\d+)\s*×\s*(\d+)\)/g, String.raw`\frac{$1}{$2 \times $3}`);
+  processedText = processedText.replace(/(-?\d+)\s*/\s*\((\d+)\s*\\times\s*(\d+)\)/g, String.raw`\frac{$1}{$2 \times $3}`);
   
   // Fix square root patterns: "√∆" → "\sqrt{\Delta}"
-  processedText = processedText.replace(/√([Δ∆])/g, '\\sqrt{\\Delta}');
-  processedText = processedText.replace(/√(\d+)/g, '\\sqrt{$1}');
-  processedText = processedText.replace(/√\(([^)]+)\)/g, '\\sqrt{$1}');
+  processedText = processedText.replace(/√([Δ∆])/g, String.raw`\sqrt{\Delta}`);
+  processedText = processedText.replace(/√(\d+)/g, String.raw`\sqrt{$1}`);
+  processedText = processedText.replace(/√\(([^)]+)\)/g, String.raw`\sqrt{$1}`);
   
   // Fix quadratic formula patterns: "x = (-3 ± √∆) / 2"
-  processedText = processedText.replace(/x\s*=\s*\((-?\d+)\s*±\s*√([Δ∆])\)\s*/\s*(\d+)/g, 'x = \\frac{-$1 \\pm \\sqrt{\\Delta}}{$3}');
-  processedText = processedText.replace(/x\s*=\s*\((-?\d+)\s*±\s*√(\d+)\)\s*/\s*(\d+)/g, 'x = \\frac{-$1 \\pm \\sqrt{$2}}{$3}');
+  processedText = processedText.replace(/x\s*=\s*\((-?\d+)\s*±\s*√([Δ∆])\)\s*/\s*(\d+)/g, 'x = ' + String.raw`\frac{-$1 \pm \sqrt{\Delta}}{$3}`);
+  processedText = processedText.replace(/x\s*=\s*\((-?\d+)\s*±\s*√(\d+)\)\s*/\s*(\d+)/g, 'x = ' + String.raw`\frac{-$1 \pm \sqrt{$2}}{$3}`);
   
   // Wrap common math patterns that might not be wrapped yet
   // Pattern: "∆ = number² - 4 × number × number = number"
