@@ -77,6 +77,11 @@ function MySubmissions() {
   return (
     <div className="my-submissions-container">
       <div className="my-submissions-header">
+        <div className="header-top">
+          <button onClick={() => navigate('/assignments')} className="back-button">
+            ← Quay lại
+          </button>
+        </div>
         <h1>Bài tập đã nộp</h1>
         <p>Xem lại các bài tập bạn đã nộp và kết quả chấm điểm</p>
       </div>
