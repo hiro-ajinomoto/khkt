@@ -37,7 +37,15 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage });
+// Configure multer with file size limits
+// Allow up to 10MB per file, max 10 files
+const upload = multer({ 
+  storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB per file
+    files: 10, // Max 10 files
+  },
+});
 
 /**
  * Normalize S3 URL - if it's a presigned URL, extract the base S3 URL
