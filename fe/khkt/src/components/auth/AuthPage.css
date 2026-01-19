@@ -3,7 +3,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #a8d5e2 0%, #b8e0f0 50%, #c8e8f5 100%);
   padding: 2rem;
 }
 
@@ -23,19 +23,23 @@
 
 .logo-auth {
   display: block;
-  margin: 0 auto 1.5rem;
+  margin: 0 auto;
   height: 160px;
-  width: auto;
-  object-fit: contain;
-  max-width: 400px;
+  width: 160px;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .school-name {
-  margin: 1rem 0 0 0;
-  color: #333;
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: 0.5px;
+  margin-top: 0.25rem !important;
+  margin-bottom: 2rem !important;
+  color: #ff9999 !important;
+  font-size: 1.2rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.5px !important;
+  text-transform: uppercase !important;
 }
 
 .auth-page-header h1 {

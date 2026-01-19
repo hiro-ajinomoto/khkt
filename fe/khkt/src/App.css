@@ -7,16 +7,43 @@
 
 .app-footer {
   margin-top: auto;
-  padding: 1.5rem 2rem;
+  margin-bottom: 3rem;
+  padding: 3rem 2rem;
   background-color: #fff;
   border-top: 1px solid #e0e0e0;
   text-align: center;
 }
 
-.app-footer p {
-  margin: 0;
-  color: #333;
-  font-size: 1rem;
+.footer-school-name {
+  margin: 0 0 0.75rem 0;
+  color: #f5a5a5;
+  font-size: 1.5rem;
   font-weight: 600;
   letter-spacing: 0.5px;
+}
+
+.footer-standard {
+  margin: 0 0 1rem 0;
+  color: #87ceeb;
+  font-size: 1.4rem;
+  font-weight: 400;
+  letter-spacing: 2px;
+  font-family: 'Great Vibes', 'Dancing Script', cursive;
+  text-decoration: none;
+  display: inline-block;
+  transform: translateY(-2px);
+}
+
+.footer-address {
+  margin: 0 0 0.5rem 0;
+  color: #666;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.footer-phone {
+  margin: 0;
+  color: #666;
+  font-size: 1rem;
+  font-weight: 400;
 }

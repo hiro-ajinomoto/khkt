@@ -84,9 +84,9 @@ function Register() {
       <div className="login-card">
         <div className="login-header">
           <img src="/logo.png" alt="Logo trường" className="logo-auth" />
+          <p className="school-name">TRƯỜNG THCS TÂN THÀNH - ĐỒNG NAI</p>
           <h1>Đăng ký</h1>
           <p>Tạo tài khoản mới</p>
-          <p className="school-name">TRƯỜNG THCS TÂN THÀNH - ĐỒNG NAI</p>
         </div>
 
         <form onSubmit={handleSubmit} className="login-form">

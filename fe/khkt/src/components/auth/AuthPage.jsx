@@ -137,9 +137,9 @@ function AuthPage() {
       <div className="auth-page-card">
         <div className="auth-page-header">
           <img src="/logo.png" alt="Logo trường" className="logo-auth" />
+          <p className="school-name">TRƯỜNG THCS TÂN THÀNH - ĐỒNG NAI</p>
           <h1>Hệ thống chấm bài Toán tự động</h1>
           <p>Đăng nhập hoặc đăng ký để tiếp tục</p>
-          <p className="school-name">TRƯỜNG THCS TÂN THÀNH - ĐỒNG NAI</p>
         </div>
 
         <div className="auth-tabs">

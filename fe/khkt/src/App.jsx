@@ -90,7 +90,10 @@ function App() {
       <div className="app">
         <AppRoutes />
         <footer className="app-footer">
-          <p>TRƯỜNG THCS TÂN THÀNH - ĐỒNG NAI</p>
+          <p className="footer-school-name">TRƯỜNG THCS TÂN THÀNH - ĐỒNG NAI</p>
+          <p className="footer-standard">TRƯỜNG CHUẨN QUỐC GIA</p>
+          <p className="footer-address">Ấp Tân Phú, xã Tân Tiến, Tỉnh Đồng Nai</p>
+          <p className="footer-phone">Điện thoại liên hệ: 0363267637</p>
         </footer>
       </div>
     </BrowserRouter>
