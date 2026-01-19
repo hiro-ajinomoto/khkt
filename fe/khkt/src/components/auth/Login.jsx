@@ -68,8 +68,10 @@ function Login() {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
+          <img src="/logo.png" alt="Logo trường" className="logo-auth" />
           <h1>Đăng nhập</h1>
           <p>Hệ thống chấm bài Toán tự động</p>
+          <p className="school-name">TRƯỜNG THCS TÂN THÀNH - ĐỒNG NAI</p>
         </div>
 
         <form onSubmit={handleSubmit} className="login-form">

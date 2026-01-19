@@ -21,6 +21,23 @@
   margin-bottom: 2rem;
 }
 
+.logo-auth {
+  display: block;
+  margin: 0 auto 1.5rem;
+  height: 160px;
+  width: auto;
+  object-fit: contain;
+  max-width: 400px;
+}
+
+.school-name {
+  margin: 1rem 0 0 0;
+  color: #333;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
 .auth-page-header h1 {
   margin: 0 0 0.5rem 0;
   color: #333;

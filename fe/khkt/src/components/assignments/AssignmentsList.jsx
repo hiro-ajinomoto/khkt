@@ -329,7 +329,10 @@ function AssignmentsList() {
   return (
     <div className="assignments-container">
       <div className="assignments-header">
-        <h1>Danh sách bài tập</h1>
+        <div className="logo-header">
+          <img src="/logo.png" alt="Logo trường" className="logo" />
+          <h1>Danh sách bài tập</h1>
+        </div>
         <div className="header-right">
           {isAuthenticated ? (
             <div className="user-info">

@@ -126,9 +126,12 @@ function AdminDashboard() {
   return (
     <div className="admin-dashboard">
       <div className="admin-header">
-        <div>
-          <h1>Quản trị hệ thống</h1>
-          <p>Xin chào, {user?.name || user?.username}</p>
+        <div className="admin-header-left">
+          <img src="/logo.png" alt="Logo trường" className="logo-admin" />
+          <div>
+            <h1>Quản trị hệ thống</h1>
+            <p>Xin chào, {user?.name || user?.username}</p>
+          </div>
         </div>
         <div className="header-actions">
           <button onClick={() => navigate('/')} className="nav-button">

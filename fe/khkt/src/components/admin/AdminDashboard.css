@@ -13,6 +13,18 @@
   border-bottom: 2px solid #e0e0e0;
 }
 
+.admin-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.logo-admin {
+  height: 100px;
+  width: auto;
+  object-fit: contain;
+}
+
 .admin-header h1 {
   margin: 0 0 0.5rem 0;
   color: #333;

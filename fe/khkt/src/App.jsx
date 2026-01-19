@@ -89,6 +89,9 @@ function App() {
     <BrowserRouter>
       <div className="app">
         <AppRoutes />
+        <footer className="app-footer">
+          <p>TRƯỜNG THCS TÂN THÀNH - ĐỒNG NAI</p>
+        </footer>
       </div>
     </BrowserRouter>
   )
