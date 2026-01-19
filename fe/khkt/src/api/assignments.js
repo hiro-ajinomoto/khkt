@@ -4,7 +4,7 @@
 
 import { getAuthHeader } from '../utils/auth';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 /**
  * Fetch all assignments
@@ -135,7 +135,7 @@ export async function deleteAssignments(ids) {
  */
 export async function createAssignment(formData) {
   try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
     const headers = {};
     const authHeader = getAuthHeader();
     if (authHeader) {
@@ -171,7 +171,7 @@ export async function createAssignment(formData) {
  */
 export async function updateAssignment(id, formData) {
   try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
     const headers = {};
     const authHeader = getAuthHeader();
     if (authHeader) {

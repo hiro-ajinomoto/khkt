@@ -11,6 +11,13 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const logout = () => {
+    setToken(null);
+    setUser(null);
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+  };
+
   // Load auth state from localStorage on mount
   useEffect(() => {
     const storedToken = localStorage.getItem(TOKEN_KEY);
@@ -28,8 +35,9 @@ export function AuthProvider({ children }) {
             setUser(currentUser);
             localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
           })
-          .catch(() => {
-            // Token invalid, clear auth
+          .catch((error) => {
+            // Token invalid or network error, clear auth
+            console.error('Error verifying token:', error);
             logout();
           })
           .finally(() => {
@@ -59,13 +67,6 @@ export function AuthProvider({ children }) {
     } catch (error) {
       return { success: false, error: error.message };
     }
-  };
-
-  const logout = () => {
-    setToken(null);
-    setUser(null);
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
   };
 
   const isAuthenticated = !!token && !!user;
