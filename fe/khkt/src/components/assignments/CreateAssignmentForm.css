@@ -5,6 +5,8 @@
   background: white;
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .form-header {
@@ -240,18 +242,170 @@
   color: #666;
 }
 
-/* Responsive */
+/* Responsive - Tablet and Desktop */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .create-assignment-form-container {
+    max-width: 90%;
+    padding: 2rem;
+  }
+}
+
+@media (min-width: 1025px) {
+  .create-assignment-form-container {
+    max-width: 900px;
+    padding: 2.5rem;
+  }
+
+  .form-header h2 {
+    font-size: 2rem;
+  }
+
+  .form-group label {
+    font-size: 1.05rem;
+  }
+
+  .form-group input[type="text"],
+  .form-group input[type="url"],
+  .form-group textarea,
+  .form-group select {
+    padding: 0.875rem;
+    font-size: 1.05rem;
+  }
+
+  .image-input-section {
+    gap: 1.25rem;
+  }
+
+  .preview-image {
+    max-height: 400px;
+  }
+
+  .form-actions {
+    gap: 1.25rem;
+  }
+
+  .cancel-form-button,
+  .submit-form-button {
+    padding: 0.875rem 2.5rem;
+    font-size: 1.05rem;
+  }
+}
+
+@media (min-width: 1440px) {
+  .create-assignment-form-container {
+    max-width: 1000px;
+    padding: 3rem;
+  }
+}
+
+/* Responsive - Mobile */
 @media (max-width: 768px) {
   .create-assignment-form-container {
     padding: 1rem;
+    margin: 0.5rem;
+    border-radius: 8px;
+  }
+
+  .form-header {
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .form-header h2 {
+    font-size: 1.5rem;
+  }
+
+  .form-group {
+    gap: 0.4rem;
+  }
+
+  .form-group label {
+    font-size: 0.95rem;
+  }
+
+  .form-group input[type="text"],
+  .form-group input[type="url"],
+  .form-group textarea,
+  .form-group select {
+    padding: 0.65rem;
+    font-size: 0.95rem;
+  }
+
+  .image-input-section {
+    gap: 0.75rem;
+  }
+
+  .file-upload-label {
+    padding: 0.875rem;
+  }
+
+  .file-upload-text {
+    font-size: 0.9rem;
+  }
+
+  .preview-image {
+    max-height: 250px;
+  }
+
+  .image-preview {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    border-radius: 6px;
   }
 
   .form-actions {
     flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    padding-top: 1rem;
   }
 
   .cancel-form-button,
   .submit-form-button {
     width: 100%;
+    padding: 0.875rem 1.5rem;
+    font-size: 1rem;
+  }
+
+  .error-message {
+    padding: 0.875rem;
+    font-size: 0.9rem;
+  }
+}
+
+/* Responsive - Small Mobile */
+@media (max-width: 480px) {
+  .create-assignment-form-container {
+    padding: 0.75rem;
+    margin: 0.25rem;
+  }
+
+  .form-header h2 {
+    font-size: 1.3rem;
+  }
+
+  .cancel-button {
+    font-size: 1.3rem;
+    padding: 0.4rem;
+  }
+
+  .form-group input[type="text"],
+  .form-group input[type="url"],
+  .form-group textarea,
+  .form-group select {
+    padding: 0.6rem;
+    font-size: 0.9rem;
+  }
+
+  .file-upload-label {
+    padding: 0.75rem;
+  }
+
+  .file-upload-text {
+    font-size: 0.85rem;
+  }
+
+  .or-divider {
+    font-size: 0.85rem;
   }
 }
