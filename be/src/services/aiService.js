@@ -103,41 +103,60 @@ LEVEL OF DETAIL (CRITICAL - MUST FOLLOW):
 - Lời giải phải CỰC KỲ CHI TIẾT, trình bày TẤT CẢ các bước nhỏ, KHÔNG ĐƯỢC BỎ QUA BẤT KỲ BƯỚC NÀO.
 - KHÔNG ĐƯỢC bỏ qua bất kỳ bước trung gian nào, dù là bước đơn giản nhất.
 
-QUY TẮC TRÌNH BÀY LỜI GIẢI CHUẨN (BẮT BUỘC - KHÔNG ĐƯỢC VI PHẠM):
-1. Mỗi dòng biến đổi toán học PHẢI có phần giải thích trong dấu ngoặc đơn ().
-2. TUYỆT ĐỐI KHÔNG được có dòng biến đổi nào thiếu giải thích.
-3. Giải thích phải đặt ngay sau dòng biến đổi, không viết thành đoạn riêng.
-4. Nếu một bước không thể giải thích ngắn gọn, phải tách thành nhiều dòng, mỗi dòng đều có ngoặc giải thích.
-5. Dòng kết quả cuối cùng cũng phải có giải thích trong ngoặc đơn (kết quả cuối cùng).
-6. Mỗi dòng chỉ có MỘT phép biến đổi chính, không gộp nhiều phép biến đổi vào một dòng.
-7. Giải thích chỉ viết bằng chữ trong ngoặc đơn, KHÔNG chứa ký hiệu toán học trong phần giải thích.
+CẤU TRÚC BẮT BUỘC CỦA LỜI GIẢI (HÌNH THỨC - KHÔNG ĐƯỢC VI PHẠM):
+- Mỗi bước phải được viết thành MỘT DÒNG RIÊNG BIỆT.
+- Mỗi dòng phải bắt đầu bằng đúng mẫu: "A = " hoặc "P(x) = " hoặc tương tự (tùy theo biến trong bài toán).
+- Sau khi kết thúc một dòng, BẮT BUỘC phải xuống dòng (sử dụng \\n).
+- TUYỆT ĐỐI KHÔNG được viết hai biểu thức "A = ..." trên cùng một dòng.
+- Mỗi dòng cách nhau bằng một ký tự xuống dòng duy nhất (\\n).
 
-QUY TẮC VỀ KÝ HIỆU VÀ PHÉP NHÂN (BẮT BUỘC - TUYỆT ĐỐI KHÔNG VI PHẠM):
-1. TUYỆT ĐỐI KHÔNG dùng các ký hiệu: ×, *, \\cdot, \\times, \\t hoặc bất kỳ ký hiệu nào để mô tả phép nhân.
-2. Các phép nhân phải được thực hiện trực tiếp và viết ra kết quả ngay (ví dụ: viết $8x$ thay vì $4 \\cdot 2x$ hoặc $4 \\times 2x$).
-3. Giữ biểu thức toán học gọn, liền mạch, không chèn ký tự đặc biệt không cần thiết.
-4. Mọi ký hiệu không thuộc chương trình Toán THCS đều BỊ CẤM.
-5. KHÔNG sử dụng Markdown phức tạp, KHÔNG LaTeX mở rộng ngoài các ký hiệu cơ bản của Toán THCS.
+QUY TẮC NỘI DUNG (BẮT BUỘC - KHÔNG ĐƯỢC VI PHẠM):
+1. Mỗi dòng PHẢI có đúng MỘT biểu thức toán học.
+2. Mỗi dòng PHẢI có giải thích đặt trong dấu ngoặc đơn ().
+3. Giải thích phải đặt SAU biểu thức, không được chèn vào giữa.
+4. Không được gộp nhiều phép biến đổi vào cùng một dòng.
+5. Giải thích phải ngắn gọn, đúng thuật ngữ Toán THCS.
+6. Giải thích chỉ viết bằng chữ trong ngoặc đơn, KHÔNG chứa ký hiệu toán học trong phần giải thích.
+7. Dòng kết quả cuối cùng cũng phải có giải thích trong ngoặc đơn (kết quả cuối cùng).
 
-QUY TẮC KIỂM TRA VÀ TỰ ĐỘNG SỬA LỖI (BẮT BUỘC):
+QUY TẮC KÝ HIỆU (BẮT BUỘC - TUYỆT ĐỐI KHÔNG VI PHẠM):
+5. Không dùng các ký hiệu ×, *, \\t hoặc ký tự đặc biệt.
+6. Phép nhân phải được thực hiện và viết ra kết quả trực tiếp (ví dụ: viết $8x$ thay vì $4 \\cdot 2x$ hoặc $4 \\times 2x$).
+- TUYỆT ĐỐI KHÔNG dùng các ký hiệu: ×, *, \\cdot, \\times, \\t hoặc bất kỳ ký hiệu nào để mô tả phép nhân.
+- Giữ biểu thức toán học gọn, liền mạch, không chèn ký tự đặc biệt không cần thiết.
+- Mọi ký hiệu không thuộc chương trình Toán THCS đều BỊ CẤM.
+- KHÔNG sử dụng Markdown phức tạp, KHÔNG LaTeX mở rộng ngoài các ký hiệu cơ bản của Toán THCS.
+
+CƠ CHẾ TỰ KIỂM TRA (BẮT BUỘC):
+7. Nếu phát hiện một dòng có hơn một lần xuất hiện chuỗi "A =" hoặc không xuống dòng sau dấu ")", toàn bộ lời giải phải được viết lại.
 - Nếu phát hiện bất kỳ dòng nào không có giải thích trong ngoặc đơn, ChatGPT PHẢI TỰ ĐỘNG viết lại toàn bộ lời giải cho đúng định dạng.
 - Nếu phát hiện bất kỳ dòng nào có ký hiệu ×, *, \\cdot, \\times, \\t hoặc bất kỳ ký hiệu nhân nào, ChatGPT PHẢI TỰ ĐỘNG viết lại toàn bộ lời giải, thay thế bằng kết quả trực tiếp.
+- Nếu phát hiện dòng nào có nhiều hơn một lần xuất hiện chuỗi "A =", ChatGPT PHẢI TỰ ĐỘNG viết lại, tách thành nhiều dòng.
+- Nếu phát hiện dòng nào không xuống dòng sau khi kết thúc dòng (sau dấu ")" hoặc sau giải thích), ChatGPT PHẢI TỰ ĐỘNG viết lại.
 - Không được bỏ qua bước trung gian để rút gọn.
 - Trước khi trả về kết quả, PHẢI kiểm tra lại từng dòng trong lời giải để đảm bảo:
-  * Mọi dòng biến đổi đều có giải thích trong ngoặc đơn.
+  * Mỗi dòng chỉ có MỘT lần xuất hiện chuỗi "A = " (hoặc biến tương ứng).
+  * Mỗi dòng chỉ có MỘT biểu thức toán học.
+  * Mỗi dòng chỉ có MỘT dấu bằng "=".
+  * Mỗi dòng có giải thích trong ngoặc đơn đặt SAU biểu thức.
+  * Sau mỗi dòng phải có ký tự xuống dòng (\\n).
   * KHÔNG có ký hiệu ×, *, \\cdot, \\times, \\t trong biểu thức toán học.
-  * Mỗi dòng chỉ có MỘT phép biến đổi chính.
   * Phép nhân đã được thực hiện trực tiếp và viết ra kết quả.
 
-QUY TẮC FORMAT CHÍNH (PHẢI GIỐNG VÍ DỤ SAU):
-- Mỗi bước được viết trên MỘT DÒNG.
-- Đầu dòng là phần toán học (ví dụ: P(x) = (x^3 - 3x^2) - (4x - 12)).
-- Ngay sau đó (cách một khoảng trắng) là phần giải thích đặt trong dấu ngoặc, ví dụ: (nhóm các hạng tử phù hợp), (rút các nhân tử chung), (rút x-3 làm nhân tử chung), (phân tích hằng đẳng thức x^2 - 4).
-- Ví dụ chuẩn: P(x) = (x^3 - 3x^2) - (4x - 12) (nhóm các hạng tử phù hợp).
-- MỖI DẤU BẰNG PHẢI Ở TRÊN DÒNG RIÊNG:
-  - Không được viết nhiều dấu bằng trên cùng một dòng.
-  - Sai: x^2 - 5x + 6 = x^2 - 2x - 3x + 6 = (x^2 - 2x) - (3x - 6).
-  - Đúng: mỗi vế sau dấu bằng là một dòng mới, có giải thích riêng.
+VÍ DỤ FORMAT ĐÚNG CHUẨN (PHẢI LÀM THEO ĐÚNG FORMAT NÀY):
+- Rút gọn biểu thức đại số:
+  "$A = 4(2x - 5) - 2(3x - 1)$\n$A = 8x - 20 - 6x + 2$ (phân phối)\n$A = (8x - 6x) + (-20 + 2)$ (nhóm các hạng tử)\n$A = 2x - 18$ (rút gọn)\n$A = 2x - 18$ (kết quả cuối cùng)"
+- Lưu ý quan trọng:
+  * Mỗi dòng chỉ có MỘT biểu thức "A = ..."
+  * Mỗi dòng chỉ có MỘT dấu bằng "="
+  * Sau mỗi dấu ngoặc đóng ")" phải xuống dòng (trừ khi là dấu ngoặc cuối cùng của dòng)
+  * Mỗi dòng có giải thích trong ngoặc đơn
+  * Không được gộp nhiều bước trên cùng một dòng
+
+VÍ DỤ SAI FORMAT (TUYỆT ĐỐI KHÔNG ĐƯỢC LÀM):
+- SAI: "$A = 4(2x - 5) - 2(3x - 1) = 8x - 20 - 6x + 2$" (nhiều dấu "=" trên một dòng)
+- SAI: "$A = 4(2x - 5) - 2(3x - 1)$\n$A = 8x - 20 - 6x + 2 = 2x - 18$" (nhiều dấu "=" trên một dòng)
+- SAI: "$A = 4(2x - 5) - 2(3x - 1)$\n$A = 8x - 20 - 6x + 2$ (phân phối)\n$A = 2x - 18$" (thiếu giải thích ở dòng cuối)
 - Với phân tích đa thức thành nhân tử, PHẢI có các bước (mỗi dòng theo format: TOÁN + GIẢI THÍCH TRONG NGOẶC):
   1. Viết lại đa thức ban đầu.
   2. Nhóm các hạng tử cho phù hợp (giải thích: (nhóm các hạng tử phù hợp)).
@@ -148,11 +167,20 @@ QUY TẮC FORMAT CHÍNH (PHẢI GIỐNG VÍ DỤ SAU):
   1. Viết lại phương trình ban đầu (có giải thích trong ngoặc, ví dụ: (viết lại phương trình)).
   2. Biến đổi từng vế, mỗi phép biến đổi một dòng, mỗi dòng có giải thích: (khai triển vế phải), (chuyển các hạng tử sang vế trái), (rút gọn), (áp dụng công thức nghiệm)...
   3. Kết luận nghiệm (giải thích: (kết luận nghiệm)).
-- VÍ DỤ ĐÚNG CHUẨN (PHẢI LÀM THEO ĐÚNG FORMAT NÀY):
-  - Phân tích đa thức bậc ba:
-    "$P(x) = x^3 - 3x^2 - 4x + 12$\n$P(x) = (x^3 - 3x^2) - (4x - 12)$ (nhóm các hạng tử phù hợp)\n$P(x) = x^2(x - 3) - 4(x - 3)$ (rút các nhân tử chung)\n$P(x) = (x - 3)(x^2 - 4)$ (rút $x-3$ làm nhân tử chung)\n$P(x) = (x - 3)(x - 2)(x + 2)$ (phân tích hằng đẳng thức $x^2 - 4$)".
-  - Lưu ý: KHÔNG có dòng tiêu đề như "Phân tích đa thức thành nhân tử:", KHÔNG có dòng giải thích riêng, chỉ có dòng toán học kèm giải thích trong ngoặc ngay sau đó.
-- Mỗi bước phải được viết trên một dòng riêng, sử dụng \\n để xuống dòng, và LUÔN có giải thích trong ngoặc sau phần toán học.
+- VÍ DỤ ĐÚNG CHUẨN - PHÂN TÍCH ĐA THỨC BẬC BA (PHẢI LÀM THEO ĐÚNG FORMAT NÀY):
+  "$P(x) = x^3 - 3x^2 - 4x + 12$\n$P(x) = (x^3 - 3x^2) - (4x - 12)$ (nhóm các hạng tử phù hợp)\n$P(x) = x^2(x - 3) - 4(x - 3)$ (rút các nhân tử chung)\n$P(x) = (x - 3)(x^2 - 4)$ (rút $x-3$ làm nhân tử chung)\n$P(x) = (x - 3)(x - 2)(x + 2)$ (phân tích hằng đẳng thức $x^2 - 4$)"
+- Lưu ý quan trọng:
+  * KHÔNG có dòng tiêu đề như "Phân tích đa thức thành nhân tử:", KHÔNG có dòng giải thích riêng
+  * Mỗi dòng chỉ có MỘT biểu thức "P(x) = ..."
+  * Mỗi dòng chỉ có MỘT dấu bằng "="
+  * Sau mỗi dấu ngoặc đóng ")" (nếu không phải cuối dòng) phải xuống dòng
+  * Mỗi bước phải được viết trên một dòng riêng, sử dụng \\n để xuống dòng, và LUÔN có giải thích trong ngoặc sau phần toán học
+
+YÊU CẦU ĐẦU RA (BẮT BUỘC):
+- Chỉ xuất nội dung lời giải, không thêm lời dẫn hay bình luận.
+- Mỗi dòng cách nhau bằng một ký tự xuống dòng duy nhất (\\n).
+- Không thêm tiêu đề như "Lời giải:", "Giải:", "Bài giải:" hoặc bất kỳ lời dẫn nào.
+- Bắt đầu trực tiếp bằng biểu thức toán học đầu tiên.
 
 YÊU CẦU PHONG CÁCH:
 - Phù hợp chương trình Toán THCS.
@@ -204,31 +232,37 @@ Required JSON format:
 CRITICAL FORMATTING RULES FOR PRACTICE PROBLEMS:
 - "problem" field MUST contain ONLY the mathematical expression/equation itself. NO instruction text like "Giải phương trình:", "Tìm giá trị của", "Phân tích đa thức thành nhân tử:", etc.
 - "problem" field should be SHORT and CONCISE - just the math expression, nothing else.
-- "solution" field MUST contain the step-by-step solution in Vietnamese, starting with the problem expression and showing each step.
-- FORMAT CHÍNH XÁC: Mỗi dòng là một bước toán học, ngay sau đó (cách một khoảng trắng) là giải thích trong dấu ngoặc đơn. KHÔNG có dòng tiêu đề như "Phân tích đa thức thành nhân tử:" hay "Giải phương trình:", KHÔNG có dòng chỉ có giải thích riêng.
+- "solution" field MUST contain ONLY the step-by-step solution, starting with the problem expression and showing each step.
+- FORMAT CHÍNH XÁC: 
+  * Mỗi dòng là một bước toán học, ngay sau đó (cách một khoảng trắng) là giải thích trong dấu ngoặc đơn.
+  * KHÔNG có dòng tiêu đề như "Phân tích đa thức thành nhân tử:", "Giải phương trình:", "Lời giải:", "Vậy", etc.
+  * KHÔNG có dòng chỉ có giải thích riêng.
+  * KHÔNG có lời dẫn hay bình luận ngoài lề.
+  * Chỉ xuất nội dung lời giải thuần túy, mỗi dòng cách nhau bằng một ký tự xuống dòng duy nhất (\\n).
+  * Mỗi dòng phải bắt đầu bằng biểu thức toán học (ví dụ: "A = ..." hoặc "P(x) = ...").
 
 Example CORRECT format - PHÂN TÍCH ĐA THỨC (this is what you MUST do):
 {
   "problem": "$6x+12$",
-  "solution": "$6x + 12$\n$6x + 12 = 6x + 12$ (viết lại biểu thức)\n$6x + 12 = 6(x + 2)$ (đặt $6$ làm nhân tử chung)\n\nVậy $6x + 12 = 6(x + 2)$ (kết quả cuối cùng)"
+  "solution": "$6x + 12$\n$6x + 12 = 6x + 12$ (viết lại biểu thức)\n$6x + 12 = 6(x + 2)$ (đặt $6$ làm nhân tử chung)\n$6x + 12 = 6(x + 2)$ (kết quả cuối cùng)"
 }
 
 Example CORRECT format - PHÂN TÍCH TAM THỨC BẬC HAI (this is what you MUST do):
 {
   "problem": "$x^2 - 5x + 6$",
-  "solution": "$x^2 - 5x + 6$\n$x^2 - 5x + 6 = x^2 - 2x - 3x + 6$ (tách hạng tử $-5x$ thành $-2x - 3x$, vì $-2$ và $-3$ có tổng bằng $-5$ và tích bằng $6$)\n$x^2 - 5x + 6 = (x^2 - 2x) - (3x - 6)$ (nhóm các hạng tử phù hợp)\n$x^2 - 5x + 6 = x(x - 2) - 3(x - 2)$ (rút các nhân tử chung)\n$x^2 - 5x + 6 = (x - 2)(x - 3)$ (rút $x-2$ làm nhân tử chung)\n\nVậy $x^2 - 5x + 6 = (x - 2)(x - 3)$ (kết quả cuối cùng)"
+  "solution": "$x^2 - 5x + 6$\n$x^2 - 5x + 6 = x^2 - 2x - 3x + 6$ (tách hạng tử $-5x$ thành $-2x - 3x$, vì $-2$ và $-3$ có tổng bằng $-5$ và tích bằng $6$)\n$x^2 - 5x + 6 = (x^2 - 2x) - (3x - 6)$ (nhóm các hạng tử phù hợp)\n$x^2 - 5x + 6 = x(x - 2) - 3(x - 2)$ (rút các nhân tử chung)\n$x^2 - 5x + 6 = (x - 2)(x - 3)$ (rút $x-2$ làm nhân tử chung)\n$x^2 - 5x + 6 = (x - 2)(x - 3)$ (kết quả cuối cùng)"
 }
 
 Another CORRECT example - GIẢI PHƯƠNG TRÌNH:
 {
   "problem": "$4x + 8 = 4(x + 2)$",
-  "solution": "$4x + 8 = 4(x + 2)$\n$4x + 8 = 4x + 8$ (khai triển vế phải)\n$4x + 8 - 4x - 8 = 0$ (chuyển tất cả hạng tử sang vế trái)\n$0 = 0$ (rút gọn)\n\nPhương trình có vô số nghiệm."
+  "solution": "$4x + 8 = 4(x + 2)$\n$4x + 8 = 4x + 8$ (khai triển vế phải)\n$4x + 8 - 4x - 8 = 0$ (chuyển tất cả hạng tử sang vế trái)\n$0 = 0$ (rút gọn)\n$0 = 0$ (phương trình có vô số nghiệm)"
 }
 
 Example CORRECT format - RÚT GỌN BIỂU THỨC ĐẠI SỐ (this is what you MUST do):
 {
-  "problem": "$A = 5(2x - 4) - 2(3x - 5)$",
-  "solution": "$A = 5(2x - 4) - 2(3x - 5)$\n$A = 10x - 20 - 6x + 10$ (nhân phân phối $5$ vào $(2x - 4)$ và $-2$ vào $(3x - 5)$)\n$A = 10x - 6x - 20 + 10$ (sắp xếp lại các hạng tử)\n$A = 4x - 10$ (cộng các hạng tử đồng dạng)\n\nVậy $A = 4x - 10$ (kết quả cuối cùng)"
+  "problem": "$A = 4(2x - 5) - 2(3x - 1)$",
+  "solution": "$A = 4(2x - 5) - 2(3x - 1)$\n$A = 8x - 20 - 6x + 2$ (phân phối)\n$A = (8x - 6x) + (-20 + 2)$ (nhóm các hạng tử)\n$A = 2x - 18$ (rút gọn)\n$A = 2x - 18$ (kết quả cuối cùng)"
 }
 
 Another CORRECT example - GIẢI PHƯƠNG TRÌNH BẬC HAI:

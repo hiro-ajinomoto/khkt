@@ -263,11 +263,20 @@
   line-height: 2;
   white-space: pre-line;
   word-break: break-word;
+  display: block;
+}
+
+/* Ensure each line in solution text is properly separated */
+.solution-text .math-content {
+  display: block;
+  white-space: pre-line;
 }
 
 .solution-text .MathJax,
 .solution-text .MathJax_SVG {
   font-size: 1em;
+  display: inline-block;
+  white-space: normal;
 }
 
 .solution-text .MathJax_Display {

@@ -202,9 +202,11 @@ function renderTextWithMath(text, renderMathFn) {
   // Fix "∆ = " → "$\Delta = $"
   processedText = processedText.replace(/([Δ∆])\s*=/g, '$' + String.raw`\Delta` + ' = ');
   
-  // Remove tab characters and normalize whitespace
+  // Remove tab characters and normalize whitespace (but preserve line breaks)
   processedText = processedText.replace(/\t/g, ' ');
-  processedText = processedText.replace(/\s+/g, ' '); // Normalize multiple spaces
+  // Normalize multiple spaces but preserve \n (line breaks)
+  processedText = processedText.replace(/[ \t]+/g, ' '); // Replace multiple spaces/tabs with single space
+  processedText = processedText.replace(/[ \t]*\n[ \t]*/g, '\n'); // Normalize line breaks but keep them
   
   // Fix "rac" → "frac" (common typo from AI)
   processedText = processedText.replace(/\brac\{([^}]+)\}\{([^}]+)\}/g, String.raw`\frac{$1}{$2}`);
