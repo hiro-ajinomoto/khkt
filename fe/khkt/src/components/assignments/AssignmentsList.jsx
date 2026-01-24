@@ -738,7 +738,16 @@ function AssignAssignmentModal({ assignmentId, onClose, onSuccess }) {
   const [error, setError] = useState(null);
   const [loadingClasses, setLoadingClasses] = useState(true);
 
-  const CLASSES = ['8A1', '8A2', '8A3', '8A4', '8A5'];
+  // Organize classes by grade level
+  const CLASSES_BY_GRADE = {
+    'Khối 6': ['6A1', '6A2', '6A3', '6A4', '6A5'],
+    'Khối 7': ['7A1', '7A2', '7A3', '7A4', '7A5'],
+    'Khối 8': ['8A1', '8A2', '8A3', '8A4', '8A5'],
+    'Khối 9': ['9A1', '9A2', '9A3', '9A4', '9A5'],
+  };
+
+  // Flatten all classes for backward compatibility
+  const CLASSES = Object.values(CLASSES_BY_GRADE).flat();
 
   useEffect(() => {
     // Load already assigned classes
@@ -766,6 +775,21 @@ function AssignAssignmentModal({ assignmentId, onClose, onSuccess }) {
         return prev.filter((c) => c !== className);
       } else {
         return [...prev, className];
+      }
+    });
+  };
+
+  const handleSelectGrade = (gradeClasses) => {
+    const allSelected = gradeClasses.every((className) => selectedClasses.includes(className));
+    
+    setSelectedClasses((prev) => {
+      if (allSelected) {
+        // Bỏ chọn tất cả lớp trong khối
+        return prev.filter((className) => !gradeClasses.includes(className));
+      } else {
+        // Chọn tất cả lớp trong khối
+        const newClasses = gradeClasses.filter((className) => !prev.includes(className));
+        return [...prev, ...newClasses];
       }
     });
   };
@@ -806,24 +830,46 @@ function AssignAssignmentModal({ assignmentId, onClose, onSuccess }) {
             {loadingClasses ? (
               <div>Đang tải...</div>
             ) : (
-              <div className="classes-grid">
-                {CLASSES.map((className) => {
-                  const isAssigned = assignedClasses.includes(className);
-                  const isSelected = selectedClasses.includes(className);
+              <div className="classes-container">
+                {Object.entries(CLASSES_BY_GRADE).map(([gradeName, gradeClasses]) => {
+                  const allSelected = gradeClasses.every((className) => selectedClasses.includes(className));
+                  const someSelected = gradeClasses.some((className) => selectedClasses.includes(className));
+                  
                   return (
-                    <label
-                      key={className}
-                      className={`class-checkbox ${isAssigned ? 'assigned' : ''} ${isSelected ? 'selected' : ''}`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => handleClassToggle(className)}
-                        disabled={loading}
-                      />
-                      <span>{className}</span>
-                      {isAssigned && <span className="assigned-badge">Đã gán</span>}
-                    </label>
+                    <div key={gradeName} className="grade-group">
+                      <div className="grade-header">
+                        <h3>{gradeName}</h3>
+                        <button
+                          type="button"
+                          onClick={() => handleSelectGrade(gradeClasses)}
+                          className={`select-grade-button ${allSelected ? 'all-selected' : someSelected ? 'some-selected' : ''}`}
+                          disabled={loading}
+                        >
+                          {allSelected ? '☑️ Bỏ chọn cả khối' : '☐ Chọn cả khối'}
+                        </button>
+                      </div>
+                      <div className="classes-grid">
+                        {gradeClasses.map((className) => {
+                          const isAssigned = assignedClasses.includes(className);
+                          const isSelected = selectedClasses.includes(className);
+                          return (
+                            <label
+                              key={className}
+                              className={`class-checkbox ${isAssigned ? 'assigned' : ''} ${isSelected ? 'selected' : ''}`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => handleClassToggle(className)}
+                                disabled={loading}
+                              />
+                              <span>{className}</span>
+                              {isAssigned && <span className="assigned-badge">Đã gán</span>}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
                   );
                 })}
               </div>
