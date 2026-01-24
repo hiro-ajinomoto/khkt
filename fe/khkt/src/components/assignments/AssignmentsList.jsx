@@ -354,7 +354,8 @@ function AssignmentsList() {
                 </button>
               )}
               <button onClick={logout} className="logout-button">
-                Đăng xuất
+                <span className="logout-icon">🚪</span>
+                <span className="logout-text">Đăng xuất</span>
               </button>
             </div>
           ) : (

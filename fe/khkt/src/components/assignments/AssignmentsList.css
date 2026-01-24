@@ -66,6 +66,17 @@
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.logout-icon {
+  font-size: 1rem;
+}
+
+.logout-text {
+  display: inline;
 }
 
 .logout-button:hover,
@@ -689,12 +700,14 @@
   }
 
   .create-text,
-  .refresh-text {
+  .refresh-text,
+  .logout-text {
     display: none;
   }
 
   .create-button,
-  .refresh-button {
+  .refresh-button,
+  .logout-button {
     padding: 0.5rem;
     min-width: 40px;
     justify-content: center;
@@ -702,7 +715,8 @@
   }
 
   .create-icon,
-  .refresh-icon {
+  .refresh-icon,
+  .logout-icon {
     font-size: 1.2rem;
   }
 

@@ -52,6 +52,17 @@
   font-size: 1rem;
   cursor: pointer;
   transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.logout-icon {
+  font-size: 1rem;
+}
+
+.logout-text {
+  display: inline;
 }
 
 .nav-button:hover {
@@ -311,6 +322,20 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  .logout-text {
+    display: none;
+  }
+
+  .logout-button {
+    padding: 0.5rem;
+    min-width: 40px;
+    justify-content: center;
+  }
+
+  .logout-icon {
+    font-size: 1.2rem;
+  }
+
   .admin-dashboard {
     padding: 1rem;
   }
