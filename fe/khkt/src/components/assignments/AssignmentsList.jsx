@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchAssignments, fetchAssignmentsByDate, fetchAssignmentsByMonth, deleteAssignment, assignAssignmentToClasses, getAssignmentClasses } from '../../api/assignments';
+import { fetchAssignments, fetchAssignmentsByDate, fetchAssignmentsByMonth, deleteAssignment, deleteAssignments, assignAssignmentToClasses, getAssignmentClasses } from '../../api/assignments';
 import { useAuth } from '../../contexts/AuthContext';
 import './AssignmentsList.css';
 
@@ -11,6 +11,7 @@ function AssignmentsList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
+  const [isDeleting, setIsDeleting] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedAssignmentToAssign, setSelectedAssignmentToAssign] = useState(null);
 
@@ -199,6 +200,42 @@ function AssignmentsList() {
     } catch (err) {
       alert('Không thể xóa bài tập: ' + (err.message || 'Lỗi không xác định'));
       console.error('Error deleting assignment:', err);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) {
+      return;
+    }
+
+    const count = selectedIds.size;
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa ${count} bài tập đã chọn?`)) {
+      return;
+    }
+
+    setIsDeleting(true);
+    setError(null);
+
+    try {
+      const idsArray = Array.from(selectedIds);
+      const result = await deleteAssignments(idsArray);
+      
+      // Show success message
+      const deletedCount = result.deletedCount || idsArray.length;
+      alert(`Đã xóa thành công ${deletedCount} bài tập${deletedCount > 1 ? '' : ''}`);
+      
+      // Clear selection
+      setSelectedIds(new Set());
+      
+      // Reload assignments
+      await loadAllAssignments();
+    } catch (err) {
+      const errorMessage = err.message || 'Lỗi không xác định';
+      alert('Không thể xóa bài tập: ' + errorMessage);
+      setError(errorMessage);
+      console.error('Error deleting assignments:', err);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -397,19 +434,11 @@ function AssignmentsList() {
         </button>
         {isTeacher && selectedIds.size > 0 && (
           <button
-            onClick={() => {
-              if (
-                window.confirm(
-                  `Bạn có chắc chắn muốn xóa ${selectedIds.size} bài tập đã chọn?`
-                )
-              ) {
-                // TODO: Implement bulk delete
-                alert('Chức năng xóa nhiều bài tập sẽ được triển khai');
-              }
-            }}
+            onClick={handleBulkDelete}
             className="delete-selected-button"
+            disabled={isDeleting}
           >
-            🗑️ Xóa đã chọn ({selectedIds.size})
+            {isDeleting ? '⏳ Đang xóa...' : `🗑️ Xóa đã chọn (${selectedIds.size})`}
           </button>
         )}
       </div>
