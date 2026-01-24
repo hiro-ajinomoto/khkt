@@ -251,6 +251,23 @@ function AssignmentsList() {
     });
   };
 
+  const handleSelectAll = (assignments) => {
+    const assignmentIds = assignments.map((a) => a.id);
+    const allSelected = assignmentIds.every((id) => selectedIds.has(id));
+    
+    setSelectedIds((prev) => {
+      const newSet = new Set(prev);
+      if (allSelected) {
+        // Bỏ chọn tất cả
+        assignmentIds.forEach((id) => newSet.delete(id));
+      } else {
+        // Chọn tất cả
+        assignmentIds.forEach((id) => newSet.add(id));
+      }
+      return newSet;
+    });
+  };
+
   const handleAssign = (assignmentId) => {
     setSelectedAssignmentToAssign(assignmentId);
     setShowAssignModal(true);
@@ -367,7 +384,13 @@ function AssignmentsList() {
     <div className="assignments-container">
       <div className="assignments-header">
         <div className="logo-header">
-          <img src="/logo.png" alt="Logo trường" className="logo" />
+          <img 
+            src="/logo.png" 
+            alt="Logo trường" 
+            className="logo" 
+            onClick={() => navigate('/assignments')}
+            style={{ cursor: 'pointer' }}
+          />
           <h1>Danh sách bài tập</h1>
         </div>
         <div className="header-right">
@@ -455,19 +478,6 @@ function AssignmentsList() {
               onChange={(e) => setSelectedDate(e.target.value)}
               className="date-input"
             />
-            {availableDates.length > 0 && (
-              <select
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="date-select"
-              >
-                {availableDates.map((date) => (
-                  <option key={date} value={date}>
-                    {formatDateHeader(date)}
-                  </option>
-                ))}
-              </select>
-            )}
           </div>
         ) : (
           <div className="month-selector">
@@ -549,9 +559,22 @@ function AssignmentsList() {
           {/* For Teachers: Group by date */}
           {(isTeacher || isAdmin) && Object.keys(filteredAndGroupedByDate).length > 0 && (
             <div className="assignments-by-date">
-              {Object.entries(filteredAndGroupedByDate).map(([date, assignments]) => (
+              {Object.entries(filteredAndGroupedByDate).map(([date, assignments]) => {
+                const assignmentIds = assignments.map((a) => a.id);
+                const allSelected = assignmentIds.length > 0 && assignmentIds.every((id) => selectedIds.has(id));
+                return (
                 <div key={date} className="date-group">
-                  <h2 className="date-header">{formatDateHeader(date)}</h2>
+                  <div className="date-header-with-actions">
+                    <h2 className="date-header">{formatDateHeader(date)}</h2>
+                    {isTeacher && assignments.length > 0 && (
+                      <button
+                        onClick={() => handleSelectAll(assignments)}
+                        className="select-all-button"
+                      >
+                        {allSelected ? '☑️ Bỏ chọn tất cả' : '☐ Chọn tất cả'}
+                      </button>
+                    )}
+                  </div>
                   <div className="assignments-grid">
                     {assignments.map((assignment) => (
                       <AssignmentCard
@@ -568,7 +591,8 @@ function AssignmentsList() {
                     ))}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
@@ -764,7 +788,16 @@ function AssignAssignmentModal({ assignmentId, onClose, onSuccess }) {
   const [error, setError] = useState(null);
   const [loadingClasses, setLoadingClasses] = useState(true);
 
-  const CLASSES = ['8A1', '8A2', '8A3', '8A4', '8A5'];
+  // Organize classes by grade level
+  const CLASSES_BY_GRADE = {
+    'Khối 6': ['6A1', '6A2', '6A3', '6A4', '6A5'],
+    'Khối 7': ['7A1', '7A2', '7A3', '7A4', '7A5'],
+    'Khối 8': ['8A1', '8A2', '8A3', '8A4', '8A5'],
+    'Khối 9': ['9A1', '9A2', '9A3', '9A4', '9A5'],
+  };
+
+  // Flatten all classes for backward compatibility
+  const CLASSES = Object.values(CLASSES_BY_GRADE).flat();
 
   useEffect(() => {
     // Load already assigned classes
@@ -793,6 +826,22 @@ function AssignAssignmentModal({ assignmentId, onClose, onSuccess }) {
       } else {
         return [...prev, className];
       }
+    });
+  };
+
+  const handleSelectGrade = (gradeClasses) => {
+    const allSelected = gradeClasses.every((className) => selectedClasses.includes(className));
+    
+    setSelectedClasses((prev) => {
+      const newSelected = new Set(prev);
+      if (allSelected) {
+        // Bỏ chọn tất cả lớp trong khối
+        gradeClasses.forEach((className) => newSelected.delete(className));
+      } else {
+        // Chọn tất cả lớp trong khối
+        gradeClasses.forEach((className) => newSelected.add(className));
+      }
+      return Array.from(newSelected);
     });
   };
 
@@ -832,24 +881,46 @@ function AssignAssignmentModal({ assignmentId, onClose, onSuccess }) {
             {loadingClasses ? (
               <div>Đang tải...</div>
             ) : (
-              <div className="classes-grid">
-                {CLASSES.map((className) => {
-                  const isAssigned = assignedClasses.includes(className);
-                  const isSelected = selectedClasses.includes(className);
+              <div className="classes-container">
+                {Object.entries(CLASSES_BY_GRADE).map(([gradeName, gradeClasses]) => {
+                  const allSelected = gradeClasses.every((className) => selectedClasses.includes(className));
+                  const someSelected = gradeClasses.some((className) => selectedClasses.includes(className));
+                  
                   return (
-                    <label
-                      key={className}
-                      className={`class-checkbox ${isAssigned ? 'assigned' : ''} ${isSelected ? 'selected' : ''}`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => handleClassToggle(className)}
-                        disabled={loading}
-                      />
-                      <span>{className}</span>
-                      {isAssigned && <span className="assigned-badge">Đã gán</span>}
-                    </label>
+                    <div key={gradeName} className="grade-group">
+                      <div className="grade-header">
+                        <h3>{gradeName}</h3>
+                        <button
+                          type="button"
+                          onClick={() => handleSelectGrade(gradeClasses)}
+                          className={`select-grade-button ${allSelected ? 'all-selected' : someSelected ? 'some-selected' : ''}`}
+                          disabled={loading}
+                        >
+                          {allSelected ? '☑️ Bỏ chọn cả khối' : '☐ Chọn cả khối'}
+                        </button>
+                      </div>
+                      <div className="classes-grid">
+                        {gradeClasses.map((className) => {
+                          const isAssigned = assignedClasses.includes(className);
+                          const isSelected = selectedClasses.includes(className);
+                          return (
+                            <label
+                              key={className}
+                              className={`class-checkbox ${isAssigned ? 'assigned' : ''} ${isSelected ? 'selected' : ''}`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => handleClassToggle(className)}
+                                disabled={loading}
+                              />
+                              <span>{className}</span>
+                              {isAssigned && <span className="assigned-badge">Đã gán</span>}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
                   );
                 })}
               </div>

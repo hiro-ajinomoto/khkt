@@ -24,14 +24,15 @@
 
 .footer-standard {
   margin: 0 0 1rem 0;
-  color: #87ceeb;
-  font-size: 1.4rem;
-  font-weight: 400;
-  letter-spacing: 2px;
+  color: #1976d2;
+  font-size: 2.2rem;
+  font-weight: 700;
+  letter-spacing: 3px;
   font-family: 'Great Vibes', 'Dancing Script', cursive;
   text-decoration: none;
   display: inline-block;
   transform: translateY(-2px);
+  text-shadow: 0 2px 4px rgba(25, 118, 210, 0.2);
 }
 
 .footer-address {

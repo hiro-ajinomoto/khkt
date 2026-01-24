@@ -127,7 +127,13 @@ function AdminDashboard() {
     <div className="admin-dashboard">
       <div className="admin-header">
         <div className="admin-header-left">
-          <img src="/logo.png" alt="Logo trường" className="logo-admin" />
+          <img 
+            src="/logo.png" 
+            alt="Logo trường" 
+            className="logo-admin" 
+            onClick={() => navigate('/assignments')}
+            style={{ cursor: 'pointer' }}
+          />
           <div>
             <h1>Quản trị hệ thống</h1>
             <p>Xin chào, {user?.name || user?.username}</p>
