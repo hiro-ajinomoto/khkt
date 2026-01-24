@@ -23,12 +23,6 @@
   height: 100px;
   width: auto;
   object-fit: contain;
-  transition: transform 0.2s, opacity 0.2s;
-}
-
-.logo-admin:hover {
-  transform: scale(1.05);
-  opacity: 0.9;
 }
 
 .admin-header h1 {

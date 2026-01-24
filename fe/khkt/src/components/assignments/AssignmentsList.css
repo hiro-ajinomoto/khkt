@@ -23,12 +23,6 @@
   height: 100px;
   width: auto;
   object-fit: contain;
-  transition: transform 0.2s, opacity 0.2s;
-}
-
-.logo-header .logo:hover {
-  transform: scale(1.05);
-  opacity: 0.9;
 }
 
 .assignments-header h1 {
@@ -177,14 +171,6 @@
   gap: 1rem;
 }
 
-.date-header-with-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
 .date-header {
   margin: 0;
   padding: 1rem;
@@ -194,27 +180,6 @@
   font-size: 1.3rem;
   font-weight: 600;
   text-transform: capitalize;
-  flex: 1;
-  min-width: 200px;
-}
-
-.select-all-button {
-  padding: 0.5rem 1rem;
-  background-color: #ff9800;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
-
-.select-all-button:hover {
-  background-color: #f57c00;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(255, 152, 0, 0.3);
 }
 
 .my-submissions-button,
@@ -243,6 +208,17 @@
 .create-button {
   background-color: #2196f3;
   color: white;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.create-icon {
+  font-size: 1rem;
+}
+
+.create-text {
+  display: inline;
 }
 
 .create-button:hover {
@@ -252,6 +228,17 @@
 .refresh-button {
   background-color: #4caf50;
   color: white;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.refresh-icon {
+  font-size: 1rem;
+}
+
+.refresh-text {
+  display: inline;
 }
 
 .refresh-button:hover {
@@ -263,15 +250,8 @@
   color: white;
 }
 
-.delete-selected-button:hover:not(:disabled) {
+.delete-selected-button:hover {
   background-color: #da190b;
-}
-
-.delete-selected-button:disabled {
-  background-color: #ccc;
-  color: #666;
-  cursor: not-allowed;
-  opacity: 0.6;
 }
 
 .retry-button {
@@ -576,72 +556,6 @@
   color: #333;
 }
 
-.classes-container {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.grade-group {
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 1rem;
-  background-color: #fafafa;
-}
-
-.grade-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.grade-header h3 {
-  margin: 0;
-  color: #333;
-  font-size: 1.1rem;
-  font-weight: 600;
-}
-
-.select-grade-button {
-  padding: 0.5rem 1rem;
-  background-color: #ff9800;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
-
-.select-grade-button:hover:not(:disabled) {
-  background-color: #f57c00;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(255, 152, 0, 0.3);
-}
-
-.select-grade-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.select-grade-button.all-selected {
-  background-color: #4caf50;
-}
-
-.select-grade-button.all-selected:hover:not(:disabled) {
-  background-color: #45a049;
-}
-
-.select-grade-button.some-selected {
-  background-color: #ff9800;
-  opacity: 0.8;
-}
-
 .classes-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
@@ -774,7 +688,24 @@
     flex-direction: column;
   }
 
-  .refresh-button,
+  .create-text,
+  .refresh-text {
+    display: none;
+  }
+
+  .create-button,
+  .refresh-button {
+    padding: 0.5rem;
+    min-width: 40px;
+    justify-content: center;
+    width: auto;
+  }
+
+  .create-icon,
+  .refresh-icon {
+    font-size: 1.2rem;
+  }
+
   .delete-selected-button {
     width: 100%;
   }

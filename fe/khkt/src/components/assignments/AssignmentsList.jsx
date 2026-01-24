@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchAssignments, fetchAssignmentsByDate, fetchAssignmentsByMonth, deleteAssignment, deleteAssignments, assignAssignmentToClasses, getAssignmentClasses } from '../../api/assignments';
+import { fetchAssignments, fetchAssignmentsByDate, fetchAssignmentsByMonth, deleteAssignment, assignAssignmentToClasses, getAssignmentClasses } from '../../api/assignments';
 import { useAuth } from '../../contexts/AuthContext';
 import './AssignmentsList.css';
 
@@ -11,7 +11,6 @@ function AssignmentsList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
-  const [isDeleting, setIsDeleting] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedAssignmentToAssign, setSelectedAssignmentToAssign] = useState(null);
 
@@ -203,42 +202,6 @@ function AssignmentsList() {
     }
   };
 
-  const handleBulkDelete = async () => {
-    if (selectedIds.size === 0) {
-      return;
-    }
-
-    const count = selectedIds.size;
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa ${count} bài tập đã chọn?`)) {
-      return;
-    }
-
-    setIsDeleting(true);
-    setError(null);
-
-    try {
-      const idsArray = Array.from(selectedIds);
-      const result = await deleteAssignments(idsArray);
-      
-      // Show success message
-      const deletedCount = result.deletedCount || idsArray.length;
-      alert(`Đã xóa thành công ${deletedCount} bài tập${deletedCount > 1 ? '' : ''}`);
-      
-      // Clear selection
-      setSelectedIds(new Set());
-      
-      // Reload assignments
-      await loadAllAssignments();
-    } catch (err) {
-      const errorMessage = err.message || 'Lỗi không xác định';
-      alert('Không thể xóa bài tập: ' + errorMessage);
-      setError(errorMessage);
-      console.error('Error deleting assignments:', err);
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
   const handleSelect = (id) => {
     setSelectedIds((prev) => {
       const newSet = new Set(prev);
@@ -246,23 +209,6 @@ function AssignmentsList() {
         newSet.delete(id);
       } else {
         newSet.add(id);
-      }
-      return newSet;
-    });
-  };
-
-  const handleSelectAll = (assignments) => {
-    const assignmentIds = assignments.map((a) => a.id);
-    const allSelected = assignmentIds.every((id) => selectedIds.has(id));
-    
-    setSelectedIds((prev) => {
-      const newSet = new Set(prev);
-      if (allSelected) {
-        // Bỏ chọn tất cả
-        assignmentIds.forEach((id) => newSet.delete(id));
-      } else {
-        // Chọn tất cả
-        assignmentIds.forEach((id) => newSet.add(id));
       }
       return newSet;
     });
@@ -384,13 +330,7 @@ function AssignmentsList() {
     <div className="assignments-container">
       <div className="assignments-header">
         <div className="logo-header">
-          <img 
-            src="/logo.png" 
-            alt="Logo trường" 
-            className="logo" 
-            onClick={() => navigate('/assignments')}
-            style={{ cursor: 'pointer' }}
-          />
+          <img src="/logo.png" alt="Logo trường" className="logo" />
           <h1>Danh sách bài tập</h1>
         </div>
         <div className="header-right">
@@ -449,19 +389,29 @@ function AssignmentsList() {
             onClick={() => navigate('/assignments/create')}
             className="create-button"
           >
-            ➕ Tạo bài tập mới
+            <span className="create-icon">➕</span>
+            <span className="create-text">Tạo bài tập mới</span>
           </button>
         )}
         <button onClick={loadAllAssignments} className="refresh-button">
-          🔄 Làm mới
+          <span className="refresh-icon">🔄</span>
+          <span className="refresh-text">Làm mới</span>
         </button>
         {isTeacher && selectedIds.size > 0 && (
           <button
-            onClick={handleBulkDelete}
+            onClick={() => {
+              if (
+                window.confirm(
+                  `Bạn có chắc chắn muốn xóa ${selectedIds.size} bài tập đã chọn?`
+                )
+              ) {
+                // TODO: Implement bulk delete
+                alert('Chức năng xóa nhiều bài tập sẽ được triển khai');
+              }
+            }}
             className="delete-selected-button"
-            disabled={isDeleting}
           >
-            {isDeleting ? '⏳ Đang xóa...' : `🗑️ Xóa đã chọn (${selectedIds.size})`}
+            🗑️ Xóa đã chọn ({selectedIds.size})
           </button>
         )}
       </div>
@@ -478,6 +428,19 @@ function AssignmentsList() {
               onChange={(e) => setSelectedDate(e.target.value)}
               className="date-input"
             />
+            {availableDates.length > 0 && (
+              <select
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="date-select"
+              >
+                {availableDates.map((date) => (
+                  <option key={date} value={date}>
+                    {formatDateHeader(date)}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
         ) : (
           <div className="month-selector">
@@ -559,22 +522,9 @@ function AssignmentsList() {
           {/* For Teachers: Group by date */}
           {(isTeacher || isAdmin) && Object.keys(filteredAndGroupedByDate).length > 0 && (
             <div className="assignments-by-date">
-              {Object.entries(filteredAndGroupedByDate).map(([date, assignments]) => {
-                const assignmentIds = assignments.map((a) => a.id);
-                const allSelected = assignmentIds.length > 0 && assignmentIds.every((id) => selectedIds.has(id));
-                return (
+              {Object.entries(filteredAndGroupedByDate).map(([date, assignments]) => (
                 <div key={date} className="date-group">
-                  <div className="date-header-with-actions">
-                    <h2 className="date-header">{formatDateHeader(date)}</h2>
-                    {isTeacher && assignments.length > 0 && (
-                      <button
-                        onClick={() => handleSelectAll(assignments)}
-                        className="select-all-button"
-                      >
-                        {allSelected ? '☑️ Bỏ chọn tất cả' : '☐ Chọn tất cả'}
-                      </button>
-                    )}
-                  </div>
+                  <h2 className="date-header">{formatDateHeader(date)}</h2>
                   <div className="assignments-grid">
                     {assignments.map((assignment) => (
                       <AssignmentCard
@@ -591,8 +541,7 @@ function AssignmentsList() {
                     ))}
                   </div>
                 </div>
-                );
-              })}
+              ))}
             </div>
           )}
 
@@ -788,16 +737,7 @@ function AssignAssignmentModal({ assignmentId, onClose, onSuccess }) {
   const [error, setError] = useState(null);
   const [loadingClasses, setLoadingClasses] = useState(true);
 
-  // Organize classes by grade level
-  const CLASSES_BY_GRADE = {
-    'Khối 6': ['6A1', '6A2', '6A3', '6A4', '6A5'],
-    'Khối 7': ['7A1', '7A2', '7A3', '7A4', '7A5'],
-    'Khối 8': ['8A1', '8A2', '8A3', '8A4', '8A5'],
-    'Khối 9': ['9A1', '9A2', '9A3', '9A4', '9A5'],
-  };
-
-  // Flatten all classes for backward compatibility
-  const CLASSES = Object.values(CLASSES_BY_GRADE).flat();
+  const CLASSES = ['8A1', '8A2', '8A3', '8A4', '8A5'];
 
   useEffect(() => {
     // Load already assigned classes
@@ -826,22 +766,6 @@ function AssignAssignmentModal({ assignmentId, onClose, onSuccess }) {
       } else {
         return [...prev, className];
       }
-    });
-  };
-
-  const handleSelectGrade = (gradeClasses) => {
-    const allSelected = gradeClasses.every((className) => selectedClasses.includes(className));
-    
-    setSelectedClasses((prev) => {
-      const newSelected = new Set(prev);
-      if (allSelected) {
-        // Bỏ chọn tất cả lớp trong khối
-        gradeClasses.forEach((className) => newSelected.delete(className));
-      } else {
-        // Chọn tất cả lớp trong khối
-        gradeClasses.forEach((className) => newSelected.add(className));
-      }
-      return Array.from(newSelected);
     });
   };
 
@@ -881,46 +805,24 @@ function AssignAssignmentModal({ assignmentId, onClose, onSuccess }) {
             {loadingClasses ? (
               <div>Đang tải...</div>
             ) : (
-              <div className="classes-container">
-                {Object.entries(CLASSES_BY_GRADE).map(([gradeName, gradeClasses]) => {
-                  const allSelected = gradeClasses.every((className) => selectedClasses.includes(className));
-                  const someSelected = gradeClasses.some((className) => selectedClasses.includes(className));
-                  
+              <div className="classes-grid">
+                {CLASSES.map((className) => {
+                  const isAssigned = assignedClasses.includes(className);
+                  const isSelected = selectedClasses.includes(className);
                   return (
-                    <div key={gradeName} className="grade-group">
-                      <div className="grade-header">
-                        <h3>{gradeName}</h3>
-                        <button
-                          type="button"
-                          onClick={() => handleSelectGrade(gradeClasses)}
-                          className={`select-grade-button ${allSelected ? 'all-selected' : someSelected ? 'some-selected' : ''}`}
-                          disabled={loading}
-                        >
-                          {allSelected ? '☑️ Bỏ chọn cả khối' : '☐ Chọn cả khối'}
-                        </button>
-                      </div>
-                      <div className="classes-grid">
-                        {gradeClasses.map((className) => {
-                          const isAssigned = assignedClasses.includes(className);
-                          const isSelected = selectedClasses.includes(className);
-                          return (
-                            <label
-                              key={className}
-                              className={`class-checkbox ${isAssigned ? 'assigned' : ''} ${isSelected ? 'selected' : ''}`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={() => handleClassToggle(className)}
-                                disabled={loading}
-                              />
-                              <span>{className}</span>
-                              {isAssigned && <span className="assigned-badge">Đã gán</span>}
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </div>
+                    <label
+                      key={className}
+                      className={`class-checkbox ${isAssigned ? 'assigned' : ''} ${isSelected ? 'selected' : ''}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleClassToggle(className)}
+                        disabled={loading}
+                      />
+                      <span>{className}</span>
+                      {isAssigned && <span className="assigned-badge">Đã gán</span>}
+                    </label>
                   );
                 })}
               </div>
