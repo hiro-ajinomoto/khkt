@@ -14,25 +14,31 @@ const GRADE_LEVELS = [
   'Lớp 12',
 ];
 
+const emptyFormData = () => ({
+  title: '',
+  description: '',
+  grade_level: '',
+  question_image: null,
+  model_solution_image: null,
+  question_image_url: '',
+  model_solution_image_url: '',
+});
+
 function CreateAssignmentForm() {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    grade_level: '',
-    question_image: null,
-    model_solution_image: null,
-    question_image_url: '',
-    model_solution_image_url: '',
-  });
+  const [formData, setFormData] = useState(emptyFormData);
 
   const [previewUrls, setPreviewUrls] = useState({
     question: null,
     solution: null,
   });
 
+  /** Tăng sau mỗi lần tạo xong để reset input file (trình duyệt không bind lại tên file cũ). */
+  const [fileInputKey, setFileInputKey] = useState(0);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -41,6 +47,7 @@ function CreateAssignmentForm() {
       [name]: value,
     }));
     setError(null);
+    setSuccessMessage(null);
   };
 
   const handleFileChange = (e) => {
@@ -48,6 +55,7 @@ function CreateAssignmentForm() {
     const file = files[0];
 
     if (file) {
+      setSuccessMessage(null);
       setFormData((prev) => ({
         ...prev,
         [name]: file,
@@ -66,6 +74,7 @@ function CreateAssignmentForm() {
 
   const handleUrlChange = (e) => {
     const { name, value } = e.target;
+    setSuccessMessage(null);
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -77,6 +86,7 @@ function CreateAssignmentForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
+    setSuccessMessage(null);
 
     // Validation
     if (!formData.title.trim()) {
@@ -131,12 +141,15 @@ function CreateAssignmentForm() {
 
       await createAssignment(formDataToSend);
 
-      // Cleanup preview URLs
       if (previewUrls.question) URL.revokeObjectURL(previewUrls.question);
       if (previewUrls.solution) URL.revokeObjectURL(previewUrls.solution);
 
-      // Navigate back to assignments list
-      navigate('/');
+      setFormData(emptyFormData());
+      setPreviewUrls({ question: null, solution: null });
+      setFileInputKey((k) => k + 1);
+      setSuccessMessage(
+        'Đã tạo bài tập thành công. Bạn có thể nhập bài tiếp theo bên dưới.'
+      );
     } catch (err) {
       setError(err.message || 'Không thể tạo bài tập. Vui lòng thử lại.');
       console.error('Error creating assignment:', err);
@@ -150,8 +163,7 @@ function CreateAssignmentForm() {
     if (previewUrls.question) URL.revokeObjectURL(previewUrls.question);
     if (previewUrls.solution) URL.revokeObjectURL(previewUrls.solution);
 
-    // Navigate back to assignments list
-    navigate('/');
+    navigate('/assignments', { replace: true });
   };
 
   return (
@@ -168,6 +180,11 @@ function CreateAssignmentForm() {
       </div>
 
       <form onSubmit={handleSubmit} className="assignment-form">
+        {successMessage ? (
+          <div className="success-message" role="status">
+            {successMessage}
+          </div>
+        ) : null}
         {/* Title */}
         <div className="form-group">
           <label htmlFor="title">
@@ -232,6 +249,7 @@ function CreateAssignmentForm() {
                     : 'Chọn file hình ảnh'}
                 </span>
                 <input
+                  key={`question-${fileInputKey}`}
                   id="question_image_file"
                   type="file"
                   name="question_image"
@@ -281,6 +299,7 @@ function CreateAssignmentForm() {
                     : 'Chọn file hình ảnh'}
                 </span>
                 <input
+                  key={`solution-${fileInputKey}`}
                   id="solution_image_file"
                   type="file"
                   name="model_solution_image"
