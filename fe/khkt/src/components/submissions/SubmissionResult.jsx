@@ -326,9 +326,9 @@ function SubmissionResult({ submission }) {
   };
 
   const getScoreColor = (score) => {
-    if (score >= 8) return '#4caf50'; // Green
-    if (score >= 6) return '#ff9800'; // Orange
-    return '#f44336'; // Red
+    if (score >= 8) return '#34d399';
+    if (score >= 6) return '#fbbf24';
+    return '#f87171';
   };
 
   return (

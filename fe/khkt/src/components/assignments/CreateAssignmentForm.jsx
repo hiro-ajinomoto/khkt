@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createAssignment } from '../../api/assignments';
+import OceanShell from '../layout/OceanShell';
 import './CreateAssignmentForm.css';
 
 const GRADE_LEVELS = [
@@ -154,9 +155,13 @@ function CreateAssignmentForm() {
   };
 
   return (
+    <OceanShell>
     <div className="create-assignment-form-container">
       <div className="form-header">
-        <h2>Tạo bài tập mới</h2>
+        <div>
+          <p className="ocean-page-eyebrow">Cuộc thi khoa học kỹ thuật</p>
+          <h2>Tạo bài tập mới</h2>
+        </div>
         <button onClick={handleCancel} className="cancel-button">
           ✕
         </button>
@@ -329,6 +334,7 @@ function CreateAssignmentForm() {
         </div>
       </form>
     </div>
+    </OceanShell>
   );
 }
 

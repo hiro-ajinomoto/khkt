@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { login as loginAPI, register as registerAPI } from '../../api/auth';
+import OceanShell from '../layout/OceanShell';
 import './AuthPage.css';
 
 function AuthPage() {
@@ -133,13 +134,22 @@ function AuthPage() {
   };
 
   return (
-    <div className="auth-page-container">
-      <div className="auth-page-card">
+    <OceanShell centered contentClassName="!max-w-none">
+      <div className="auth-page-card w-full max-w-md rounded-[28px] border border-cyan-300/15 bg-slate-900/80 shadow-2xl shadow-cyan-950/40 ring-1 ring-white/10 backdrop-blur-xl">
         <div className="auth-page-header">
           <img src="/logo.png" alt="Logo trường" className="logo-auth" />
           <p className="school-name">TRƯỜNG THCS TÂN THÀNH - ĐỒNG NAI</p>
-          <h1>Hệ thống chấm bài Toán tự động</h1>
-          <p>Đăng nhập hoặc đăng ký để tiếp tục</p>
+          {activeTab === 'login' ? (
+            <>
+              <h1>Đăng nhập</h1>
+              <p>Hệ thống chấm bài Toán tự động</p>
+            </>
+          ) : (
+            <>
+              <h1>Đăng ký</h1>
+              <p>Tạo tài khoản học sinh</p>
+            </>
+          )}
         </div>
 
         <div className="auth-tabs">
@@ -234,22 +244,14 @@ function AuthPage() {
               />
             </div>
 
-            <div className="form-group" style={{ display: 'block', visibility: 'visible' }}>
-              <label htmlFor="register-class" style={{ display: 'block' }}>Lớp (tùy chọn)</label>
+            <div className="form-group">
+              <label htmlFor="register-class">Lớp (tùy chọn)</label>
               <select
                 id="register-class"
                 name="class_name"
                 value={registerData.class_name || ''}
                 onChange={handleRegisterChange}
                 disabled={isSubmitting}
-                style={{ 
-                  display: 'block', 
-                  width: '100%',
-                  visibility: 'visible',
-                  opacity: 1,
-                  height: 'auto',
-                  minHeight: '40px'
-                }}
               >
                 <option value="">Chọn lớp (tùy chọn)</option>
                 <option value="8A1">8A1</option>
@@ -258,7 +260,7 @@ function AuthPage() {
                 <option value="8A4">8A4</option>
                 <option value="8A5">8A5</option>
               </select>
-              <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.75rem', color: '#999', fontStyle: 'italic' }}>
+              <p className="field-hint">
                 * Lưu ý: Chỉ học sinh cần chọn lớp. Nếu bạn trở thành giáo viên sau này, bạn không cần lớp.
               </p>
             </div>
@@ -315,7 +317,7 @@ function AuthPage() {
           )}
         </div>
       </div>
-    </div>
+    </OceanShell>
   );
 }
 

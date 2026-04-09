@@ -1,31 +1,39 @@
 .app {
   min-height: 100vh;
-  background-color: #f5f5f5;
+  min-height: 100dvh;
+  background-color: var(--ocean-bg-deep);
   display: flex;
   flex-direction: column;
 }
 
+/* Route content (OceanShell, v.v.) chiếm hết chiều cao còn lại — căn giữa /login đúng */
+.app > :first-child {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .app-footer {
   margin-top: auto;
-  margin-bottom: 3rem;
-  padding: 3rem 2rem;
-  background-color: #fff;
-  border-top: 1px solid #e0e0e0;
+  padding: 2.5rem 1.5rem 3rem;
+  background: linear-gradient(180deg, rgba(2, 6, 23, 0.4) 0%, rgba(15, 23, 42, 0.95) 100%);
+  border-top: 1px solid rgba(103, 232, 249, 0.12);
   text-align: center;
 }
 
 .footer-school-name {
   margin: 0 0 0.75rem 0;
-  color: #f5a5a5;
-  font-size: 1.5rem;
+  color: #fecaca;
+  font-size: 1.35rem;
   font-weight: 600;
   letter-spacing: 0.5px;
 }
 
 .footer-standard {
   margin: 0 0 1rem 0;
-  color: #87ceeb;
-  font-size: 1.4rem;
+  color: #7dd3fc;
+  font-size: 1.35rem;
   font-weight: 400;
   letter-spacing: 2px;
   font-family: 'Great Vibes', 'Dancing Script', cursive;
@@ -36,14 +44,14 @@
 
 .footer-address {
   margin: 0 0 0.5rem 0;
-  color: #666;
-  font-size: 1rem;
+  color: #94a3b8;
+  font-size: 0.95rem;
   font-weight: 400;
 }
 
 .footer-phone {
   margin: 0;
-  color: #666;
-  font-size: 1rem;
+  color: #94a3b8;
+  font-size: 0.95rem;
   font-weight: 400;
 }

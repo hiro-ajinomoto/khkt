@@ -1,115 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Đồng bộ với /assignments: nền slate sâu, viền cyan, kính mờ, accent cyan → violet */
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light;
-  color: #333 !important;
-  background-color: #ffffff;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --ocean-bg-deep: #020617;
+  --ocean-border: rgba(103, 232, 249, 0.15);
+  --ocean-border-strong: rgba(103, 232, 249, 0.22);
+  --ocean-surface-glass: rgba(255, 255, 255, 0.05);
+  --ocean-surface-raised: rgba(15, 23, 42, 0.55);
+  --ocean-shadow-panel: 0 25px 50px -12px rgba(8, 47, 73, 0.35);
+  --ocean-text: #f8fafc;
+  --ocean-text-muted: #94a3b8;
+  --ocean-text-body: #cbd5e1;
+  --ocean-eyebrow: rgba(165, 243, 252, 0.85);
+  --ocean-gradient-banner: linear-gradient(
+    90deg,
+    rgba(59, 130, 246, 0.65),
+    rgba(14, 165, 233, 0.6),
+    rgba(124, 58, 246, 0.55)
+  );
+  --ocean-gradient-button: linear-gradient(
+    135deg,
+    rgba(6, 182, 212, 0.92),
+    rgba(124, 58, 237, 0.88)
+  );
 }
 
-/* Force input text color - override dark mode */
-input[type="text"],
-input[type="password"],
-input[type="email"],
-input[type="number"],
-textarea,
-select {
-  color: #333 !important;
-  background-color: white !important;
-  -webkit-text-fill-color: #333 !important; /* Override Safari autofill */
-}
-
-input[type="text"]::placeholder,
-input[type="password"]::placeholder,
-input[type="email"]::placeholder,
-textarea::placeholder {
-  color: #999 !important;
-  opacity: 1 !important;
-  -webkit-text-fill-color: #999 !important;
-}
-
-/* Force input color even in dark mode */
-@media (prefers-color-scheme: dark) {
-  input[type="text"],
-  input[type="password"],
-  input[type="email"],
-  input[type="number"],
-  textarea,
-  select {
-    color: #333 !important;
-    background-color: white !important;
-    -webkit-text-fill-color: #333 !important;
-  }
-  
-  input[type="text"]::placeholder,
-  input[type="password"]::placeholder,
-  input[type="email"]::placeholder,
-  textarea::placeholder {
-    color: #999 !important;
-    opacity: 1 !important;
-    -webkit-text-fill-color: #999 !important;
-  }
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+/* Dòng phụ đề uppercase (giống header /assignments) */
+.ocean-page-eyebrow {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.35em;
+  color: var(--ocean-eyebrow);
 }
 
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background-color: #f5f5f5;
+  background-color: var(--ocean-bg-deep);
+  color: #e2e8f0;
 }
 
-#root {
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
-}

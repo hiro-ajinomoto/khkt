@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { register as registerAPI } from '../../api/auth';
-import './Login.css';
+import OceanShell from '../layout/OceanShell';
+import './AuthPage.css';
 
 function Register() {
   const navigate = useNavigate();
@@ -80,16 +81,16 @@ function Register() {
   };
 
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <div className="login-header">
+    <OceanShell centered contentClassName="!max-w-none">
+      <div className="auth-page-card w-full max-w-md rounded-[28px] border border-cyan-300/15 bg-slate-900/80 shadow-2xl shadow-cyan-950/40 ring-1 ring-white/10 backdrop-blur-xl">
+        <div className="auth-page-header">
           <img src="/logo.png" alt="Logo trường" className="logo-auth" />
           <p className="school-name">TRƯỜNG THCS TÂN THÀNH - ĐỒNG NAI</p>
           <h1>Đăng ký</h1>
           <p>Tạo tài khoản mới</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="login-form">
+        <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
             <label htmlFor="username">Tên đăng nhập</label>
             <input
@@ -126,14 +127,6 @@ function Register() {
               value={formData.class_name || ''}
               onChange={handleInputChange}
               disabled={isSubmitting}
-              style={{ 
-                display: 'block', 
-                width: '100%',
-                visibility: 'visible',
-                opacity: 1,
-                height: 'auto',
-                minHeight: '40px'
-              }}
             >
               <option value="">Chọn lớp (tùy chọn)</option>
               <option value="8A1">8A1</option>
@@ -142,7 +135,7 @@ function Register() {
               <option value="8A4">8A4</option>
               <option value="8A5">8A5</option>
             </select>
-            <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.75rem', color: '#999', fontStyle: 'italic' }}>
+            <p className="field-hint">
               * Lưu ý: Chỉ học sinh cần chọn lớp. Nếu bạn trở thành giáo viên sau này, bạn không cần lớp.
             </p>
           </div>
@@ -176,30 +169,26 @@ function Register() {
             />
           </div>
 
-          {error && <div className="error-message">{error}</div>}
+          {error ? <div className="error-message">{error}</div> : null}
 
-          <button
-            type="submit"
-            className="login-button"
-            disabled={isSubmitting}
-          >
+          <button type="submit" className="submit-button" disabled={isSubmitting}>
             {isSubmitting ? 'Đang đăng ký...' : 'Đăng ký'}
           </button>
         </form>
 
-        <div className="login-footer">
+        <div className="auth-footer">
           <p className="help-text">
             Đã có tài khoản?{' '}
             <Link to="/login" className="link-text">
               Đăng nhập ngay
             </Link>
           </p>
-          <p className="help-text" style={{ marginTop: '0.5rem', fontSize: '0.8rem' }}>
+          <p className="help-text help-text-register-note">
             Tài khoản mới sẽ được tạo với quyền học sinh. Để trở thành giáo viên, vui lòng liên hệ quản trị viên.
           </p>
         </div>
       </div>
-    </div>
+    </OceanShell>
   );
 }
 

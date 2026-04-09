@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchAssignments, fetchAssignmentsByDate, fetchAssignmentsByMonth, deleteAssignment, assignAssignmentToClasses, getAssignmentClasses } from '../../api/assignments';
 import { useAuth } from '../../contexts/AuthContext';
+import OceanShell, { OceanPageLoading, OceanPageError } from '../layout/OceanShell';
 import './AssignmentsList.css';
 
 function AssignmentsList() {
@@ -306,282 +307,394 @@ function AssignmentsList() {
   }, [allAssignments, isTeacher, isAdmin]);
 
   if (loading) {
-    return (
-      <div className="assignments-container">
-        <div className="loading">Đang tải...</div>
-      </div>
-    );
+    return <OceanPageLoading message="Đang tải danh sách bài tập" />;
   }
 
   if (error) {
     return (
-      <div className="assignments-container">
-        <div className="error">
-          <p>Lỗi: {error}</p>
-          <button onClick={loadAssignments} className="retry-button">
-            Thử lại
-          </button>
-        </div>
-      </div>
+      <OceanPageError
+        message={error}
+        onRetry={loadAllAssignments}
+        retryLabel="Thử tải lại"
+      />
     );
   }
 
   return (
-    <div className="assignments-container">
-      <div className="assignments-header">
-        <div className="logo-header">
-          <img src="/logo.png" alt="Logo trường" className="logo" />
-          <h1>Danh sách bài tập</h1>
-        </div>
-        <div className="header-right">
-          {isAuthenticated ? (
-            <div className="user-info">
-              <span className="user-name">
-                {user?.name || user?.username} (
-                {user?.role === 'admin'
-                  ? 'Quản trị viên'
-                  : user?.role === 'teacher'
-                  ? 'Giáo viên'
-                  : 'Học sinh'}
-                )
-              </span>
-              {isAdmin && (
+    <OceanShell>
+        {/* Header */}
+        <header className="mb-10 flex flex-col gap-6 rounded-[28px] border border-cyan-300/15 bg-white/5 p-6 shadow-2xl shadow-cyan-950/30 backdrop-blur-xl lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="relative h-16 w-16 overflow-hidden rounded-2xl border border-cyan-300/30 bg-gradient-to-br from-cyan-300/20 via-sky-400/10 to-blue-500/20 p-1 shadow-lg shadow-cyan-950/40">
+              <div className="flex h-full w-full items-center justify-center rounded-[14px] bg-slate-900/80 text-xl font-bold text-cyan-200">
+                {user?.name?.[0] || user?.username?.[0] || 'ST'}
+              </div>
+              <div className="absolute inset-x-1 top-1 h-4 rounded-full bg-cyan-300/20 blur-md" />
+            </div>
+            <div>
+              <p className="mb-2 text-xs uppercase tracking-[0.35em] text-cyan-200/80">
+                Cuộc thi khoa học kỹ thuật
+              </p>
+              <h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
+                Danh sách bài tập &amp; thử thách
+              </h1>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-start gap-3 lg:items-end">
+            {isAuthenticated ? (
+              <>
+                <div className="rounded-2xl border border-white/10 bg-slate-900/50 px-4 py-3 text-sm text-slate-300 backdrop-blur">
+                  {user?.name || user?.username}{' '}
+                  <span className="text-cyan-200">
+                    (
+                    {user?.role === 'admin'
+                      ? 'Quản trị viên'
+                      : user?.role === 'teacher'
+                      ? 'Giáo viên'
+                      : 'Học sinh'}
+                    )
+                  </span>
+                </div>
+                <div className="flex gap-3">
+                  {isAdmin && (
+                    <button
+                      onClick={() => navigate('/admin')}
+                      className="group relative overflow-hidden rounded-2xl border border-amber-300/40 bg-gradient-to-r from-amber-500/40 via-amber-400/30 to-amber-500/40 px-5 py-3 text-sm font-medium text-amber-50 shadow-lg shadow-amber-950/40 transition hover:-translate-y-0.5"
+                    >
+                      <span className="relative z-10">⚙️ Trang quản trị</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={logout}
+                    className="group relative overflow-hidden rounded-2xl border border-cyan-300/30 bg-gradient-to-r from-sky-500/20 via-cyan-400/20 to-blue-500/20 px-5 py-3 text-sm font-medium text-white shadow-lg shadow-cyan-950/30 transition hover:-translate-y-0.5 hover:border-cyan-200/40 hover:shadow-cyan-900/50"
+                  >
+                    <span className="relative z-10">Đăng xuất</span>
+                    <span className="absolute inset-0 bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.18),transparent)] translate-x-[-120%] group-hover:translate-x-[120%] transition duration-1000" />
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="flex gap-3">
                 <button
-                  onClick={() => navigate('/admin')}
-                  className="admin-button"
+                  onClick={() => navigate('/login')}
+                  className="rounded-2xl border border-cyan-300/40 bg-slate-900/70 px-5 py-3 text-sm font-medium text-cyan-100 shadow-lg shadow-cyan-950/40 hover:-translate-y-0.5 transition"
                 >
-                  ⚙️ Quản trị
+                  Đăng nhập
+                </button>
+                <button
+                  onClick={() => navigate('/register')}
+                  className="rounded-2xl border border-fuchsia-300/40 bg-gradient-to-r from-fuchsia-500/70 to-violet-600/80 px-5 py-3 text-sm font-medium text-white shadow-lg shadow-fuchsia-950/40 hover:-translate-y-0.5 transition"
+                >
+                  Đăng ký
+                </button>
+              </div>
+            )}
+          </div>
+        </header>
+
+        {/* Filters + quick actions */}
+        <section className="mb-8 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="rounded-[28px] border border-cyan-300/15 bg-white/5 p-5 backdrop-blur-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-white">Bộ lọc thời gian</h2>
+              <div className="h-px flex-1 mx-4 bg-gradient-to-r from-cyan-300/30 to-transparent" />
+              <span className="text-xs uppercase tracking-[0.28em] text-cyan-200/70">
+                Ocean UI
+              </span>
+            </div>
+
+            {isTeacher || isAdmin ? (
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="group rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-400">
+                    Ngày
+                  </label>
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="w-full rounded-xl border border-cyan-400/20 bg-gradient-to-r from-slate-900 to-sky-950/60 px-4 py-3 text-slate-100 outline-none ring-0 focus:border-cyan-300/60"
+                  />
+                </div>
+
+                <div className="group rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-400">
+                    Ngày có bài tập
+                  </label>
+                  <select
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="w-full rounded-xl border border-cyan-400/20 bg-gradient-to-r from-slate-900 to-sky-950/60 px-4 py-3 text-slate-100 outline-none ring-0"
+                  >
+                    {availableDates.length === 0 ? (
+                      <option value={selectedDate}>{formatDateHeader(selectedDate)}</option>
+                    ) : (
+                      availableDates.map((date) => (
+                        <option key={date} value={date}>
+                          {formatDateHeader(date)}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+
+                <div className="group rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-400">
+                    Thống kê
+                  </label>
+                  <div className="rounded-xl border border-cyan-400/10 bg-gradient-to-r from-slate-900 to-sky-950/60 px-4 py-3 text-sm text-slate-100">
+                    {filteredAssignments.length} bài tập vào ngày{' '}
+                    {formatDateHeader(selectedDate)}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="group rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-400">
+                    Năm
+                  </label>
+                  <input
+                    type="number"
+                    value={selectedYear}
+                    onChange={(e) =>
+                      setSelectedYear(parseInt(e.target.value, 10) || selectedYear)
+                    }
+                    min="2020"
+                    max="2100"
+                    className="w-full rounded-xl border border-cyan-400/20 bg-gradient-to-r from-slate-900 to-sky-950/60 px-4 py-3 text-slate-100 outline-none ring-0"
+                  />
+                </div>
+                <div className="group rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-400">
+                    Tháng
+                  </label>
+                  <select
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(parseInt(e.target.value, 10))}
+                    className="w-full rounded-xl border border-cyan-400/20 bg-gradient-to-r from-slate-900 to-sky-950/60 px-4 py-3 text-slate-100 outline-none ring-0"
+                  >
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((month) => (
+                      <option key={month} value={month}>
+                        Tháng {month}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="group rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-400">
+                    Tháng có bài tập
+                  </label>
+                  <select
+                    value={`${selectedYear}-${selectedMonth}`}
+                    onChange={(e) => {
+                      const [year, month] = e.target.value.split('-').map(Number);
+                      setSelectedYear(year);
+                      setSelectedMonth(month);
+                    }}
+                    className="w-full rounded-xl border border-cyan-400/20 bg-gradient-to-r from-slate-900 to-sky-950/60 px-4 py-3 text-slate-100 outline-none ring-0"
+                  >
+                    {availableMonths.length === 0 ? (
+                      <option value={`${selectedYear}-${selectedMonth}`}>
+                        {formatMonthYear(selectedYear, selectedMonth)}
+                      </option>
+                    ) : (
+                      availableMonths.map(({ year, month }) => (
+                        <option key={`${year}-${month}`} value={`${year}-${month}`}>
+                          {formatMonthYear(year, month)}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-[28px] border border-cyan-300/15 bg-gradient-to-br from-cyan-400/10 via-sky-400/5 to-blue-500/10 p-5 backdrop-blur-xl">
+            <div className="mb-5 flex items-center gap-3">
+              <div className="h-10 w-10 rounded-2xl bg-cyan-300/10 flex items-center justify-center text-cyan-200">
+                ✦
+              </div>
+              <div>
+                <h3 className="font-semibold text-white">Thống kê nhanh</h3>
+                <p className="text-sm text-slate-300">
+                  {filteredAssignments.length} bài tập trong{' '}
+                  {isTeacher || isAdmin
+                    ? formatDateHeader(selectedDate)
+                    : formatMonthYear(selectedYear, selectedMonth)}
+                </p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {isStudent && (
+                <button
+                  onClick={() => navigate('/my-submissions')}
+                  className="w-full rounded-2xl border border-fuchsia-300/20 bg-gradient-to-r from-fuchsia-500/80 to-violet-600/80 px-4 py-3 font-medium text-white shadow-lg shadow-fuchsia-950/30 transition hover:-translate-y-0.5"
+                >
+                  📝 Bài đã nộp
                 </button>
               )}
-              <button onClick={logout} className="logout-button">
-                <span className="logout-icon">🚪</span>
-                <span className="logout-text">Đăng xuất</span>
-              </button>
-            </div>
-          ) : (
-            <div className="auth-buttons">
+              {isTeacher && (
+                <button
+                  onClick={() => navigate('/assignments/create')}
+                  className="w-full rounded-2xl border border-emerald-300/20 bg-gradient-to-r from-emerald-500/80 to-cyan-500/80 px-4 py-3 font-medium text-white shadow-lg shadow-emerald-950/30 transition hover:-translate-y-0.5"
+                >
+                  ➕ Tạo bài tập mới
+                </button>
+              )}
               <button
-                onClick={() => navigate('/register')}
-                className="register-button-header"
+                onClick={loadAllAssignments}
+                className="w-full rounded-2xl border border-cyan-300/20 bg-gradient-to-r from-cyan-500/70 to-blue-600/80 px-4 py-3 font-medium text-white shadow-lg shadow-cyan-950/30 transition hover:-translate-y-0.5"
               >
-                Đăng ký
+                ↻ Làm mới dữ liệu
               </button>
-              <button
-                onClick={() => navigate('/login')}
-                className="login-button-header"
-              >
-                Đăng nhập
-              </button>
+              {isTeacher && selectedIds.size > 0 && (
+                <button
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        `Bạn có chắc chắn muốn xóa ${selectedIds.size} bài tập đã chọn?`
+                      )
+                    ) {
+                      alert('Chức năng xóa nhiều bài tập sẽ được triển khai');
+                    }
+                  }}
+                  className="w-full rounded-2xl border border-rose-300/30 bg-rose-500/20 px-4 py-3 text-sm font-medium text-rose-50 shadow-lg shadow-rose-950/40 transition hover:-translate-y-0.5"
+                >
+                  🗑️ Xóa đã chọn ({selectedIds.size})
+                </button>
+              )}
             </div>
-          )}
-        </div>
-      </div>
-      <div className="header-actions">
-        {isStudent && (
-          <button
-            onClick={() => navigate('/my-submissions')}
-            className="my-submissions-button"
-          >
-            📝 Bài đã nộp
-          </button>
-        )}
-        {isTeacher && (
-          <button
-            onClick={() => navigate('/assignments/create')}
-            className="create-button"
-          >
-            <span className="create-icon">➕</span>
-            <span className="create-text">Tạo bài tập mới</span>
-          </button>
-        )}
-        <button onClick={loadAllAssignments} className="refresh-button">
-          <span className="refresh-icon">🔄</span>
-          <span className="refresh-text">Làm mới</span>
-        </button>
-        {isTeacher && selectedIds.size > 0 && (
-          <button
-            onClick={() => {
-              if (
-                window.confirm(
-                  `Bạn có chắc chắn muốn xóa ${selectedIds.size} bài tập đã chọn?`
-                )
-              ) {
-                // TODO: Implement bulk delete
-                alert('Chức năng xóa nhiều bài tập sẽ được triển khai');
-              }
-            }}
-            className="delete-selected-button"
-          >
-            🗑️ Xóa đã chọn ({selectedIds.size})
-          </button>
-        )}
-      </div>
+          </div>
+        </section>
 
-      {/* Date/Month Selector */}
-      <div className="filter-section">
-        {isTeacher || isAdmin ? (
-          <div className="date-selector">
-            <label htmlFor="date-select">Chọn ngày:</label>
-            <input
-              id="date-select"
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="date-input"
-            />
-            {availableDates.length > 0 && (
-              <select
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="date-select"
-              >
-                {availableDates.map((date) => (
-                  <option key={date} value={date}>
-                    {formatDateHeader(date)}
-                  </option>
-                ))}
-              </select>
-            )}
+        {/* Timeline banner */}
+        <section className="mb-6">
+          <div className="relative overflow-hidden rounded-[28px] border border-cyan-300/20 bg-gradient-to-r from-blue-500/70 via-sky-500/65 to-violet-600/60 px-6 py-5 shadow-2xl shadow-sky-950/30">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.18),transparent_20%),radial-gradient(circle_at_80%_0%,rgba(255,255,255,0.14),transparent_18%)]" />
+            <div className="relative">
+              <p className="text-xs uppercase tracking-[0.3em] text-cyan-50/75">
+                Mốc thời gian
+              </p>
+              <h2 className="mt-1 text-2xl font-semibold text-white">
+                {isTeacher || isAdmin
+                  ? formatDateHeader(selectedDate)
+                  : `Tháng ${selectedMonth}, ${selectedYear}`}
+              </h2>
+            </div>
+          </div>
+        </section>
+
+        {/* Empty states */}
+        {allAssignments.length === 0 ? (
+          <div className="mt-10 rounded-3xl border border-white/10 bg-slate-900/70 px-6 py-10 text-center text-slate-200">
+            {isTeacher || isAdmin
+              ? 'Chưa có bài tập nào. Hãy tạo bài tập mới cho học sinh nhé!'
+              : 'Chưa có bài tập nào được gán cho lớp của bạn.'}
+          </div>
+        ) : filteredAssignments.length === 0 ? (
+          <div className="mt-10 rounded-3xl border border-white/10 bg-slate-900/70 px-6 py-10 text-center text-slate-200">
+            {isTeacher || isAdmin
+              ? `Chưa có bài tập nào vào ngày ${formatDateHeader(
+                  selectedDate
+                )}. Tổng số bài tập: ${allAssignments.length}`
+              : `Chưa có bài tập nào trong tháng ${formatMonthYear(
+                  selectedYear,
+                  selectedMonth
+                )}. Tổng số bài tập: ${allAssignments.length}`}
           </div>
         ) : (
-          <div className="month-selector">
-            <label htmlFor="month-select">Chọn tháng:</label>
-            <div className="month-inputs">
-              <input
-                id="year-input"
-                type="number"
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(parseInt(e.target.value, 10))}
-                className="year-input"
-                min="2020"
-                max="2100"
-              />
-              <select
-                id="month-select"
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(parseInt(e.target.value, 10))}
-                className="month-select"
-              >
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((month) => (
-                  <option key={month} value={month}>
-                    Tháng {month}
-                  </option>
-                ))}
-              </select>
+          <>
+            {/* Stats line */}
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-200">
+              <span>
+                Tổng số: {filteredAssignments.length} bài tập
+                {isTeacher || isAdmin
+                  ? ` vào ngày ${formatDateHeader(selectedDate)}`
+                  : ` trong tháng ${formatMonthYear(selectedYear, selectedMonth)}`}
+              </span>
+              {isTeacher && selectedIds.size > 0 && (
+                <span className="rounded-full border border-cyan-300/30 bg-cyan-500/10 px-3 py-1 text-xs text-cyan-100">
+                  Đã chọn: {selectedIds.size}
+                </span>
+              )}
             </div>
-            {availableMonths.length > 0 && (
-              <select
-                value={`${selectedYear}-${selectedMonth}`}
-                onChange={(e) => {
-                  const [year, month] = e.target.value.split('-').map(Number);
-                  setSelectedYear(year);
-                  setSelectedMonth(month);
-                }}
-                className="month-select-dropdown"
-              >
-                {availableMonths.map(({ year, month }) => (
-                  <option key={`${year}-${month}`} value={`${year}-${month}`}>
-                    {formatMonthYear(year, month)}
-                  </option>
+
+            {/* Cards */}
+            {(isTeacher || isAdmin) && Object.keys(filteredAndGroupedByDate).length > 0 && (
+              <div className="space-y-6">
+                {Object.entries(filteredAndGroupedByDate).map(([date, assignments]) => (
+                  <div key={date} className="space-y-4">
+                    <h2 className="text-base font-semibold text-slate-100">
+                      {formatDateHeader(date)}
+                    </h2>
+                    <section className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
+                      {assignments.map((assignment, idx) => (
+                        <AssignmentCard
+                          key={assignment.id}
+                          assignment={assignment}
+                          index={idx}
+                          isTeacher={true}
+                          selectedIds={selectedIds}
+                          onSelect={handleSelect}
+                          onDelete={handleDelete}
+                          onEdit={(id) => navigate(`/assignments/${id}/edit`)}
+                          onView={(id) => navigate(`/assignments/${id}`)}
+                          onAssign={handleAssign}
+                          formatDate={formatDate}
+                        />
+                      ))}
+                    </section>
+                  </div>
                 ))}
-              </select>
+              </div>
             )}
-          </div>
+
+            {!isTeacher &&
+              !isAdmin &&
+              Object.keys(filteredAndGroupedByDateInMonth).length > 0 && (
+                <div className="space-y-6">
+                  {Object.entries(filteredAndGroupedByDateInMonth).map(
+                    ([date, assignments]) => (
+                      <div key={date} className="space-y-4">
+                        <h2 className="text-base font-semibold text-slate-100">
+                          {formatDateHeader(date)}
+                        </h2>
+                        <section className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
+                          {assignments.map((assignment, idx) => (
+                            <AssignmentCard
+                              key={assignment.id}
+                              assignment={assignment}
+                              index={idx}
+                              isTeacher={false}
+                              selectedIds={selectedIds}
+                              onSelect={handleSelect}
+                              onDelete={handleDelete}
+                              onEdit={(id) => navigate(`/assignments/${id}/edit`)}
+                              onView={(id) => navigate(`/assignments/${id}`)}
+                              onAssign={handleAssign}
+                              formatDate={formatDate}
+                            />
+                          ))}
+                        </section>
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
+          </>
         )}
-      </div>
 
-      {allAssignments.length === 0 ? (
-        <div className="empty-state">
-          <p>
-            {isTeacher || isAdmin
-              ? 'Chưa có bài tập nào. Hãy tạo bài tập mới!'
-              : 'Chưa có bài tập nào được gán cho lớp của bạn.'}
-          </p>
-        </div>
-      ) : filteredAssignments.length === 0 ? (
-        <div className="empty-state">
-          <p>
-            {isTeacher || isAdmin
-              ? `Chưa có bài tập nào vào ngày ${formatDateHeader(selectedDate)}. Tổng số bài tập: ${allAssignments.length}`
-              : `Chưa có bài tập nào trong tháng ${formatMonthYear(selectedYear, selectedMonth)}. Tổng số bài tập: ${allAssignments.length}`}
-          </p>
-        </div>
-      ) : (
-        <>
-          <div className="assignments-stats">
-            <span>
-              Tổng số: {filteredAssignments.length} bài tập
-              {isTeacher || isAdmin
-                ? ` vào ngày ${formatDateHeader(selectedDate)}`
-                : ` trong tháng ${formatMonthYear(selectedYear, selectedMonth)}`}
-            </span>
-            {isTeacher && selectedIds.size > 0 && (
-              <span>Đã chọn: {selectedIds.size}</span>
-            )}
-          </div>
-
-          {/* For Teachers: Group by date */}
-          {(isTeacher || isAdmin) && Object.keys(filteredAndGroupedByDate).length > 0 && (
-            <div className="assignments-by-date">
-              {Object.entries(filteredAndGroupedByDate).map(([date, assignments]) => (
-                <div key={date} className="date-group">
-                  <h2 className="date-header">{formatDateHeader(date)}</h2>
-                  <div className="assignments-grid">
-                    {assignments.map((assignment) => (
-                      <AssignmentCard
-                        key={assignment.id}
-                        assignment={assignment}
-                        isTeacher={isTeacher}
-                        selectedIds={selectedIds}
-                        onSelect={handleSelect}
-                        onDelete={handleDelete}
-                        onEdit={(id) => navigate(`/assignments/${id}/edit`)}
-                        onView={(id) => navigate(`/assignments/${id}`)}
-                        onAssign={handleAssign}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* For Students: Group by date within month */}
-          {!isTeacher && !isAdmin && Object.keys(filteredAndGroupedByDateInMonth).length > 0 && (
-            <div className="assignments-by-date">
-              {Object.entries(filteredAndGroupedByDateInMonth).map(([date, assignments]) => (
-                <div key={date} className="date-group">
-                  <h2 className="date-header">{formatDateHeader(date)}</h2>
-                  <div className="assignments-grid">
-                    {assignments.map((assignment) => (
-                      <AssignmentCard
-                        key={assignment.id}
-                        assignment={assignment}
-                        isTeacher={false}
-                        selectedIds={selectedIds}
-                        onSelect={handleSelect}
-                        onDelete={handleDelete}
-                        onEdit={(id) => navigate(`/assignments/${id}/edit`)}
-                        onView={(id) => navigate(`/assignments/${id}`)}
-                        onAssign={handleAssign}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </>
-      )}
-
-      {showAssignModal && (
-        <AssignAssignmentModal
-          assignmentId={selectedAssignmentToAssign}
-          onClose={handleCloseAssignModal}
-          onSuccess={handleCloseAssignModal}
-        />
-      )}
-    </div>
+        {showAssignModal && (
+          <AssignAssignmentModal
+            assignmentId={selectedAssignmentToAssign}
+            onClose={handleCloseAssignModal}
+            onSuccess={handleCloseAssignModal}
+          />
+        )}
+    </OceanShell>
   );
 }
 
@@ -589,144 +702,159 @@ function AssignmentsList() {
 function AssignmentCard({
   assignment,
   isTeacher,
+  index,
   selectedIds,
   onSelect,
   onDelete,
   onEdit,
   onView,
   onAssign,
+  formatDate,
 }) {
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleString('vi-VN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
   return (
-    <div
-      className={`assignment-card ${
-        selectedIds.has(assignment.id) ? 'selected' : ''
+    <article
+      className={`group relative overflow-hidden rounded-[30px] border border-white/10 bg-white/6 p-5 shadow-xl shadow-slate-950/30 backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-cyan-300/30 hover:shadow-cyan-950/40 cursor-pointer ${
+        selectedIds.has(assignment.id) ? 'ring-2 ring-cyan-300/70 ring-offset-2 ring-offset-slate-900' : ''
       }`}
+      onClick={() => onView(assignment.id)}
     >
-      <div className="card-header">
-        {isTeacher && (
-          <input
-            type="checkbox"
-            checked={selectedIds.has(assignment.id)}
-            onChange={() => onSelect(assignment.id)}
-            className="select-checkbox"
-            onClick={(e) => e.stopPropagation()}
-          />
-        )}
-        <h3
-          className="assignment-title"
-          onClick={() => onView(assignment.id)}
-          style={{ cursor: 'pointer' }}
-        >
-          {assignment.title}
-        </h3>
-        {isTeacher && (
-          <div className="card-actions">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onAssign(assignment.id);
-              }}
-              className="assign-button"
-              title="Gán bài tập cho lớp"
-            >
-              📋
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit(assignment.id);
-              }}
-              className="edit-button"
-              title="Sửa bài tập"
-            >
-              ✏️
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(assignment.id);
-              }}
-              className="delete-button"
-              title="Xóa bài tập"
-            >
-              🗑️
-            </button>
+      <div className="absolute inset-0 opacity-0 transition group-hover:opacity-100 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.16),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(96,165,250,0.16),transparent_28%)]" />
+      <div className="relative">
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-3xl font-semibold tracking-tight text-white line-clamp-1">
+              {assignment.title || `Bài ${index + 1}`}
+            </h3>
+            <p className="mt-2 text-base text-slate-300 line-clamp-2">
+              {assignment.description || assignment.subtitle || 'Bài tập tự luận'}
+            </p>
           </div>
-        )}
-      </div>
-
-      {assignment.description && (
-        <p className="assignment-description">{assignment.description}</p>
-      )}
-
-      <div className="assignment-meta">
-        <span className="meta-badge subject">
-          {assignment.subject || 'math'}
-        </span>
-        {assignment.grade_level && (
-          <span className="meta-badge grade">#{assignment.grade_level}</span>
-        )}
-        <span className="meta-badge date">
-          {formatDate(assignment.created_at)}
-        </span>
-      </div>
-
-      <div className="assignment-images">
-        {assignment.question_image_url && (
-          <div className="image-container">
-            <label>Hình ảnh câu hỏi:</label>
-            <img
-              src={assignment.question_image_url}
-              alt="Câu hỏi"
-              className="assignment-image"
-              onClick={() => onView(assignment.id)}
-              style={{ cursor: 'pointer' }}
-              onError={(e) => {
-                console.error(
-                  'Failed to load question image:',
-                  assignment.question_image_url
-                );
-                e.target.style.display = 'none';
-                const errorDiv = e.target.nextSibling;
-                if (errorDiv) {
-                  errorDiv.style.display = 'block';
-                  errorDiv.innerHTML = `Không thể tải hình ảnh<br/><small>URL: ${assignment.question_image_url}</small>`;
-                }
-              }}
-            />
-            <div className="image-error" style={{ display: 'none' }}>
-              Không thể tải hình ảnh
+          <div className="flex flex-col items-end gap-2">
+            <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-sm text-cyan-100">
+              {String(index + 1).padStart(2, '0')}
             </div>
+            {isTeacher && (
+              <div className="flex gap-1 text-xs">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAssign(assignment.id);
+                  }}
+                  className="rounded-xl border border-cyan-300/30 bg-cyan-500/10 px-2 py-1 text-cyan-100 hover:bg-cyan-500/20"
+                  title="Gán bài tập cho lớp"
+                >
+                  📋
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(assignment.id);
+                  }}
+                  className="rounded-xl border border-amber-300/30 bg-amber-500/10 px-2 py-1 text-amber-100 hover:bg-amber-500/20"
+                  title="Sửa bài tập"
+                >
+                  ✏️
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(assignment.id);
+                  }}
+                  className="rounded-xl border border-rose-300/30 bg-rose-500/10 px-2 py-1 text-rose-100 hover:bg-rose-500/20"
+                  title="Xóa bài tập"
+                >
+                  🗑️
+                </button>
+              </div>
+            )}
           </div>
-        )}
-      </div>
-
-      <button
-        onClick={() => onView(assignment.id)}
-        className="view-detail-button"
-      >
-        Xem chi tiết và nộp bài
-      </button>
-
-      {assignment.model_solution && (
-        <div className="model-solution">
-          <label>Bài giải mẫu:</label>
-          <p>{assignment.model_solution}</p>
         </div>
-      )}
-    </div>
+
+        <div className="mb-5 flex flex-wrap gap-2 text-sm">
+          {isTeacher && (
+            <label
+              className="flex items-center gap-2 rounded-xl border border-cyan-300/20 bg-slate-900/50 px-3 py-2 text-xs text-slate-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <input
+                type="checkbox"
+                checked={selectedIds.has(assignment.id)}
+                onChange={() => onSelect(assignment.id)}
+                className="h-4 w-4 rounded border-cyan-300/40 bg-slate-900 text-cyan-400"
+              />
+              Chọn bài này
+            </label>
+          )}
+          <span className="rounded-xl border border-cyan-300/15 bg-cyan-300/10 px-3 py-2 text-cyan-100">
+            {assignment.subject || 'Math'}
+          </span>
+          {assignment.grade_level && (
+            <span className="rounded-xl border border-fuchsia-300/10 bg-fuchsia-300/10 px-3 py-2 text-fuchsia-100">
+              Lớp {assignment.grade_level}
+            </span>
+          )}
+          <span className="rounded-xl border border-sky-300/15 bg-sky-300/10 px-3 py-2 text-sky-100">
+            {formatDate(assignment.created_at)}
+          </span>
+        </div>
+
+        <div className="mb-3 text-sm uppercase tracking-[0.25em] text-slate-400">
+          Nội dung minh họa
+        </div>
+
+        <div className="relative overflow-hidden rounded-[24px] border border-white/10 bg-gradient-to-br from-white/95 to-cyan-50 p-6 text-slate-900 shadow-inner">
+          <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full border-[18px] border-cyan-300/40" />
+          <div className="absolute -left-10 bottom-0 h-16 w-28 rounded-t-full border-t-[10px] border-cyan-400/30" />
+
+          {assignment.question_image_url ? (
+            <div className="flex flex-col items-center gap-3">
+              <img
+                src={assignment.question_image_url}
+                alt="Câu hỏi"
+                className="max-h-40 w-auto rounded-2xl object-contain shadow-md"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onView(assignment.id);
+                }}
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+              <p className="text-xs text-slate-500">
+                Bấm để xem chi tiết bài và nộp bài.
+              </p>
+            </div>
+          ) : (
+            <div className="text-center text-xl md:text-2xl font-serif tracking-tight">
+              {assignment.model_solution ||
+                assignment.title ||
+                'Mở bài tập để xem nội dung chi tiết'}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-5 flex gap-3">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onView(assignment.id);
+            }}
+            className="flex-1 rounded-2xl border border-cyan-300/25 bg-gradient-to-r from-cyan-500/80 to-blue-600/80 px-4 py-3 font-medium text-white shadow-lg shadow-cyan-950/30 transition hover:-translate-y-0.5"
+          >
+            Xem chi tiết
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onView(assignment.id);
+            }}
+            className="rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-slate-200 transition hover:bg-white/12"
+          >
+            ⋯
+          </button>
+        </div>
+      </div>
+    </article>
   );
 }
 
@@ -815,56 +943,100 @@ function AssignAssignmentModal({ assignmentId, onClose, onSuccess }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>Gán bài tập cho lớp</h2>
-          <button onClick={onClose} className="modal-close-button">
+    <div
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/75 px-4 py-8 backdrop-blur-md"
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-cyan-300/20 bg-slate-900/95 p-6 shadow-2xl shadow-cyan-950/50 backdrop-blur-xl"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="assign-modal-title"
+      >
+        <div className="mb-5 flex items-center justify-between border-b border-white/10 pb-4">
+          <h2 id="assign-modal-title" className="text-lg font-semibold text-white">
+            Gán bài tập cho lớp
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 text-slate-300 transition hover:bg-white/10"
+          >
             ✕
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="assign-form">
-          <div className="form-group">
-            <label>Chọn lớp:</label>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          <div>
+            <label className="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">
+              Chọn lớp
+            </label>
             {loadingClasses ? (
-              <div>Đang tải...</div>
+              <div className="rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-6 text-center text-slate-300">
+                Đang tải...
+              </div>
             ) : (
-              <div className="classes-container">
+              <div className="flex max-h-[min(50vh,420px)] flex-col gap-4 overflow-y-auto pr-1">
                 {Object.entries(CLASSES_BY_GRADE).map(([gradeName, gradeClasses]) => {
-                  const allSelected = gradeClasses.every((className) => selectedClasses.includes(className));
-                  const someSelected = gradeClasses.some((className) => selectedClasses.includes(className));
-                  
+                  const allSelected = gradeClasses.every((className) =>
+                    selectedClasses.includes(className)
+                  );
+                  const someSelected = gradeClasses.some((className) =>
+                    selectedClasses.includes(className)
+                  );
+
                   return (
-                    <div key={gradeName} className="grade-group">
-                      <div className="grade-header">
-                        <h3>{gradeName}</h3>
+                    <div
+                      key={gradeName}
+                      className="rounded-2xl border border-white/10 bg-slate-950/40 p-4"
+                    >
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
+                        <h3 className="m-0 text-base font-semibold text-slate-100">{gradeName}</h3>
                         <button
                           type="button"
                           onClick={() => handleSelectGrade(gradeClasses)}
-                          className={`select-grade-button ${allSelected ? 'all-selected' : someSelected ? 'some-selected' : ''}`}
+                          className={`rounded-xl border px-3 py-1.5 text-xs font-medium transition ${
+                            allSelected
+                              ? 'border-emerald-400/40 bg-emerald-500/20 text-emerald-100'
+                              : someSelected
+                                ? 'border-amber-400/40 bg-amber-500/15 text-amber-100'
+                                : 'border-cyan-400/30 bg-cyan-500/10 text-cyan-100 hover:bg-cyan-500/20'
+                          }`}
                           disabled={loading}
                         >
                           {allSelected ? '☑️ Bỏ chọn cả khối' : '☐ Chọn cả khối'}
                         </button>
                       </div>
-                      <div className="classes-grid">
+                      <div className="grid grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))] gap-2">
                         {gradeClasses.map((className) => {
                           const isAssigned = assignedClasses.includes(className);
                           const isSelected = selectedClasses.includes(className);
                           return (
                             <label
                               key={className}
-                              className={`class-checkbox ${isAssigned ? 'assigned' : ''} ${isSelected ? 'selected' : ''}`}
+                              className={`relative flex cursor-pointer flex-col items-center rounded-xl border px-2 py-3 text-center text-sm transition ${
+                                isSelected
+                                  ? 'border-cyan-400/50 bg-cyan-500/15 text-cyan-50'
+                                  : isAssigned
+                                    ? 'border-emerald-400/35 bg-emerald-500/10 text-emerald-100'
+                                    : 'border-white/10 bg-slate-900/40 text-slate-200 hover:border-cyan-400/30'
+                              }`}
                             >
                               <input
                                 type="checkbox"
+                                className="mb-1 h-4 w-4 rounded border-cyan-400/40 bg-slate-900 text-cyan-400"
                                 checked={isSelected}
                                 onChange={() => handleClassToggle(className)}
                                 disabled={loading}
                               />
-                              <span>{className}</span>
-                              {isAssigned && <span className="assigned-badge">Đã gán</span>}
+                              <span className="font-medium">{className}</span>
+                              {isAssigned && (
+                                <span className="mt-1 rounded-full bg-emerald-500/30 px-2 py-0.5 text-[0.65rem] text-emerald-100">
+                                  Đã gán
+                                </span>
+                              )}
                             </label>
                           );
                         })}
@@ -876,20 +1048,24 @@ function AssignAssignmentModal({ assignmentId, onClose, onSuccess }) {
             )}
           </div>
 
-          {error && <div className="error-message">{error}</div>}
+          {error && (
+            <div className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+              {error}
+            </div>
+          )}
 
-          <div className="modal-actions">
+          <div className="flex justify-end gap-3 border-t border-white/10 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="cancel-button"
+              className="rounded-2xl border border-white/15 bg-slate-800/80 px-5 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-slate-700/80"
               disabled={loading}
             >
               Hủy
             </button>
             <button
               type="submit"
-              className="submit-button"
+              className="rounded-2xl border border-cyan-400/30 bg-gradient-to-r from-cyan-500/80 to-blue-600/80 px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-cyan-950/40 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={loading || selectedClasses.length === 0}
             >
               {loading ? 'Đang gán...' : 'Gán bài tập'}

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { fetchAssignmentById, updateAssignment } from '../../api/assignments';
+import OceanShell, { OceanPageLoading } from '../layout/OceanShell';
 import './CreateAssignmentForm.css';
 
 const GRADE_LEVELS = [
@@ -216,17 +217,17 @@ function EditAssignmentForm() {
   };
 
   if (isLoading) {
-    return (
-      <div className="create-assignment-form-container">
-        <div className="loading">Đang tải thông tin bài tập...</div>
-      </div>
-    );
+    return <OceanPageLoading message="Đang tải thông tin bài tập..." />;
   }
 
   return (
+    <OceanShell>
     <div className="create-assignment-form-container">
       <div className="form-header">
-        <h2>Sửa bài tập</h2>
+        <div>
+          <p className="ocean-page-eyebrow">Cuộc thi khoa học kỹ thuật</p>
+          <h2>Sửa bài tập</h2>
+        </div>
         <button onClick={handleCancel} className="cancel-button">
           ✕
         </button>
@@ -399,6 +400,7 @@ function EditAssignmentForm() {
         </div>
       </form>
     </div>
+    </OceanShell>
   );
 }
 

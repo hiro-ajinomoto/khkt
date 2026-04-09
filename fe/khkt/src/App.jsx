@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext'
 import AssignmentsList from './components/assignments/AssignmentsList'
 import CreateAssignmentForm from './components/assignments/CreateAssignmentForm'
@@ -10,22 +10,14 @@ import Register from './components/auth/Register'
 import AdminDashboard from './components/admin/AdminDashboard'
 import MySubmissions from './components/submissions/MySubmissions'
 import ProtectedRoute from './components/auth/ProtectedRoute'
+import { OceanPageLoading } from './components/layout/OceanShell'
 import './App.css'
 
 function AppRoutes() {
   const { isAuthenticated, isAdmin, loading } = useAuth();
 
   if (loading) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        minHeight: '100vh' 
-      }}>
-        <div>Đang tải...</div>
-      </div>
-    );
+    return <OceanPageLoading message="Đang tải..." />;
   }
 
   return (
@@ -84,18 +76,30 @@ function AppRoutes() {
   );
 }
 
-function App() {
+function AppShell() {
+  const location = useLocation();
+  const hideFooter =
+    location.pathname === '/login' || location.pathname === '/register';
+
   return (
-    <BrowserRouter>
-      <div className="app">
-        <AppRoutes />
+    <div className="app">
+      <AppRoutes />
+      {!hideFooter ? (
         <footer className="app-footer">
           <p className="footer-school-name">TRƯỜNG THCS TÂN THÀNH - ĐỒNG NAI</p>
           <p className="footer-standard">TRƯỜNG CHUẨN QUỐC GIA</p>
           <p className="footer-address">Ấp Tân Phú, xã Tân Tiến, Tỉnh Đồng Nai</p>
           <p className="footer-phone">Điện thoại liên hệ: 0363267637</p>
         </footer>
-      </div>
+      ) : null}
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppShell />
     </BrowserRouter>
   )
 }

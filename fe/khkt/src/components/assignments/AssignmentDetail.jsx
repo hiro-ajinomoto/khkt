@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { fetchAssignmentById } from '../../api/assignments';
 import { createSubmission } from '../../api/submissions';
 import SubmissionResult from '../submissions/SubmissionResult';
+import OceanShell, { OceanPageLoading } from '../layout/OceanShell';
 import './AssignmentDetail.css';
 
 function AssignmentDetail() {
@@ -103,33 +104,31 @@ function AssignmentDetail() {
   };
 
   if (loading) {
-    return (
-      <div className="assignment-detail">
-        <div className="loading-message">Đang tải bài tập...</div>
-      </div>
-    );
+    return <OceanPageLoading message="Đang tải bài tập..." />;
   }
 
   if (assignmentError || !assignment) {
     return (
-      <div className="assignment-detail">
-        <button onClick={() => navigate('/')} className="back-button">
-          ← Quay lại
-        </button>
-        <div className="error-message">
-          {assignmentError || 'Không tìm thấy bài tập'}
+      <OceanShell>
+        <div className="assignment-detail">
+          <button type="button" onClick={() => navigate('/assignments')} className="back-button">
+            ← Quay lại danh sách
+          </button>
+          <div className="error-message">{assignmentError || 'Không tìm thấy bài tập'}</div>
         </div>
-      </div>
+      </OceanShell>
     );
   }
 
   return (
-    <div className="assignment-detail">
-      <button onClick={() => navigate('/')} className="back-button">
-        ← Quay lại
+    <OceanShell>
+      <div className="assignment-detail">
+      <button type="button" onClick={() => navigate('/assignments')} className="back-button">
+        ← Quay lại danh sách
       </button>
 
       <div className="detail-header">
+        <p className="ocean-page-eyebrow">Cuộc thi khoa học kỹ thuật</p>
         <h1>{assignment.title}</h1>
         {assignment.description && (
           <p className="assignment-description">{assignment.description}</p>
@@ -277,7 +276,8 @@ function AssignmentDetail() {
           )}
         </div>
       )}
-    </div>
+      </div>
+    </OceanShell>
   );
 }
 

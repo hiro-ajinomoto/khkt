@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchUsers, updateUserRole, updateUserClass, deleteUser, fetchStats } from '../../api/admin';
+import OceanShell, { OceanPageLoading } from '../layout/OceanShell';
 import './AdminDashboard.css';
 
 function AdminDashboard() {
@@ -108,33 +109,31 @@ function AdminDashboard() {
 
   const getRoleColor = (role) => {
     const colors = {
-      admin: '#f44336',
-      teacher: '#2196f3',
-      student: '#4caf50',
+      admin: '#f87171',
+      teacher: '#38bdf8',
+      student: '#4ade80',
     };
-    return colors[role] || '#999';
+    return colors[role] || '#94a3b8';
   };
 
   if (loading) {
-    return (
-      <div className="admin-dashboard">
-        <div className="loading">Đang tải...</div>
-      </div>
-    );
+    return <OceanPageLoading message="Đang tải bảng quản trị..." />;
   }
 
   return (
+    <OceanShell>
     <div className="admin-dashboard">
       <div className="admin-header">
         <div className="admin-header-left">
           <img src="/logo.png" alt="Logo trường" className="logo-admin" />
           <div>
+            <p className="ocean-page-eyebrow">Cuộc thi khoa học kỹ thuật</p>
             <h1>Quản trị hệ thống</h1>
             <p>Xin chào, {user?.name || user?.username}</p>
           </div>
         </div>
         <div className="header-actions">
-          <button onClick={() => navigate('/')} className="nav-button">
+          <button type="button" onClick={() => navigate('/assignments')} className="nav-button">
             📚 Bài tập
           </button>
           <button onClick={logout} className="logout-button">
@@ -331,6 +330,7 @@ function AdminDashboard() {
         </div>
       </div>
     </div>
+    </OceanShell>
   );
 }
 

@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchMySubmissions } from '../../api/submissions';
 import SubmissionResult from './SubmissionResult';
+import OceanShell, { OceanPageLoading, OceanPageError } from '../layout/OceanShell';
 import './MySubmissions.css';
 
 function MySubmissions() {
   const navigate = useNavigate();
-  const { isAuthenticated, isStudent, user } = useAuth();
+  const { isAuthenticated, isStudent } = useAuth();
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -48,40 +49,31 @@ function MySubmissions() {
   };
 
   const getScoreColor = (score) => {
-    if (score >= 8) return '#4caf50'; // Green
-    if (score >= 6) return '#ff9800'; // Orange
-    return '#f44336'; // Red
+    if (score >= 8) return '#34d399';
+    if (score >= 6) return '#fbbf24';
+    return '#f87171';
   };
 
   if (loading) {
-    return (
-      <div className="my-submissions-container">
-        <div className="loading">Đang tải danh sách bài nộp...</div>
-      </div>
-    );
+    return <OceanPageLoading message="Đang tải danh sách bài nộp..." />;
   }
 
   if (error) {
     return (
-      <div className="my-submissions-container">
-        <div className="error-message">
-          {error}
-          <button onClick={loadSubmissions} className="retry-button">
-            Thử lại
-          </button>
-        </div>
-      </div>
+      <OceanPageError message={error} onRetry={loadSubmissions} retryLabel="Thử lại" />
     );
   }
 
   return (
+    <OceanShell>
     <div className="my-submissions-container">
       <div className="my-submissions-header">
         <div className="header-top">
-          <button onClick={() => navigate('/assignments')} className="back-button">
+          <button type="button" onClick={() => navigate('/assignments')} className="back-button">
             ← Quay lại
           </button>
         </div>
+        <p className="ocean-page-eyebrow">Cuộc thi khoa học kỹ thuật</p>
         <h1>Bài tập đã nộp</h1>
         <p>Xem lại các bài tập bạn đã nộp và kết quả chấm điểm</p>
       </div>
@@ -165,6 +157,7 @@ function MySubmissions() {
         </>
       )}
     </div>
+    </OceanShell>
   );
 }
 

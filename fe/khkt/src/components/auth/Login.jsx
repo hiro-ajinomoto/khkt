@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import './Login.css';
+import OceanShell from '../layout/OceanShell';
+import './AuthPage.css';
 
 function Login() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { login } = useAuth();
 
   const [formData, setFormData] = useState({
@@ -14,9 +14,6 @@ function Login() {
   });
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Get redirect path from location state or default to home
-  const from = location.state?.from?.pathname || '/';
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -41,18 +38,12 @@ function Login() {
       const result = await login(formData.username, formData.password);
 
       if (result.success) {
-        // Get user role from auth context
         const authUser = JSON.parse(localStorage.getItem('khkt_auth_user') || '{}');
-        
-        // Redirect based on role
+
         if (authUser.role === 'admin') {
           navigate('/admin', { replace: true });
-        } else if (authUser.role === 'teacher') {
-          // Teacher goes to assignments list
-          navigate('/', { replace: true });
         } else {
-          // Student goes to assignments list
-          navigate('/', { replace: true });
+          navigate('/assignments', { replace: true });
         }
       } else {
         setError(result.error || 'Đăng nhập thất bại');
@@ -65,16 +56,16 @@ function Login() {
   };
 
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <div className="login-header">
+    <OceanShell centered contentClassName="!max-w-none">
+      <div className="auth-page-card w-full max-w-md rounded-[28px] border border-cyan-300/15 bg-slate-900/80 shadow-2xl shadow-cyan-950/40 ring-1 ring-white/10 backdrop-blur-xl">
+        <div className="auth-page-header">
           <img src="/logo.png" alt="Logo trường" className="logo-auth" />
           <p className="school-name">TRƯỜNG THCS TÂN THÀNH - ĐỒNG NAI</p>
           <h1>Đăng nhập</h1>
           <p>Hệ thống chấm bài Toán tự động</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="login-form">
+        <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
             <label htmlFor="username">Tên đăng nhập</label>
             <input
@@ -104,18 +95,14 @@ function Login() {
             />
           </div>
 
-          {error && <div className="error-message">{error}</div>}
+          {error ? <div className="error-message">{error}</div> : null}
 
-          <button
-            type="submit"
-            className="login-button"
-            disabled={isSubmitting}
-          >
+          <button type="submit" className="submit-button" disabled={isSubmitting}>
             {isSubmitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </button>
         </form>
 
-        <div className="login-footer">
+        <div className="auth-footer">
           <p className="help-text">
             Chưa có tài khoản?{' '}
             <Link to="/register" className="link-text">
@@ -124,7 +111,7 @@ function Login() {
           </p>
         </div>
       </div>
-    </div>
+    </OceanShell>
   );
 }
 
