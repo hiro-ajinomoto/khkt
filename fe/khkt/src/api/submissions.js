@@ -96,6 +96,7 @@ export async function fetchMySubmissions() {
         'Content-Type': 'application/json',
         'Authorization': authHeader,
       },
+      cache: 'no-store',
     });
 
     if (!response.ok) {

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchAssignments, fetchAssignmentsByDate, fetchAssignmentsByMonth, deleteAssignment, assignAssignmentsToClasses, getAssignmentClasses } from '../../api/assignments';
+import { fetchMySubmissions } from '../../api/submissions';
 import { useAuth } from '../../contexts/AuthContext';
 import OceanShell, { OceanPageLoading, OceanPageError } from '../layout/OceanShell';
 import './AssignmentsList.css';
@@ -22,6 +23,12 @@ function AssignmentsList() {
   /** Danh sách id bài tập đang mở trong modal gán lớp (một hoặc nhiều bài). */
   const [assignModalAssignmentIds, setAssignModalAssignmentIds] = useState(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
+  /** Học sinh: id bài đã có bài nộp của tôi */
+  const [submittedAssignmentIds, setSubmittedAssignmentIds] = useState(
+    () => new Set()
+  );
+  /** Học sinh: chỉ hiện bài chưa nộp */
+  const [studentOnlyUnsubmitted, setStudentOnlyUnsubmitted] = useState(false);
 
   // For teachers: filter by date
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -88,6 +95,19 @@ function AssignmentsList() {
       console.log('Assignments loaded:', data);
       console.log('Number of assignments:', data.length);
       setAllAssignments(data);
+
+      if (isStudent) {
+        try {
+          const subs = await fetchMySubmissions();
+          setSubmittedAssignmentIds(
+            new Set(subs.map((s) => s.assignment_id))
+          );
+        } catch {
+          setSubmittedAssignmentIds(new Set());
+        }
+      } else {
+        setSubmittedAssignmentIds(new Set());
+      }
 
       // Học sinh: nhảy tới tháng của bài mới nhất sau mỗi lần tải (tránh kẹt bộ lọc tháng cũ khi có bài mới)
       if (!isTeacher && !isAdmin && Array.isArray(data) && data.length > 0) {
@@ -159,12 +179,18 @@ function AssignmentsList() {
     if (isTeacher || isAdmin) return {};
     
     // Filter by selected month
-    const filtered = allAssignments.filter((assignment) => {
+    let filtered = allAssignments.filter((assignment) => {
       const date = getAssignmentLocalDate(assignment);
       const year = date.getFullYear();
       const month = date.getMonth() + 1;
       return year === selectedYear && month === selectedMonth;
     });
+
+    if (studentOnlyUnsubmitted) {
+      filtered = filtered.filter(
+        (assignment) => !submittedAssignmentIds.has(assignment.id)
+      );
+    }
 
     // Group by date
     const groups = {};
@@ -186,7 +212,15 @@ function AssignmentsList() {
     });
 
     return sortedGroups;
-  }, [allAssignments, isTeacher, isAdmin, selectedYear, selectedMonth]);
+  }, [
+    allAssignments,
+    isTeacher,
+    isAdmin,
+    selectedYear,
+    selectedMonth,
+    studentOnlyUnsubmitted,
+    submittedAssignmentIds,
+  ]);
 
   const handleDelete = async (id) => {
     if (!window.confirm('Bạn có chắc chắn muốn xóa bài tập này?')) {
@@ -556,6 +590,58 @@ function AssignmentsList() {
                   📝 Bài đã nộp
                 </button>
               )}
+              {isStudent && (
+                <button
+                  type="button"
+                  onClick={() => setStudentOnlyUnsubmitted((v) => !v)}
+                  aria-pressed={studentOnlyUnsubmitted}
+                  className={`flex w-full items-center justify-center gap-2.5 rounded-2xl border px-4 py-3 text-sm font-semibold shadow-lg transition hover:-translate-y-0.5 ${
+                    studentOnlyUnsubmitted
+                      ? 'border-amber-200/70 bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-amber-950/50 ring-2 ring-amber-300/40'
+                      : 'border-orange-400/45 bg-gradient-to-r from-orange-500 via-orange-500 to-amber-500 text-white shadow-orange-950/45 hover:from-orange-400 hover:via-orange-500 hover:to-amber-400'
+                  }`}
+                >
+                  {studentOnlyUnsubmitted ? (
+                    <>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        className="h-5 w-5 shrink-0"
+                        aria-hidden
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013H9.75a2.25 2.25 0 01-2.248-2.052v-1.524a2.25 2.25 0 00-.659-1.591L2.659 8.23A2.25 2.25 0 012 6.638V5.582c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z"
+                        />
+                      </svg>
+                      <span>Đang lọc: bài tôi chưa nộp</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        className="h-5 w-5 shrink-0"
+                        aria-hidden
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      <span>Chỉ hiện bài tôi chưa nộp</span>
+                    </>
+                  )}
+                </button>
+              )}
               {isTeacher && (
                 <button
                   onClick={() => navigate('/assignments/create')}
@@ -629,10 +715,15 @@ function AssignmentsList() {
               ? `Chưa có bài tập nào vào ngày ${formatDateHeader(
                   selectedDate
                 )}. Tổng số bài tập: ${allAssignments.length}`
-              : `Chưa có bài tập nào trong tháng ${formatMonthYear(
-                  selectedYear,
-                  selectedMonth
-                )}. Tổng số bài tập: ${allAssignments.length}`}
+              : studentOnlyUnsubmitted
+                ? `Không còn bài nào bạn chưa nộp trong tháng ${formatMonthYear(
+                    selectedYear,
+                    selectedMonth
+                  )}.`
+                : `Chưa có bài tập nào trong tháng ${formatMonthYear(
+                    selectedYear,
+                    selectedMonth
+                  )}. Tổng số bài tập: ${allAssignments.length}`}
           </div>
         ) : (
           <>
@@ -643,6 +734,9 @@ function AssignmentsList() {
                 {isTeacher || isAdmin
                   ? ` vào ngày ${formatDateHeader(selectedDate)}`
                   : ` trong tháng ${formatMonthYear(selectedYear, selectedMonth)}`}
+                {isStudent && studentOnlyUnsubmitted && (
+                  <span className="text-cyan-200/90"> · lọc: tôi chưa nộp</span>
+                )}
               </span>
               {isTeacher && selectedIds.size > 0 && (
                 <span className="rounded-full border border-cyan-300/30 bg-cyan-500/10 px-3 py-1 text-xs text-cyan-100">
