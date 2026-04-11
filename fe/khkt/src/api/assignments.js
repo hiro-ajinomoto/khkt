@@ -268,6 +268,17 @@ export async function assignAssignmentToClasses(assignmentId, classNames) {
 }
 
 /**
+ * Gán cùng một danh sách lớp cho nhiều bài tập (gọi API tuần tự).
+ * @param {string[]} assignmentIds
+ * @param {string[]} classNames
+ */
+export async function assignAssignmentsToClasses(assignmentIds, classNames) {
+  for (const assignmentId of assignmentIds) {
+    await assignAssignmentToClasses(assignmentId, classNames);
+  }
+}
+
+/**
  * Get list of classes that an assignment is assigned to
  * @param {string} assignmentId - Assignment ID
  * @returns {Promise<Array>} List of classes

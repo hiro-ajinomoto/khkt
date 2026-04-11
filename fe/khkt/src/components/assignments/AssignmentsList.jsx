@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchAssignments, fetchAssignmentsByDate, fetchAssignmentsByMonth, deleteAssignment, assignAssignmentToClasses, getAssignmentClasses } from '../../api/assignments';
+import { fetchAssignments, fetchAssignmentsByDate, fetchAssignmentsByMonth, deleteAssignment, assignAssignmentsToClasses, getAssignmentClasses } from '../../api/assignments';
 import { useAuth } from '../../contexts/AuthContext';
 import OceanShell, { OceanPageLoading, OceanPageError } from '../layout/OceanShell';
 import './AssignmentsList.css';
@@ -19,7 +19,8 @@ function AssignmentsList() {
   const [error, setError] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [showAssignModal, setShowAssignModal] = useState(false);
-  const [selectedAssignmentToAssign, setSelectedAssignmentToAssign] = useState(null);
+  /** Danh sách id bài tập đang mở trong modal gán lớp (một hoặc nhiều bài). */
+  const [assignModalAssignmentIds, setAssignModalAssignmentIds] = useState(null);
 
   // For teachers: filter by date
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -212,14 +213,27 @@ function AssignmentsList() {
   };
 
   const handleAssign = (assignmentId) => {
-    setSelectedAssignmentToAssign(assignmentId);
+    setAssignModalAssignmentIds([assignmentId]);
+    setShowAssignModal(true);
+  };
+
+  const handleBulkAssignFromSelection = () => {
+    if (selectedIds.size === 0) return;
+    setAssignModalAssignmentIds(Array.from(selectedIds));
     setShowAssignModal(true);
   };
 
   const handleCloseAssignModal = () => {
     setShowAssignModal(false);
-    setSelectedAssignmentToAssign(null);
-    loadAllAssignments(); // Reload assignments to reflect changes
+    setAssignModalAssignmentIds(null);
+    loadAllAssignments();
+  };
+
+  const handleAssignModalSuccess = () => {
+    setShowAssignModal(false);
+    setAssignModalAssignmentIds(null);
+    setSelectedIds(new Set());
+    loadAllAssignments();
   };
 
   const formatDate = (dateString) => {
@@ -538,6 +552,15 @@ function AssignmentsList() {
                   ➕ Tạo bài tập mới
                 </button>
               )}
+              {isTeacher && selectedIds.size > 0 && (
+                <button
+                  type="button"
+                  onClick={handleBulkAssignFromSelection}
+                  className="w-full rounded-2xl border border-cyan-300/35 bg-gradient-to-r from-cyan-500/50 to-sky-600/60 px-4 py-3 font-medium text-white shadow-lg shadow-cyan-950/30 transition hover:-translate-y-0.5"
+                >
+                  📋 Gán các bài đã chọn ({selectedIds.size})
+                </button>
+              )}
               <button
                 onClick={loadAllAssignments}
                 className="w-full rounded-2xl border border-cyan-300/20 bg-gradient-to-r from-cyan-500/70 to-blue-600/80 px-4 py-3 font-medium text-white shadow-lg shadow-cyan-950/30 transition hover:-translate-y-0.5"
@@ -681,11 +704,11 @@ function AssignmentsList() {
           </>
         )}
 
-        {showAssignModal && (
+        {showAssignModal && assignModalAssignmentIds?.length > 0 && (
           <AssignAssignmentModal
-            assignmentId={selectedAssignmentToAssign}
+            assignmentIds={assignModalAssignmentIds}
             onClose={handleCloseAssignModal}
-            onSuccess={handleCloseAssignModal}
+            onSuccess={handleAssignModalSuccess}
           />
         )}
     </OceanShell>
@@ -792,10 +815,6 @@ function AssignmentCard({
           </span>
         </div>
 
-        <div className="mb-3 text-sm uppercase tracking-[0.25em] text-slate-400">
-          Nội dung minh họa
-        </div>
-
         <div className="relative overflow-hidden rounded-[24px] border border-white/10 bg-gradient-to-br from-white/95 to-cyan-50 p-6 text-slate-900 shadow-inner">
           <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full border-[18px] border-cyan-300/40" />
           <div className="absolute -left-10 bottom-0 h-16 w-28 rounded-t-full border-t-[10px] border-cyan-400/30" />
@@ -853,7 +872,7 @@ function AssignmentCard({
 }
 
 // Assign Assignment Modal Component
-function AssignAssignmentModal({ assignmentId, onClose, onSuccess }) {
+function AssignAssignmentModal({ assignmentIds, onClose, onSuccess }) {
   const [selectedClasses, setSelectedClasses] = useState([]);
   const [assignedClasses, setAssignedClasses] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -868,28 +887,31 @@ function AssignAssignmentModal({ assignmentId, onClose, onSuccess }) {
     'Khối 9': ['9A1', '9A2', '9A3', '9A4', '9A5'],
   };
 
-  // Flatten all classes for backward compatibility
-  const CLASSES = Object.values(CLASSES_BY_GRADE).flat();
+  const assignmentCount = assignmentIds?.length ?? 0;
 
   useEffect(() => {
-    // Load already assigned classes
     const loadAssignedClasses = async () => {
+      if (!assignmentIds?.length) return;
       try {
         setLoadingClasses(true);
-        const classes = await getAssignmentClasses(assignmentId);
-        const classNames = classes.map(c => c.class_name);
+        const lists = await Promise.all(
+          assignmentIds.map((id) => getAssignmentClasses(id))
+        );
+        const union = new Set();
+        lists.forEach((list) => {
+          list.forEach((c) => union.add(c.class_name));
+        });
+        const classNames = Array.from(union);
         setAssignedClasses(classNames);
-        setSelectedClasses(classNames); // Pre-select already assigned classes
+        setSelectedClasses(classNames);
       } catch (err) {
         console.error('Error loading assigned classes:', err);
       } finally {
         setLoadingClasses(false);
       }
     };
-    if (assignmentId) {
-      loadAssignedClasses();
-    }
-  }, [assignmentId]);
+    loadAssignedClasses();
+  }, [assignmentIds]);
 
   const handleClassToggle = (className) => {
     setSelectedClasses((prev) => {
@@ -926,7 +948,7 @@ function AssignAssignmentModal({ assignmentId, onClose, onSuccess }) {
     try {
       setLoading(true);
       setError(null);
-      await assignAssignmentToClasses(assignmentId, selectedClasses);
+      await assignAssignmentsToClasses(assignmentIds, selectedClasses);
       onSuccess();
     } catch (err) {
       setError(err.message || 'Không thể gán bài tập. Vui lòng thử lại.');
@@ -950,9 +972,18 @@ function AssignAssignmentModal({ assignmentId, onClose, onSuccess }) {
         aria-labelledby="assign-modal-title"
       >
         <div className="mb-5 flex items-center justify-between border-b border-white/10 pb-4">
-          <h2 id="assign-modal-title" className="text-lg font-semibold text-white">
-            Gán bài tập cho lớp
-          </h2>
+          <div>
+            <h2 id="assign-modal-title" className="text-lg font-semibold text-white">
+              {assignmentCount > 1
+                ? `Gán ${assignmentCount} bài tập cho lớp`
+                : 'Gán bài tập cho lớp'}
+            </h2>
+            {assignmentCount > 1 && (
+              <p className="mt-1 text-sm text-slate-400">
+                Các lớp bạn chọn sẽ được gán cho tất cả bài đã chọn.
+              </p>
+            )}
+          </div>
           <button
             type="button"
             onClick={onClose}
@@ -1028,7 +1059,7 @@ function AssignAssignmentModal({ assignmentId, onClose, onSuccess }) {
                               <span className="font-medium">{className}</span>
                               {isAssigned && (
                                 <span className="mt-1 rounded-full bg-emerald-500/30 px-2 py-0.5 text-[0.65rem] text-emerald-100">
-                                  Đã gán
+                                  {assignmentCount > 1 ? 'Đã gán (≥1 bài)' : 'Đã gán'}
                                 </span>
                               )}
                             </label>
@@ -1062,7 +1093,11 @@ function AssignAssignmentModal({ assignmentId, onClose, onSuccess }) {
               className="rounded-2xl border border-cyan-400/30 bg-gradient-to-r from-cyan-500/80 to-blue-600/80 px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-cyan-950/40 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={loading || selectedClasses.length === 0}
             >
-              {loading ? 'Đang gán...' : 'Gán bài tập'}
+              {loading
+                ? 'Đang gán...'
+                : assignmentCount > 1
+                  ? `Gán ${assignmentCount} bài`
+                  : 'Gán bài tập'}
             </button>
           </div>
         </form>
