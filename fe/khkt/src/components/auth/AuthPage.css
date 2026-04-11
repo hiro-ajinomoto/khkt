@@ -92,6 +92,24 @@
   font-size: 0.88rem;
 }
 
+.error-message.auth-error-banner {
+  padding: 1rem 1.1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.45;
+  border-width: 2px;
+  border-color: rgba(251, 113, 133, 0.65);
+  background: linear-gradient(
+    135deg,
+    rgba(127, 29, 29, 0.55) 0%,
+    rgba(153, 27, 27, 0.42) 100%
+  );
+  color: #fff1f2;
+  box-shadow:
+    0 4px 20px rgba(127, 29, 29, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
 .auth-form {
   display: flex;
   flex-direction: column;

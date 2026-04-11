@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { login as loginAPI, getCurrentUser } from '../api/auth';
+import { getAuthErrorMessage } from '../utils/authErrors';
 
 const AuthContext = createContext(null);
 
@@ -65,7 +66,7 @@ export function AuthProvider({ children }) {
 
       return { success: true };
     } catch (error) {
-      return { success: false, error: error.message };
+      return { success: false, error: getAuthErrorMessage(error) };
     }
   };
 

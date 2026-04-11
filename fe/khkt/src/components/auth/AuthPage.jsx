@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { login as loginAPI, register as registerAPI } from '../../api/auth';
+import { register as registerAPI } from '../../api/auth';
+import { getAuthErrorMessage, normalizeLoginPayload } from '../../utils/authErrors';
 import OceanShell from '../layout/OceanShell';
 import './AuthPage.css';
 
@@ -55,14 +56,15 @@ function AuthPage() {
     e.preventDefault();
     setError(null);
 
-    if (!loginData.username || !loginData.password) {
-      setError('Vui lòng nhập đầy đủ thông tin');
+    const check = normalizeLoginPayload(loginData);
+    if (!check.ok) {
+      setError(check.message);
       return;
     }
 
     try {
       setIsSubmitting(true);
-      const result = await login(loginData.username, loginData.password);
+      const result = await login(check.username, check.password);
 
       if (result.success) {
         // Get user role from auth context
@@ -76,10 +78,10 @@ function AuthPage() {
           navigate('/assignments', { replace: true });
         }
       } else {
-        setError(result.error || 'Đăng nhập thất bại');
+        setError(result.error || 'Đăng nhập thất bại. Vui lòng thử lại.');
       }
     } catch (err) {
-      setError(err.message || 'Đăng nhập thất bại. Vui lòng thử lại.');
+      setError(getAuthErrorMessage(err));
     } finally {
       setIsSubmitting(false);
     }
@@ -89,19 +91,27 @@ function AuthPage() {
     e.preventDefault();
     setError(null);
 
-    // Validation
-    if (!registerData.username || !registerData.password || !registerData.confirmPassword) {
-      setError('Vui lòng nhập đầy đủ thông tin');
+    const username = registerData.username.trim();
+    if (!username) {
+      setError('Vui lòng nhập tên đăng nhập.');
+      return;
+    }
+    if (!registerData.password || !registerData.confirmPassword) {
+      setError('Vui lòng nhập mật khẩu và xác nhận mật khẩu.');
+      return;
+    }
+    if (!registerData.password.trim()) {
+      setError('Mật khẩu không được chỉ gồm khoảng trắng.');
       return;
     }
 
     if (registerData.password.length < 6) {
-      setError('Mật khẩu phải có ít nhất 6 ký tự');
+      setError('Mật khẩu phải có ít nhất 6 ký tự.');
       return;
     }
 
     if (registerData.password !== registerData.confirmPassword) {
-      setError('Mật khẩu xác nhận không khớp');
+      setError('Mật khẩu xác nhận không khớp.');
       return;
     }
 
@@ -109,11 +119,11 @@ function AuthPage() {
       setIsSubmitting(true);
       // Register as student by default
       const result = await registerAPI(
-        registerData.username,
+        username,
         registerData.password,
         'student',
-        registerData.name || registerData.username,
-        registerData.class_name || null
+        registerData.name?.trim() || username,
+        registerData.class_name?.trim() || null
       );
 
       if (result.token && result.user) {
@@ -127,7 +137,7 @@ function AuthPage() {
         setError('Đăng ký thất bại. Vui lòng thử lại.');
       }
     } catch (err) {
-      setError(err.message || 'Đăng ký thất bại. Vui lòng thử lại.');
+      setError(getAuthErrorMessage(err));
     } finally {
       setIsSubmitting(false);
     }
@@ -173,7 +183,15 @@ function AuthPage() {
           </button>
         </div>
 
-        {error && <div className="error-message">{error}</div>}
+        {error && (
+          <div
+            className="error-message auth-error-banner"
+            role="alert"
+            aria-live="polite"
+          >
+            {error}
+          </div>
+        )}
 
         {activeTab === 'login' ? (
           <form onSubmit={handleLogin} className="auth-form">
@@ -185,8 +203,14 @@ function AuthPage() {
                 name="username"
                 value={loginData.username}
                 onChange={handleLoginChange}
+                onBlur={(e) => {
+                  const t = e.target.value.trim();
+                  if (t !== e.target.value) {
+                    setLoginData((prev) => ({ ...prev, username: t }));
+                  }
+                }}
                 placeholder="Nhập tên đăng nhập"
-                required
+                autoComplete="username"
                 disabled={isSubmitting}
                 autoFocus
               />
@@ -201,7 +225,7 @@ function AuthPage() {
                 value={loginData.password}
                 onChange={handleLoginChange}
                 placeholder="Nhập mật khẩu"
-                required
+                autoComplete="current-password"
                 disabled={isSubmitting}
               />
             </div>
@@ -224,8 +248,14 @@ function AuthPage() {
                 name="username"
                 value={registerData.username}
                 onChange={handleRegisterChange}
+                onBlur={(e) => {
+                  const t = e.target.value.trim();
+                  if (t !== e.target.value) {
+                    setRegisterData((prev) => ({ ...prev, username: t }));
+                  }
+                }}
                 placeholder="Nhập tên đăng nhập"
-                required
+                autoComplete="username"
                 disabled={isSubmitting}
                 autoFocus
               />
@@ -274,7 +304,7 @@ function AuthPage() {
                 value={registerData.password}
                 onChange={handleRegisterChange}
                 placeholder="Nhập mật khẩu (tối thiểu 6 ký tự)"
-                required
+                autoComplete="new-password"
                 disabled={isSubmitting}
                 minLength={6}
               />
@@ -289,7 +319,7 @@ function AuthPage() {
                 value={registerData.confirmPassword}
                 onChange={handleRegisterChange}
                 placeholder="Nhập lại mật khẩu"
-                required
+                autoComplete="new-password"
                 disabled={isSubmitting}
               />
             </div>

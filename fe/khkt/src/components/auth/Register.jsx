@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { register as registerAPI } from '../../api/auth';
+import { getAuthErrorMessage } from '../../utils/authErrors';
 import OceanShell from '../layout/OceanShell';
 import './AuthPage.css';
 
@@ -30,19 +31,27 @@ function Register() {
     e.preventDefault();
     setError(null);
 
-    // Validation
-    if (!formData.username || !formData.password || !formData.confirmPassword) {
-      setError('Vui lòng nhập đầy đủ thông tin');
+    const username = formData.username.trim();
+    if (!username) {
+      setError('Vui lòng nhập tên đăng nhập.');
+      return;
+    }
+    if (!formData.password || !formData.confirmPassword) {
+      setError('Vui lòng nhập mật khẩu và xác nhận mật khẩu.');
+      return;
+    }
+    if (!formData.password.trim()) {
+      setError('Mật khẩu không được chỉ gồm khoảng trắng.');
       return;
     }
 
     if (formData.password.length < 6) {
-      setError('Mật khẩu phải có ít nhất 6 ký tự');
+      setError('Mật khẩu phải có ít nhất 6 ký tự.');
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Mật khẩu xác nhận không khớp');
+      setError('Mật khẩu xác nhận không khớp.');
       return;
     }
 
@@ -50,11 +59,11 @@ function Register() {
       setIsSubmitting(true);
       // Register as student by default
       const result = await registerAPI(
-        formData.username,
+        username,
         formData.password,
         'student',
-        formData.name || formData.username,
-        formData.class_name || null
+        formData.name?.trim() || username,
+        formData.class_name?.trim() || null
       );
 
       if (result.token && result.user) {
@@ -74,7 +83,7 @@ function Register() {
         setError('Đăng ký thất bại. Vui lòng thử lại.');
       }
     } catch (err) {
-      setError(err.message || 'Đăng ký thất bại. Vui lòng thử lại.');
+      setError(getAuthErrorMessage(err));
     } finally {
       setIsSubmitting(false);
     }
@@ -99,8 +108,14 @@ function Register() {
               name="username"
               value={formData.username}
               onChange={handleInputChange}
+              onBlur={(e) => {
+                const t = e.target.value.trim();
+                if (t !== e.target.value) {
+                  setFormData((prev) => ({ ...prev, username: t }));
+                }
+              }}
               placeholder="Nhập tên đăng nhập"
-              required
+              autoComplete="username"
               disabled={isSubmitting}
               autoFocus
             />
@@ -149,7 +164,7 @@ function Register() {
               value={formData.password}
               onChange={handleInputChange}
               placeholder="Nhập mật khẩu (tối thiểu 6 ký tự)"
-              required
+              autoComplete="new-password"
               disabled={isSubmitting}
               minLength={6}
             />
@@ -164,12 +179,20 @@ function Register() {
               value={formData.confirmPassword}
               onChange={handleInputChange}
               placeholder="Nhập lại mật khẩu"
-              required
+              autoComplete="new-password"
               disabled={isSubmitting}
             />
           </div>
 
-          {error ? <div className="error-message">{error}</div> : null}
+          {error ? (
+            <div
+              className="error-message auth-error-banner"
+              role="alert"
+              aria-live="polite"
+            >
+              {error}
+            </div>
+          ) : null}
 
           <button type="submit" className="submit-button" disabled={isSubmitting}>
             {isSubmitting ? 'Đang đăng ký...' : 'Đăng ký'}

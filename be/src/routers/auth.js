@@ -14,23 +14,31 @@ const router = express.Router();
  */
 router.post('/login', async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const username = String(req.body?.username ?? '').trim();
+    const password =
+      req.body?.password != null ? String(req.body.password) : '';
 
     if (!username || !password) {
-      return res.status(400).json({ detail: 'Username and password are required' });
+      return res.status(400).json({
+        detail: 'Vui lòng nhập tên đăng nhập và mật khẩu.',
+      });
     }
 
     const db = getDB();
     const user = await db.collection('users').findOne({ username });
 
     if (!user) {
-      return res.status(401).json({ detail: 'Invalid username or password' });
+      return res.status(401).json({
+        detail: 'Sai tên đăng nhập hoặc mật khẩu.',
+      });
     }
 
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
-      return res.status(401).json({ detail: 'Invalid username or password' });
+      return res.status(401).json({
+        detail: 'Sai tên đăng nhập hoặc mật khẩu.',
+      });
     }
 
     // Generate JWT token
@@ -51,7 +59,7 @@ router.post('/login', async (req, res) => {
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ detail: 'Login failed' });
+    res.status(500).json({ detail: 'Đăng nhập thất bại. Vui lòng thử lại.' });
   }
 });
 
@@ -61,14 +69,17 @@ router.post('/login', async (req, res) => {
  */
 router.post('/register', async (req, res) => {
   try {
-    const { username, password, role, name } = req.body;
+    const username = String(req.body?.username ?? '').trim();
+    const password =
+      req.body?.password != null ? String(req.body.password) : '';
+    const { name } = req.body;
 
     if (!username || !password) {
-      return res.status(400).json({ detail: 'Username and password are required' });
+      return res.status(400).json({
+        detail: 'Vui lòng nhập tên đăng nhập và mật khẩu.',
+      });
     }
 
-    // Validate role - new registrations can only be students
-    const validRoles = ['teacher', 'student', 'admin'];
     // Only allow student role for new registrations (admin/teacher must be assigned)
     const userRole = 'student';
 
@@ -77,7 +88,7 @@ router.post('/register', async (req, res) => {
     // Check if username already exists
     const existingUser = await db.collection('users').findOne({ username });
     if (existingUser) {
-      return res.status(400).json({ detail: 'Username already exists' });
+      return res.status(400).json({ detail: 'Tên đăng nhập đã được sử dụng.' });
     }
 
     // Hash password
@@ -113,7 +124,7 @@ router.post('/register', async (req, res) => {
     });
   } catch (error) {
     console.error('Registration error:', error);
-    res.status(500).json({ detail: 'Registration failed' });
+    res.status(500).json({ detail: 'Đăng ký thất bại. Vui lòng thử lại.' });
   }
 });
 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { getAuthErrorMessage, normalizeLoginPayload } from '../../utils/authErrors';
 import OceanShell from '../layout/OceanShell';
 import './AuthPage.css';
 
@@ -28,14 +29,15 @@ function Login() {
     e.preventDefault();
     setError(null);
 
-    if (!formData.username || !formData.password) {
-      setError('Vui lòng nhập đầy đủ thông tin');
+    const check = normalizeLoginPayload(formData);
+    if (!check.ok) {
+      setError(check.message);
       return;
     }
 
     try {
       setIsSubmitting(true);
-      const result = await login(formData.username, formData.password);
+      const result = await login(check.username, check.password);
 
       if (result.success) {
         const authUser = JSON.parse(localStorage.getItem('khkt_auth_user') || '{}');
@@ -46,10 +48,10 @@ function Login() {
           navigate('/assignments', { replace: true });
         }
       } else {
-        setError(result.error || 'Đăng nhập thất bại');
+        setError(result.error || 'Đăng nhập thất bại. Vui lòng thử lại.');
       }
     } catch (err) {
-      setError(err.message || 'Đăng nhập thất bại. Vui lòng thử lại.');
+      setError(getAuthErrorMessage(err));
     } finally {
       setIsSubmitting(false);
     }
@@ -74,8 +76,14 @@ function Login() {
               name="username"
               value={formData.username}
               onChange={handleInputChange}
+              onBlur={(e) => {
+                const t = e.target.value.trim();
+                if (t !== e.target.value) {
+                  setFormData((prev) => ({ ...prev, username: t }));
+                }
+              }}
               placeholder="Nhập tên đăng nhập"
-              required
+              autoComplete="username"
               disabled={isSubmitting}
               autoFocus
             />
@@ -90,12 +98,20 @@ function Login() {
               value={formData.password}
               onChange={handleInputChange}
               placeholder="Nhập mật khẩu"
-              required
+              autoComplete="current-password"
               disabled={isSubmitting}
             />
           </div>
 
-          {error ? <div className="error-message">{error}</div> : null}
+          {error ? (
+            <div
+              className="error-message auth-error-banner"
+              role="alert"
+              aria-live="polite"
+            >
+              {error}
+            </div>
+          ) : null}
 
           <button type="submit" className="submit-button" disabled={isSubmitting}>
             {isSubmitting ? 'Đang đăng nhập...' : 'Đăng nhập'}

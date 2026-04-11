@@ -2,7 +2,14 @@
  * API service for authentication
  */
 
+import { parseApiDetail, toVietnameseAuthMessage } from '../utils/authErrors';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+
+function throwAuthHttpError(status, errorData, fallbackLabel) {
+  const raw = parseApiDetail(errorData?.detail) || fallbackLabel || `Lỗi ${status}`;
+  throw new Error(toVietnameseAuthMessage(raw));
+}
 
 /**
  * Login with username and password
@@ -22,7 +29,7 @@ export async function login(username, password) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || `Login failed: ${response.statusText}`);
+      throwAuthHttpError(response.status, errorData, response.statusText);
     }
 
     const data = await response.json();
@@ -54,7 +61,7 @@ export async function register(username, password, role = 'student', name = null
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || `Registration failed: ${response.statusText}`);
+      throwAuthHttpError(response.status, errorData, response.statusText);
     }
 
     const data = await response.json();
@@ -82,7 +89,7 @@ export async function getCurrentUser(token) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || `Failed to get user: ${response.statusText}`);
+      throwAuthHttpError(response.status, errorData, response.statusText);
     }
 
     const data = await response.json();
@@ -111,7 +118,7 @@ export async function initAdmin(username = 'admin', password = 'admin123') {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || `Init failed: ${response.statusText}`);
+      throwAuthHttpError(response.status, errorData, response.statusText);
     }
 
     const data = await response.json();
