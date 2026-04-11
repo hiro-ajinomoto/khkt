@@ -21,6 +21,7 @@ function AssignmentsList() {
   const [showAssignModal, setShowAssignModal] = useState(false);
   /** Danh sách id bài tập đang mở trong modal gán lớp (một hoặc nhiều bài). */
   const [assignModalAssignmentIds, setAssignModalAssignmentIds] = useState(null);
+  const [showBackToTop, setShowBackToTop] = useState(false);
 
   // For teachers: filter by date
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -40,6 +41,17 @@ function AssignmentsList() {
 
   useEffect(() => {
     loadAllAssignments();
+  }, []);
+
+  useEffect(() => {
+    const threshold = 320;
+    const onScroll = () => {
+      const y = window.scrollY ?? document.documentElement.scrollTop ?? 0;
+      setShowBackToTop(y > threshold);
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   // Auto-select latest date/month when assignments are loaded (only once)
@@ -710,6 +722,35 @@ function AssignmentsList() {
             onClose={handleCloseAssignModal}
             onSuccess={handleAssignModalSuccess}
           />
+        )}
+
+        {showBackToTop && (
+          <button
+            type="button"
+            onClick={() =>
+              window.scrollTo({ top: 0, left: 0, behavior: 'smooth' })
+            }
+            className="fixed bottom-24 right-5 z-[600] flex h-12 w-12 items-center justify-center rounded-2xl border border-cyan-300/35 bg-gradient-to-br from-cyan-500/50 to-sky-700/55 text-lg text-white shadow-lg shadow-cyan-950/40 backdrop-blur-md transition hover:-translate-y-0.5 hover:border-cyan-200/40 hover:shadow-cyan-900/50 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 sm:bottom-10 sm:right-8"
+            aria-label="Lên đầu trang"
+            title="Lên đầu trang"
+          >
+            <span className="sr-only">Lên đầu trang</span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              className="h-6 w-6"
+              aria-hidden
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M4.5 15.75l7.5-7.5 7.5 7.5"
+              />
+            </svg>
+          </button>
         )}
     </OceanShell>
   );
