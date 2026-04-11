@@ -23,6 +23,7 @@ function EditAssignmentForm() {
     grade_level: '',
     available_from_date: '',
     due_date: '',
+    max_submissions_per_student: '5',
     question_image: null,
     model_solution_image: null,
     question_image_url: '',
@@ -52,6 +53,9 @@ function EditAssignmentForm() {
           grade_level: assignment.grade_level || '',
           available_from_date: assignment.available_from_date || '',
           due_date: assignment.due_date || '',
+          max_submissions_per_student: String(
+            assignment.max_submissions_per_student ?? 5
+          ),
           question_image: null,
           model_solution_image: null,
           question_image_url: assignment.question_image_url || '',
@@ -173,6 +177,10 @@ function EditAssignmentForm() {
         formData.available_from_date || ''
       );
       formDataToSend.append('due_date', formData.due_date || '');
+      formDataToSend.append(
+        'max_submissions_per_student',
+        formData.max_submissions_per_student ?? '5'
+      );
 
       if (formData.question_image) {
         formDataToSend.append('question_image', formData.question_image);
@@ -324,6 +332,28 @@ function EditAssignmentForm() {
           />
           <p className="form-hint">
             Để trống: không giới hạn. Hạn nộp không được trước ngày mở bài.
+          </p>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="max_submissions_per_student">
+            Số lần nộp tối đa (mỗi học sinh)
+          </label>
+          <select
+            id="max_submissions_per_student"
+            name="max_submissions_per_student"
+            value={formData.max_submissions_per_student}
+            onChange={handleInputChange}
+            disabled={isSubmitting}
+          >
+            <option value="3">3 lần</option>
+            <option value="5">5 lần (mặc định)</option>
+            <option value="10">10 lần</option>
+            <option value="0">Không giới hạn</option>
+          </select>
+          <p className="form-hint">
+            Giới hạn giúp giảm tải server. Học sinh đã nộp vượt lượt mới chỉnh
+            vẫn giữ bài đã nộp.
           </p>
         </div>
 

@@ -115,6 +115,13 @@
   font-weight: 600;
 }
 
+.meta-badge.quota {
+  border-color: rgba(167, 139, 250, 0.45);
+  background: rgba(109, 40, 217, 0.18);
+  color: #ede9fe;
+  font-weight: 600;
+}
+
 .meta-badge.deadline-reminder {
   font-weight: 600;
 }

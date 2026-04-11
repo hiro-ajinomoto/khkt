@@ -18,6 +18,10 @@ import {
   todayStrHoChiMinh,
   isAssignmentReleased,
 } from "../utils/assignmentRelease.js";
+import {
+  parseMaxSubmissionsRaw,
+  storedMaxSubmissionsForApi,
+} from "../utils/submissionLimits.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -242,6 +246,7 @@ router.get("/", optionalAuthenticate, async (req, res) => {
         created_at: item.created_at || null,
         available_from_date: item.available_from_date ?? null,
         due_date: item.due_date ?? null,
+        max_submissions_per_student: storedMaxSubmissionsForApi(item),
       }))
     );
 
@@ -305,6 +310,7 @@ router.get("/by-date", async (req, res) => {
         created_at: item.created_at || null,
         available_from_date: item.available_from_date ?? null,
         due_date: item.due_date ?? null,
+        max_submissions_per_student: storedMaxSubmissionsForApi(item),
       }))
     );
 
@@ -371,6 +377,7 @@ router.get("/by-month", async (req, res) => {
         created_at: item.created_at || null,
         available_from_date: item.available_from_date ?? null,
         due_date: item.due_date ?? null,
+        max_submissions_per_student: storedMaxSubmissionsForApi(item),
       }))
     );
 
@@ -451,7 +458,17 @@ router.get("/:id", optionalAuthenticate, async (req, res) => {
       created_at: assignment.created_at || null,
       available_from_date: assignment.available_from_date ?? null,
       due_date: assignment.due_date ?? null,
+      max_submissions_per_student: storedMaxSubmissionsForApi(assignment),
     };
+
+    if (req.user && req.user.role === "student") {
+      result.my_submission_count = await db
+        .collection("submissions")
+        .countDocuments({
+          assignment_id: objectId,
+          student_id: ObjectId.createFromHexString(req.user.id),
+        });
+    }
 
     res.json(result);
   } catch (error) {
@@ -487,6 +504,7 @@ router.post(
         model_solution_image_url,
         available_from_date: availableFromRaw,
         due_date: dueFromRaw,
+        max_submissions_per_student: maxSubRaw,
       } = req.body;
 
       const parsedDate = normalizeAvailableFromDate(availableFromRaw);
@@ -507,6 +525,11 @@ router.post(
         return res.status(400).json({
           detail: "Hạn nộp không được trước ngày mở bài cho học sinh.",
         });
+      }
+
+      const parsedMax = parseMaxSubmissionsRaw(maxSubRaw);
+      if (parsedMax.error) {
+        return res.status(400).json({ detail: parsedMax.error });
       }
 
       const files = req.files || [];
@@ -608,6 +631,7 @@ router.post(
         created_at: new Date(),
         available_from_date: parsedDate.value,
         due_date: parsedDue.value,
+        max_submissions_per_student: parsedMax.value,
       };
 
       const result = await db.collection("assignments").insertOne(assignment);
@@ -631,6 +655,7 @@ router.post(
         created_at: inserted.created_at || null,
         available_from_date: inserted.available_from_date ?? null,
         due_date: inserted.due_date ?? null,
+        max_submissions_per_student: storedMaxSubmissionsForApi(inserted),
       });
     } catch (error) {
       console.error("Error creating assignment:", error);
@@ -668,6 +693,7 @@ router.patch(
         model_solution_image_url,
         available_from_date: availableFromRaw,
         due_date: dueFromRaw,
+        max_submissions_per_student: maxSubRaw,
       } = req.body;
 
       const files = req.files || [];
@@ -740,6 +766,14 @@ router.patch(
           return res.status(400).json({ detail: parsed.error });
         }
         updateData.due_date = parsed.value;
+      }
+
+      if (maxSubRaw !== undefined) {
+        const parsed = parseMaxSubmissionsRaw(maxSubRaw);
+        if (parsed.error) {
+          return res.status(400).json({ detail: parsed.error });
+        }
+        updateData.max_submissions_per_student = parsed.value;
       }
 
       // Handle question image update
@@ -909,6 +943,7 @@ router.patch(
         created_at: updated.created_at || null,
         available_from_date: updated.available_from_date ?? null,
         due_date: updated.due_date ?? null,
+        max_submissions_per_student: storedMaxSubmissionsForApi(updated),
       });
     } catch (error) {
       console.error("Error updating assignment:", error);

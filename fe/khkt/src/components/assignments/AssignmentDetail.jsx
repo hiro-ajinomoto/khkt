@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchAssignmentById } from '../../api/assignments';
 import { createSubmission } from '../../api/submissions';
@@ -8,6 +8,11 @@ import {
   isPastDueClient,
   deadlineReminderClient,
 } from '../../utils/assignmentRelease';
+import {
+  formatSubmissionQuota,
+  isAtSubmissionLimit,
+  resolveMaxSubmissionsClient,
+} from '../../utils/submissionLimits';
 import SubmissionResult from '../submissions/SubmissionResult';
 import OceanShell, { OceanPageLoading } from '../layout/OceanShell';
 import './AssignmentDetail.css';
@@ -15,7 +20,7 @@ import './AssignmentDetail.css';
 function AssignmentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isStudent } = useAuth();
+  const { isStudent, isTeacher } = useAuth();
   const [assignment, setAssignment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [assignmentError, setAssignmentError] = useState(null);
@@ -26,26 +31,24 @@ function AssignmentDetail() {
   const [error, setError] = useState(null);
   const [showResult, setShowResult] = useState(false);
 
-  // Load assignment data
-  useEffect(() => {
-    const loadAssignment = async () => {
-      try {
-        setLoading(true);
-        setAssignmentError(null);
-        const data = await fetchAssignmentById(id);
-        setAssignment(data);
-      } catch (err) {
-        setAssignmentError(err.message || 'Không thể tải bài tập');
-        console.error('Error loading assignment:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (id) {
-      loadAssignment();
+  const loadAssignment = useCallback(async () => {
+    if (!id) return;
+    try {
+      setLoading(true);
+      setAssignmentError(null);
+      const data = await fetchAssignmentById(id);
+      setAssignment(data);
+    } catch (err) {
+      setAssignmentError(err.message || 'Không thể tải bài tập');
+      console.error('Error loading assignment:', err);
+    } finally {
+      setLoading(false);
     }
   }, [id]);
+
+  useEffect(() => {
+    loadAssignment();
+  }, [loadAssignment]);
 
   // Cleanup preview URLs when component unmounts or files change
   useEffect(() => {
@@ -70,7 +73,15 @@ function AssignmentDetail() {
     e.preventDefault();
 
     if (submissionBlocked) {
-      setError('Đã quá hạn nộp bài.');
+      if (
+        isStudent &&
+        assignment?.due_date &&
+        isPastDueClient(assignment.due_date)
+      ) {
+        setError('Đã quá hạn nộp bài.');
+      } else if (isStudent && isAtSubmissionLimit(assignment)) {
+        setError('Bạn đã nộp đủ số lần cho phép với bài này.');
+      }
       return;
     }
 
@@ -86,12 +97,14 @@ function AssignmentDetail() {
       const result = await createSubmission(assignment.id, selectedFiles);
       setSubmission(result);
       setShowResult(true);
-      
+
+      await loadAssignment();
+
       // Cleanup preview URLs
       previewUrls.forEach((url) => {
         if (url) URL.revokeObjectURL(url);
       });
-      
+
       // Clear selected files and preview URLs after successful submission
       setSelectedFiles([]);
       setPreviewUrls([]);
@@ -103,10 +116,12 @@ function AssignmentDetail() {
     }
   };
 
-  const submissionBlocked =
+  const pastDueBlocked =
     isStudent &&
     assignment?.due_date &&
     isPastDueClient(assignment.due_date);
+  const limitBlocked = isStudent && isAtSubmissionLimit(assignment);
+  const submissionBlocked = pastDueBlocked || limitBlocked;
 
   const deadlineHint =
     assignment?.due_date && deadlineReminderClient(assignment.due_date);
@@ -179,6 +194,18 @@ function AssignmentDetail() {
               {deadlineHint.label}
             </span>
           )}
+          {isStudent && formatSubmissionQuota(assignment) && (
+            <span className="meta-badge quota" title="Số lần nộp của bạn với bài này">
+              {formatSubmissionQuota(assignment)}
+            </span>
+          )}
+          {isTeacher && (
+            <span className="meta-badge quota">
+              {Number.isFinite(resolveMaxSubmissionsClient(assignment))
+                ? `Tối đa ${resolveMaxSubmissionsClient(assignment)} lần nộp/HS`
+                : 'Không giới hạn số lần nộp'}
+            </span>
+          )}
         </div>
       </div>
 
@@ -218,11 +245,17 @@ function AssignmentDetail() {
       {/* Submission Form */}
       <div className="submission-section">
         <h2>Nộp bài làm</h2>
-        {submissionBlocked && (
+        {isStudent && pastDueBlocked && (
           <div className="deadline-passed-banner" role="alert">
             Đã quá hạn nộp bài (hạn{' '}
             {formatVNDateFromYMD(assignment.due_date)}). Bạn vẫn xem được đề
             nhưng không thể nộp thêm trên hệ thống.
+          </div>
+        )}
+        {isStudent && limitBlocked && !pastDueBlocked && (
+          <div className="deadline-passed-banner submission-limit-banner" role="alert">
+            Bạn đã nộp đủ số lần cho phép với bài này. Không thể nộp thêm để
+            giảm tải hệ thống; nếu cần hỗ trợ, hãy báo giáo viên.
           </div>
         )}
         <form onSubmit={handleSubmit} className="submission-form">

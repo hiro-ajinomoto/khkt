@@ -22,6 +22,8 @@ const emptyFormData = () => ({
   available_from_date: '',
   /** YYYY-MM-DD — để trống = không giới hạn hạn nộp */
   due_date: '',
+  /** 3 | 5 | 10 | 0 (không giới hạn); mặc định 5 */
+  max_submissions_per_student: '5',
   question_image: null,
   model_solution_image: null,
   question_image_url: '',
@@ -133,6 +135,10 @@ function CreateAssignmentForm() {
       if (formData.due_date) {
         formDataToSend.append('due_date', formData.due_date);
       }
+      formDataToSend.append(
+        'max_submissions_per_student',
+        formData.max_submissions_per_student ?? '5'
+      );
 
       if (formData.question_image) {
         formDataToSend.append('question_image', formData.question_image);
@@ -281,6 +287,28 @@ function CreateAssignmentForm() {
             Để trống: không giới hạn ngày nộp. Chọn ngày: học sinh chỉ được nộp
             đến hết ngày đó (giờ Việt Nam). Phải sau hoặc cùng ngày mở bài (nếu
             có).
+          </p>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="max_submissions_per_student">
+            Số lần nộp tối đa (mỗi học sinh)
+          </label>
+          <select
+            id="max_submissions_per_student"
+            name="max_submissions_per_student"
+            value={formData.max_submissions_per_student}
+            onChange={handleInputChange}
+            disabled={isSubmitting}
+          >
+            <option value="3">3 lần</option>
+            <option value="5">5 lần (mặc định, giảm tải server)</option>
+            <option value="10">10 lần</option>
+            <option value="0">Không giới hạn</option>
+          </select>
+          <p className="form-hint">
+            Giới hạn số lần nộp giúp giảm tải xử lý (chấm AI, lưu ảnh). Học sinh
+            vẫn xem đề sau khi hết lượt.
           </p>
         </div>
 

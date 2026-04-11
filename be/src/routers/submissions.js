@@ -12,6 +12,7 @@ import {
   isAssignmentReleased,
   isBeforeOrOnDeadline,
 } from "../utils/assignmentRelease.js";
+import { resolveMaxSubmissionsLimit } from "../utils/submissionLimits.js";
 import { uploadFileToS3 } from "../services/s3Service.js";
 import { authenticate } from "../middleware/auth.js";
 
@@ -304,6 +305,19 @@ router.post("/", authenticate, upload.array("files"), async (req, res) => {
         return res
           .status(403)
           .json({ detail: "Assignment not assigned to your class" });
+      }
+
+      const limit = resolveMaxSubmissionsLimit(assignment);
+      if (Number.isFinite(limit)) {
+        const priorCount = await db.collection("submissions").countDocuments({
+          assignment_id: assignmentObjectId,
+          student_id: studentId,
+        });
+        if (priorCount >= limit) {
+          return res.status(403).json({
+            detail: `Bạn đã nộp đủ ${limit} lần cho bài này. Không thể nộp thêm.`,
+          });
+        }
       }
     }
 
