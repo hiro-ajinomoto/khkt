@@ -794,7 +794,7 @@ function AssignmentsList() {
                     <h2 className="text-base font-semibold text-slate-100">
                       {formatDateHeader(date)}
                     </h2>
-                    <section className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
+                    <section className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3 [&>*]:h-full [&>*]:min-h-0">
                       {assignments.map((assignment, idx) => (
                         <AssignmentCard
                           key={assignment.id}
@@ -826,7 +826,7 @@ function AssignmentsList() {
                         <h2 className="text-base font-semibold text-slate-100">
                           {formatDateHeader(date)}
                         </h2>
-                        <section className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
+                        <section className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3 [&>*]:h-full [&>*]:min-h-0">
                           {assignments.map((assignment, idx) => (
                             <AssignmentCard
                               key={assignment.id}
@@ -906,13 +906,13 @@ function AssignmentCard({
 }) {
   return (
     <article
-      className={`group relative overflow-hidden rounded-[30px] border border-white/10 bg-white/6 p-5 shadow-xl shadow-slate-950/30 backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-cyan-300/30 hover:shadow-cyan-950/40 cursor-pointer ${
+      className={`group relative flex h-full min-h-0 flex-col overflow-hidden rounded-[30px] border border-white/10 bg-white/6 p-5 shadow-xl shadow-slate-950/30 backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-cyan-300/30 hover:shadow-cyan-950/40 cursor-pointer ${
         selectedIds.has(assignment.id) ? 'ring-2 ring-cyan-300/70 ring-offset-2 ring-offset-slate-900' : ''
       }`}
       onClick={() => onView(assignment.id)}
     >
       <div className="absolute inset-0 opacity-0 transition group-hover:opacity-100 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.16),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(96,165,250,0.16),transparent_28%)]" />
-      <div className="relative">
+      <div className="relative flex min-h-0 flex-1 flex-col">
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
             <h3 className="text-3xl font-semibold tracking-tight text-white line-clamp-1">
@@ -1019,7 +1019,8 @@ function AssignmentCard({
           </span>
         </div>
 
-        <div className="relative overflow-hidden rounded-[24px] border border-white/10 bg-gradient-to-br from-white/95 to-cyan-50 p-6 text-slate-900 shadow-inner">
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-[24px] border border-white/10 bg-gradient-to-br from-white/95 to-cyan-50 p-6 text-slate-900 shadow-inner">
           <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full border-[18px] border-cyan-300/40" />
           <div className="absolute -left-10 bottom-0 h-16 w-28 rounded-t-full border-t-[10px] border-cyan-400/30" />
 
@@ -1048,9 +1049,10 @@ function AssignmentCard({
                 'Mở bài tập để xem nội dung chi tiết'}
             </div>
           )}
+          </div>
         </div>
 
-        <div className="mt-5 flex gap-3">
+        <div className="mt-5 flex shrink-0 gap-3">
           <button
             onClick={(e) => {
               e.stopPropagation();
