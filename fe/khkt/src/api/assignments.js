@@ -3,8 +3,18 @@
  */
 
 import { getAuthHeader } from '../utils/auth';
+import {
+  describeApiFailure,
+  getNetworkErrorMessage,
+  isLikelyNetworkError,
+} from '../utils/fetchErrors';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+
+function rethrowNetwork(error) {
+  if (isLikelyNetworkError(error)) throw new Error(getNetworkErrorMessage());
+  throw error;
+}
 
 /**
  * Fetch all assignments
@@ -27,14 +37,17 @@ export async function fetchAssignments() {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch assignments: ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        describeApiFailure(response, errorData, 'Không tải được danh sách bài tập.')
+      );
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
     console.error('Error fetching assignments:', error);
-    throw error;
+    rethrowNetwork(error);
   }
 }
 
@@ -62,7 +75,7 @@ export async function fetchAssignmentById(id) {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
-        errorData.detail || `Failed to fetch assignment: ${response.statusText}`
+        describeApiFailure(response, errorData, 'Không tải được bài tập.')
       );
     }
 
@@ -70,7 +83,7 @@ export async function fetchAssignmentById(id) {
     return data;
   } catch (error) {
     console.error('Error fetching assignment:', error);
-    throw error;
+    rethrowNetwork(error);
   }
 }
 
@@ -95,14 +108,17 @@ export async function deleteAssignment(id) {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to delete assignment: ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        describeApiFailure(response, errorData, 'Không xóa được bài tập.')
+      );
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
     console.error('Error deleting assignment:', error);
-    throw error;
+    rethrowNetwork(error);
   }
 }
 
@@ -130,7 +146,7 @@ export async function deleteAssignments(ids) {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
-        errorData.detail || `Failed to delete assignments: ${response.statusText}`
+        describeApiFailure(response, errorData, 'Không xóa được các bài tập.')
       );
     }
 
@@ -138,7 +154,7 @@ export async function deleteAssignments(ids) {
     return data;
   } catch (error) {
     console.error('Error deleting assignments:', error);
-    throw error;
+    rethrowNetwork(error);
   }
 }
 
@@ -165,7 +181,7 @@ export async function createAssignment(formData) {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
-        errorData.detail || `Failed to create assignment: ${response.statusText}`
+        describeApiFailure(response, errorData, 'Không tạo được bài tập.')
       );
     }
 
@@ -173,7 +189,7 @@ export async function createAssignment(formData) {
     return data;
   } catch (error) {
     console.error('Error creating assignment:', error);
-    throw error;
+    rethrowNetwork(error);
   }
 }
 
@@ -201,7 +217,7 @@ export async function updateAssignment(id, formData) {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
-        errorData.detail || `Failed to update assignment: ${response.statusText}`
+        describeApiFailure(response, errorData, 'Không cập nhật được bài tập.')
       );
     }
 
@@ -209,7 +225,7 @@ export async function updateAssignment(id, formData) {
     return data;
   } catch (error) {
     console.error('Error updating assignment:', error);
-    throw error;
+    rethrowNetwork(error);
   }
 }
 
@@ -228,14 +244,17 @@ export async function fetchAssignmentsByDate(date) {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch assignments by date: ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        describeApiFailure(response, errorData, 'Không tải được bài theo ngày.')
+      );
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
     console.error('Error fetching assignments by date:', error);
-    throw error;
+    rethrowNetwork(error);
   }
 }
 
@@ -269,14 +288,16 @@ export async function assignAssignmentToClasses(assignmentId, classNames) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || `Failed to assign assignment: ${response.statusText}`);
+      throw new Error(
+        describeApiFailure(response, errorData, 'Không gán được bài cho lớp.')
+      );
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
     console.error('Error assigning assignment to classes:', error);
-    throw error;
+    rethrowNetwork(error);
   }
 }
 
@@ -313,14 +334,16 @@ export async function getAssignmentClasses(assignmentId) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || `Failed to fetch assignment classes: ${response.statusText}`);
+      throw new Error(
+        describeApiFailure(response, errorData, 'Không tải được danh sách lớp.')
+      );
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
     console.error('Error fetching assignment classes:', error);
-    throw error;
+    rethrowNetwork(error);
   }
 }
 
@@ -337,13 +360,16 @@ export async function fetchAssignmentsByMonth(year, month) {
     );
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch assignments by month: ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        describeApiFailure(response, errorData, 'Không tải được bài theo tháng.')
+      );
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
     console.error('Error fetching assignments by month:', error);
-    throw error;
+    rethrowNetwork(error);
   }
 }

@@ -3,8 +3,18 @@
  */
 
 import { getAuthHeader } from '../utils/auth';
+import {
+  describeApiFailure,
+  getNetworkErrorMessage,
+  isLikelyNetworkError,
+} from '../utils/fetchErrors';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+
+function rethrowNetwork(error) {
+  if (isLikelyNetworkError(error)) throw new Error(getNetworkErrorMessage());
+  throw error;
+}
 
 /**
  * Create a new submission
@@ -40,7 +50,7 @@ export async function createSubmission(assignmentId, files) {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
-        errorData.detail || `Failed to create submission: ${response.statusText}`
+        describeApiFailure(response, errorData, 'Không nộp được bài.')
       );
     }
 
@@ -48,7 +58,7 @@ export async function createSubmission(assignmentId, files) {
     return data;
   } catch (error) {
     console.error('Error creating submission:', error);
-    throw error;
+    rethrowNetwork(error);
   }
 }
 
@@ -67,14 +77,17 @@ export async function fetchSubmissionById(id) {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch submission: ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        describeApiFailure(response, errorData, 'Không tải được bài nộp.')
+      );
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
     console.error('Error fetching submission:', error);
-    throw error;
+    rethrowNetwork(error);
   }
 }
 
@@ -101,13 +114,15 @@ export async function fetchMySubmissions() {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || `Failed to fetch submissions: ${response.statusText}`);
+      throw new Error(
+        describeApiFailure(response, errorData, 'Không tải được danh sách bài nộp.')
+      );
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
     console.error('Error fetching my submissions:', error);
-    throw error;
+    rethrowNetwork(error);
   }
 }

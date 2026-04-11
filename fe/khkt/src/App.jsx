@@ -11,6 +11,9 @@ import AdminDashboard from './components/admin/AdminDashboard'
 import MySubmissions from './components/submissions/MySubmissions'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import { OceanPageLoading } from './components/layout/OceanShell'
+import AppErrorBoundary from './components/errors/AppErrorBoundary'
+import NotFoundPage from './components/errors/NotFoundPage'
+import ServerErrorPage from './components/errors/ServerErrorPage'
 import './App.css'
 
 function AppRoutes() {
@@ -72,6 +75,8 @@ function AppRoutes() {
           </ProtectedRoute>
         } 
       />
+      <Route path="/500" element={<ServerErrorPage />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }
@@ -79,7 +84,9 @@ function AppRoutes() {
 function AppShell() {
   const location = useLocation();
   const hideFooter =
-    location.pathname === '/login' || location.pathname === '/register';
+    location.pathname === '/login' ||
+    location.pathname === '/register' ||
+    location.pathname === '/500';
 
   return (
     <div className="app">
@@ -99,7 +106,9 @@ function AppShell() {
 function App() {
   return (
     <BrowserRouter>
-      <AppShell />
+      <AppErrorBoundary>
+        <AppShell />
+      </AppErrorBoundary>
     </BrowserRouter>
   )
 }

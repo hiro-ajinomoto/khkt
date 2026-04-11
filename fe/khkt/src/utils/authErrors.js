@@ -1,3 +1,5 @@
+import { getNetworkErrorMessage, isLikelyNetworkError } from './fetchErrors';
+
 /**
  * Chuẩn hóa `detail` từ API (Express string hoặc mảng validation kiểu FastAPI).
  */
@@ -68,15 +70,7 @@ export function normalizeLoginPayload({ username, password }) {
 
 export function getAuthErrorMessage(error) {
   if (!error) return 'Đã xảy ra lỗi. Vui lòng thử lại.';
+  if (isLikelyNetworkError(error)) return getNetworkErrorMessage();
   const msg = error.message != null ? String(error.message) : String(error);
-
-  if (
-    msg === 'Failed to fetch' ||
-    /networkerror|load failed|fetch/i.test(msg) ||
-    /failed to fetch/i.test(msg)
-  ) {
-    return 'Không kết nối được máy chủ. Kiểm tra mạng hoặc thử lại sau.';
-  }
-
   return toVietnameseAuthMessage(msg);
 }
