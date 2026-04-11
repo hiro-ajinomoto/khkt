@@ -241,6 +241,7 @@ router.get("/", optionalAuthenticate, async (req, res) => {
         ),
         created_at: item.created_at || null,
         available_from_date: item.available_from_date ?? null,
+        due_date: item.due_date ?? null,
       }))
     );
 
@@ -303,6 +304,7 @@ router.get("/by-date", async (req, res) => {
         ),
         created_at: item.created_at || null,
         available_from_date: item.available_from_date ?? null,
+        due_date: item.due_date ?? null,
       }))
     );
 
@@ -368,6 +370,7 @@ router.get("/by-month", async (req, res) => {
         ),
         created_at: item.created_at || null,
         available_from_date: item.available_from_date ?? null,
+        due_date: item.due_date ?? null,
       }))
     );
 
@@ -447,6 +450,7 @@ router.get("/:id", optionalAuthenticate, async (req, res) => {
       ),
       created_at: assignment.created_at || null,
       available_from_date: assignment.available_from_date ?? null,
+      due_date: assignment.due_date ?? null,
     };
 
     res.json(result);
@@ -482,11 +486,27 @@ router.post(
         question_image_url,
         model_solution_image_url,
         available_from_date: availableFromRaw,
+        due_date: dueFromRaw,
       } = req.body;
 
       const parsedDate = normalizeAvailableFromDate(availableFromRaw);
       if (parsedDate.error) {
         return res.status(400).json({ detail: parsedDate.error });
+      }
+
+      const parsedDue = normalizeAvailableFromDate(dueFromRaw);
+      if (parsedDue.error) {
+        return res.status(400).json({ detail: parsedDue.error });
+      }
+
+      if (
+        parsedDate.value &&
+        parsedDue.value &&
+        parsedDue.value < parsedDate.value
+      ) {
+        return res.status(400).json({
+          detail: "Hạn nộp không được trước ngày mở bài cho học sinh.",
+        });
       }
 
       const files = req.files || [];
@@ -587,6 +607,7 @@ router.post(
         model_solution_image_url: finalSolutionImageUrl,
         created_at: new Date(),
         available_from_date: parsedDate.value,
+        due_date: parsedDue.value,
       };
 
       const result = await db.collection("assignments").insertOne(assignment);
@@ -609,6 +630,7 @@ router.post(
         ),
         created_at: inserted.created_at || null,
         available_from_date: inserted.available_from_date ?? null,
+        due_date: inserted.due_date ?? null,
       });
     } catch (error) {
       console.error("Error creating assignment:", error);
@@ -645,6 +667,7 @@ router.patch(
         question_image_url,
         model_solution_image_url,
         available_from_date: availableFromRaw,
+        due_date: dueFromRaw,
       } = req.body;
 
       const files = req.files || [];
@@ -709,6 +732,14 @@ router.patch(
           return res.status(400).json({ detail: parsed.error });
         }
         updateData.available_from_date = parsed.value;
+      }
+
+      if (dueFromRaw !== undefined) {
+        const parsed = normalizeAvailableFromDate(dueFromRaw);
+        if (parsed.error) {
+          return res.status(400).json({ detail: parsed.error });
+        }
+        updateData.due_date = parsed.value;
       }
 
       // Handle question image update
@@ -831,6 +862,20 @@ router.patch(
         }
       }
 
+      const nextAvailable =
+        updateData.available_from_date !== undefined
+          ? updateData.available_from_date
+          : assignment.available_from_date;
+      const nextDue =
+        updateData.due_date !== undefined
+          ? updateData.due_date
+          : assignment.due_date;
+      if (nextAvailable && nextDue && nextDue < nextAvailable) {
+        return res.status(400).json({
+          detail: "Hạn nộp không được trước ngày mở bài cho học sinh.",
+        });
+      }
+
       // If no fields to update, return error
       if (Object.keys(updateData).length === 0) {
         return res.status(400).json({
@@ -863,6 +908,7 @@ router.patch(
         ),
         created_at: updated.created_at || null,
         available_from_date: updated.available_from_date ?? null,
+        due_date: updated.due_date ?? null,
       });
     } catch (error) {
       console.error("Error updating assignment:", error);

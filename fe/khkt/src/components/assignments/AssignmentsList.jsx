@@ -7,6 +7,7 @@ import OceanShell, { OceanPageLoading, OceanPageError } from '../layout/OceanShe
 import {
   formatVNDateFromYMD,
   isAssignmentReleasedClient,
+  deadlineReminderClient,
 } from '../../utils/assignmentRelease';
 import './AssignmentsList.css';
 
@@ -986,6 +987,28 @@ function AssignmentCard({
                 {formatVNDateFromYMD(assignment.available_from_date)}
               </span>
             )}
+          {isTeacher && assignment.due_date && (
+            <span className="rounded-xl border border-slate-400/30 bg-slate-800/70 px-3 py-2 text-xs text-slate-200">
+              Hạn nộp: {formatVNDateFromYMD(assignment.due_date)}
+            </span>
+          )}
+          {!isTeacher && assignment.due_date && (() => {
+            const r = deadlineReminderClient(assignment.due_date);
+            if (!r) return null;
+            const cls =
+              r.tone === 'overdue'
+                ? 'border-rose-400/45 bg-rose-600/25 text-rose-100'
+                : r.tone === 'today'
+                  ? 'border-orange-400/50 bg-orange-500/30 text-orange-50'
+                  : 'border-emerald-400/40 bg-emerald-600/20 text-emerald-100';
+            return (
+              <span
+                className={`rounded-xl border px-3 py-2 text-xs font-medium ${cls}`}
+              >
+                {r.label}
+              </span>
+            );
+          })()}
           {assignment.grade_level && (
             <span className="rounded-xl border border-fuchsia-300/10 bg-fuchsia-300/10 px-3 py-2 text-fuchsia-100">
               Lớp {assignment.grade_level}

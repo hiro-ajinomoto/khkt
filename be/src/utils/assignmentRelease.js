@@ -17,3 +17,13 @@ export function isAssignmentReleased(assignment) {
   const t = todayStrHoChiMinh();
   return t >= d;
 }
+
+/**
+ * Còn trong hạn nộp (đến hết ngày due_date tính theo giờ VN), hoặc không đặt hạn.
+ */
+export function isBeforeOrOnDeadline(assignment) {
+  const d = assignment?.due_date;
+  if (d === undefined || d === null || d === "") return true;
+  if (typeof d !== "string") return true;
+  return todayStrHoChiMinh() <= d;
+}

@@ -22,6 +22,7 @@ function EditAssignmentForm() {
     description: '',
     grade_level: '',
     available_from_date: '',
+    due_date: '',
     question_image: null,
     model_solution_image: null,
     question_image_url: '',
@@ -50,6 +51,7 @@ function EditAssignmentForm() {
           description: assignment.description || '',
           grade_level: assignment.grade_level || '',
           available_from_date: assignment.available_from_date || '',
+          due_date: assignment.due_date || '',
           question_image: null,
           model_solution_image: null,
           question_image_url: assignment.question_image_url || '',
@@ -170,6 +172,7 @@ function EditAssignmentForm() {
         'available_from_date',
         formData.available_from_date || ''
       );
+      formDataToSend.append('due_date', formData.due_date || '');
 
       if (formData.question_image) {
         formDataToSend.append('question_image', formData.question_image);
@@ -305,6 +308,22 @@ function EditAssignmentForm() {
           <p className="form-hint">
             Để trống: hiển thị ngay. Chọn ngày: học sinh chỉ thấy từ 0h ngày đó
             (giờ Việt Nam).
+          </p>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="due_date">Hạn nộp bài (cho học sinh)</label>
+          <input
+            id="due_date"
+            type="date"
+            name="due_date"
+            value={formData.due_date}
+            onChange={handleInputChange}
+            disabled={isSubmitting}
+            min={formData.available_from_date || undefined}
+          />
+          <p className="form-hint">
+            Để trống: không giới hạn. Hạn nộp không được trước ngày mở bài.
           </p>
         </div>
 

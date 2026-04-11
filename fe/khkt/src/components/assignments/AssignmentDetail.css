@@ -108,6 +108,35 @@
   font-weight: 600;
 }
 
+.meta-badge.due {
+  border-color: rgba(56, 189, 248, 0.4);
+  background: rgba(14, 165, 233, 0.14);
+  color: #bae6fd;
+  font-weight: 600;
+}
+
+.meta-badge.deadline-reminder {
+  font-weight: 600;
+}
+
+.meta-badge.deadline-reminder--upcoming {
+  border-color: rgba(52, 211, 153, 0.45);
+  background: rgba(16, 185, 129, 0.18);
+  color: #d1fae5;
+}
+
+.meta-badge.deadline-reminder--today {
+  border-color: rgba(251, 146, 60, 0.55);
+  background: rgba(234, 88, 12, 0.22);
+  color: #ffedd5;
+}
+
+.meta-badge.deadline-reminder--overdue {
+  border-color: rgba(251, 113, 133, 0.55);
+  background: rgba(225, 29, 72, 0.2);
+  color: #ffe4e6;
+}
+
 .assignment-images-section {
   margin-bottom: 2rem;
 }
@@ -186,6 +215,17 @@
   color: #f1f5f9;
   font-size: 1.25rem;
   font-weight: 600;
+}
+
+.deadline-passed-banner {
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.15rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(251, 113, 133, 0.45);
+  background: rgba(190, 18, 60, 0.18);
+  color: #fecdd3;
+  font-size: 0.95rem;
+  line-height: 1.45;
 }
 
 .submission-form {

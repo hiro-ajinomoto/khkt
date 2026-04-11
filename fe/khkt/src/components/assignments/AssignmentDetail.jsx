@@ -2,6 +2,12 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchAssignmentById } from '../../api/assignments';
 import { createSubmission } from '../../api/submissions';
+import { useAuth } from '../../contexts/AuthContext';
+import {
+  formatVNDateFromYMD,
+  isPastDueClient,
+  deadlineReminderClient,
+} from '../../utils/assignmentRelease';
 import SubmissionResult from '../submissions/SubmissionResult';
 import OceanShell, { OceanPageLoading } from '../layout/OceanShell';
 import './AssignmentDetail.css';
@@ -9,6 +15,7 @@ import './AssignmentDetail.css';
 function AssignmentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isStudent } = useAuth();
   const [assignment, setAssignment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [assignmentError, setAssignmentError] = useState(null);
@@ -62,6 +69,11 @@ function AssignmentDetail() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (submissionBlocked) {
+      setError('Đã quá hạn nộp bài.');
+      return;
+    }
+
     if (selectedFiles.length === 0) {
       setError('Vui lòng chọn ít nhất một hình ảnh bài làm');
       return;
@@ -90,6 +102,14 @@ function AssignmentDetail() {
       setIsSubmitting(false);
     }
   };
+
+  const submissionBlocked =
+    isStudent &&
+    assignment?.due_date &&
+    isPastDueClient(assignment.due_date);
+
+  const deadlineHint =
+    assignment?.due_date && deadlineReminderClient(assignment.due_date);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -147,6 +167,18 @@ function AssignmentDetail() {
           <span className="meta-badge date">
             {formatDate(assignment.created_at)}
           </span>
+          {assignment.due_date && (
+            <span className="meta-badge due">
+              Hạn nộp: {formatVNDateFromYMD(assignment.due_date)}
+            </span>
+          )}
+          {isStudent && deadlineHint && (
+            <span
+              className={`meta-badge deadline-reminder deadline-reminder--${deadlineHint.tone}`}
+            >
+              {deadlineHint.label}
+            </span>
+          )}
         </div>
       </div>
 
@@ -186,6 +218,13 @@ function AssignmentDetail() {
       {/* Submission Form */}
       <div className="submission-section">
         <h2>Nộp bài làm</h2>
+        {submissionBlocked && (
+          <div className="deadline-passed-banner" role="alert">
+            Đã quá hạn nộp bài (hạn{' '}
+            {formatVNDateFromYMD(assignment.due_date)}). Bạn vẫn xem được đề
+            nhưng không thể nộp thêm trên hệ thống.
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="submission-form">
           <div className="file-upload-area">
             <label htmlFor="file-input" className="file-label">
@@ -200,7 +239,7 @@ function AssignmentDetail() {
                 accept="image/*"
                 multiple
                 onChange={handleFileChange}
-                disabled={isSubmitting}
+                disabled={isSubmitting || submissionBlocked}
                 className="file-input"
               />
             </label>
@@ -249,7 +288,11 @@ function AssignmentDetail() {
 
           <button
             type="submit"
-            disabled={isSubmitting || selectedFiles.length === 0}
+            disabled={
+              isSubmitting ||
+              selectedFiles.length === 0 ||
+              submissionBlocked
+            }
             className="submit-button"
           >
             {isSubmitting ? (

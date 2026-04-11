@@ -20,6 +20,8 @@ const emptyFormData = () => ({
   grade_level: '',
   /** YYYY-MM-DD — để trống = hiển thị cho HS ngay */
   available_from_date: '',
+  /** YYYY-MM-DD — để trống = không giới hạn hạn nộp */
+  due_date: '',
   question_image: null,
   model_solution_image: null,
   question_image_url: '',
@@ -127,6 +129,9 @@ function CreateAssignmentForm() {
           'available_from_date',
           formData.available_from_date
         );
+      }
+      if (formData.due_date) {
+        formDataToSend.append('due_date', formData.due_date);
       }
 
       if (formData.question_image) {
@@ -258,6 +263,24 @@ function CreateAssignmentForm() {
           <p className="form-hint">
             Để trống: học sinh thấy bài ngay sau khi gán lớp. Chọn ngày: chỉ từ
             0h ngày đó (giờ Việt Nam) học sinh mới thấy và nộp bài.
+          </p>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="due_date">Hạn nộp bài (cho học sinh)</label>
+          <input
+            id="due_date"
+            type="date"
+            name="due_date"
+            value={formData.due_date}
+            onChange={handleInputChange}
+            disabled={isSubmitting}
+            min={formData.available_from_date || undefined}
+          />
+          <p className="form-hint">
+            Để trống: không giới hạn ngày nộp. Chọn ngày: học sinh chỉ được nộp
+            đến hết ngày đó (giờ Việt Nam). Phải sau hoặc cùng ngày mở bài (nếu
+            có).
           </p>
         </div>
 
