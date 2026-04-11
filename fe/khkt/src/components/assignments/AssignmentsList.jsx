@@ -5,6 +5,12 @@ import { useAuth } from '../../contexts/AuthContext';
 import OceanShell, { OceanPageLoading, OceanPageError } from '../layout/OceanShell';
 import './AssignmentsList.css';
 
+/** Local calendar date for filtering (missing created_at → coi như hôm nay để vẫn hiện bài cũ). */
+function getAssignmentLocalDate(assignment) {
+  if (assignment?.created_at) return new Date(assignment.created_at);
+  return new Date();
+}
+
 function AssignmentsList() {
   const navigate = useNavigate();
   const { isAuthenticated, isAdmin, isTeacher, isStudent, user, logout } = useAuth();
@@ -56,34 +62,8 @@ function AssignmentsList() {
         setSelectedDate(latestDate);
         setHasAutoSelected(true);
       }
-    } else {
-      // Find the latest month with assignments
-      const monthSet = new Set();
-      allAssignments.forEach((assignment) => {
-        if (assignment.created_at) {
-          const date = new Date(assignment.created_at);
-          const year = date.getFullYear();
-          const month = date.getMonth() + 1;
-          monthSet.add(`${year}-${month}`);
-        }
-      });
-      
-      if (monthSet.size > 0) {
-        const latestMonth = Array.from(monthSet)
-          .map((ym) => {
-            const [y, m] = ym.split('-').map(Number);
-            return { year: y, month: m };
-          })
-          .sort((a, b) => {
-            if (a.year !== b.year) return b.year - a.year;
-            return b.month - a.month;
-          })[0];
-        
-        setSelectedYear(latestMonth.year);
-        setSelectedMonth(latestMonth.month);
-        setHasAutoSelected(true);
-      }
     }
+    // Học sinh: tháng/năm được đồng bộ trong loadAllAssignments sau mỗi lần tải API
   }, [allAssignments, isTeacher, isAdmin, hasAutoSelected]);
 
   const loadAllAssignments = async () => {
@@ -95,6 +75,24 @@ function AssignmentsList() {
       console.log('Assignments loaded:', data);
       console.log('Number of assignments:', data.length);
       setAllAssignments(data);
+
+      // Học sinh: nhảy tới tháng của bài mới nhất sau mỗi lần tải (tránh kẹt bộ lọc tháng cũ khi có bài mới)
+      if (!isTeacher && !isAdmin && Array.isArray(data) && data.length > 0) {
+        const dated = data.filter((a) => a?.created_at);
+        if (dated.length > 0) {
+          const latest = dated.reduce((best, a) =>
+            new Date(a.created_at) > new Date(best.created_at) ? a : best
+          );
+          const d = new Date(latest.created_at);
+          setSelectedYear(d.getFullYear());
+          setSelectedMonth(d.getMonth() + 1);
+        } else {
+          const now = new Date();
+          setSelectedYear(now.getFullYear());
+          setSelectedMonth(now.getMonth() + 1);
+        }
+        setHasAutoSelected(true);
+      }
     } catch (err) {
       setError(err.message || 'Failed to load assignments');
       console.error('Error loading assignments:', err);
@@ -149,8 +147,7 @@ function AssignmentsList() {
     
     // Filter by selected month
     const filtered = allAssignments.filter((assignment) => {
-      if (!assignment.created_at) return false;
-      const date = new Date(assignment.created_at);
+      const date = getAssignmentLocalDate(assignment);
       const year = date.getFullYear();
       const month = date.getMonth() + 1;
       return year === selectedYear && month === selectedMonth;
@@ -159,8 +156,7 @@ function AssignmentsList() {
     // Group by date
     const groups = {};
     filtered.forEach((assignment) => {
-      if (!assignment.created_at) return;
-      const date = new Date(assignment.created_at);
+      const date = getAssignmentLocalDate(assignment);
       const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
       
       if (!groups[dateKey]) {
@@ -287,12 +283,10 @@ function AssignmentsList() {
     
     const monthSet = new Set();
     allAssignments.forEach((assignment) => {
-      if (assignment.created_at) {
-        const date = new Date(assignment.created_at);
-        const year = date.getFullYear();
-        const month = date.getMonth() + 1;
-        monthSet.add(`${year}-${month}`);
-      }
+      const date = getAssignmentLocalDate(assignment);
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1;
+      monthSet.add(`${year}-${month}`);
     });
     
     return Array.from(monthSet)

@@ -23,6 +23,7 @@ export async function fetchAssignments() {
     const response = await fetch(`${API_BASE_URL}/assignments`, {
       method: 'GET',
       headers,
+      cache: 'no-store',
     });
 
     if (!response.ok) {

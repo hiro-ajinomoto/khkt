@@ -140,7 +140,18 @@ router.get("/", optionalAuthenticate, async (req, res) => {
           .find({ class_name: student.class_name })
           .toArray();
 
-        assignmentIds = assignmentClasses.map((ac) => ac.assignment_id);
+        assignmentIds = assignmentClasses
+          .map((ac) => ac.assignment_id)
+          .filter(Boolean)
+          .map((id) => {
+            if (id instanceof ObjectId) return id;
+            try {
+              return ObjectId.createFromHexString(String(id));
+            } catch {
+              return null;
+            }
+          })
+          .filter(Boolean);
         console.log(`Found ${assignmentIds.length} assignments for class ${student.class_name}`);
       } else {
         // Student has no class, return empty array
