@@ -134,7 +134,13 @@ function AssignmentDetail() {
           <p className="assignment-description">{assignment.description}</p>
         )}
         <div className="assignment-meta">
-          <span className="meta-badge subject">{assignment.subject || 'math'}</span>
+          <span className="meta-badge subject">
+            #
+            {String(assignment.subject || 'math')
+              .replace(/^#/, '')
+              .trim()
+              .toLowerCase()}
+          </span>
           {assignment.grade_level && (
             <span className="meta-badge grade">#{assignment.grade_level}</span>
           )}

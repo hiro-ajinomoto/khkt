@@ -80,9 +80,19 @@
 }
 
 .meta-badge.subject {
-  border-color: rgba(103, 232, 249, 0.35);
-  background: rgba(34, 211, 238, 0.12);
-  color: #a5f3fc;
+  border: 1px solid rgba(196, 181, 253, 0.55);
+  background: linear-gradient(
+    120deg,
+    rgba(124, 58, 237, 0.92) 0%,
+    rgba(192, 38, 211, 0.88) 50%,
+    rgba(79, 70, 229, 0.92) 100%
+  );
+  color: #faf5ff;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  box-shadow:
+    0 4px 14px rgba(88, 28, 135, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 .meta-badge.date {

@@ -118,7 +118,10 @@ export async function deleteAssignments(ids) {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to delete assignments: ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.detail || `Failed to delete assignments: ${response.statusText}`
+      );
     }
 
     const data = await response.json();

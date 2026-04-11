@@ -863,6 +863,11 @@ router.delete("/", authenticate, requireTeacher, async (req, res) => {
       }
     }
 
+    // Gỡ gán lớp trước khi xóa bài
+    await db.collection("assignment_classes").deleteMany({
+      assignment_id: { $in: objectIds },
+    });
+
     // Delete assignments from database
     const result = await db.collection("assignments").deleteMany({
       _id: { $in: objectIds },

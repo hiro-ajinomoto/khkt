@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchAssignments, fetchAssignmentsByDate, fetchAssignmentsByMonth, deleteAssignment, assignAssignmentsToClasses, getAssignmentClasses } from '../../api/assignments';
+import { fetchAssignments, fetchAssignmentsByDate, fetchAssignmentsByMonth, deleteAssignment, deleteAssignments, assignAssignmentsToClasses, getAssignmentClasses } from '../../api/assignments';
 import { fetchMySubmissions } from '../../api/submissions';
 import { useAuth } from '../../contexts/AuthContext';
 import OceanShell, { OceanPageLoading, OceanPageError } from '../layout/OceanShell';
@@ -10,6 +10,20 @@ import './AssignmentsList.css';
 function getAssignmentLocalDate(assignment) {
   if (assignment?.created_at) return new Date(assignment.created_at);
   return new Date();
+}
+
+/** Hiển thị môn dạng #hashtag, màu gradient nổi bật */
+function SubjectHashtag({ subject }) {
+  const raw =
+    String(subject || 'math')
+      .replace(/^#/, '')
+      .trim()
+      .toLowerCase() || 'math';
+  return (
+    <span className="inline-flex items-center rounded-full border border-violet-300/45 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-indigo-600 px-3 py-1.5 text-xs font-semibold tracking-wide text-white shadow-lg shadow-violet-950/45 ring-1 ring-white/15">
+      #{raw}
+    </span>
+  );
 }
 
 function AssignmentsList() {
@@ -23,6 +37,7 @@ function AssignmentsList() {
   /** Danh sách id bài tập đang mở trong modal gán lớp (một hoặc nhiều bài). */
   const [assignModalAssignmentIds, setAssignModalAssignmentIds] = useState(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   /** Học sinh: id bài đã có bài nộp của tôi */
   const [submittedAssignmentIds, setSubmittedAssignmentIds] = useState(
     () => new Set()
@@ -267,6 +282,31 @@ function AssignmentsList() {
     if (selectedIds.size === 0) return;
     setAssignModalAssignmentIds(Array.from(selectedIds));
     setShowAssignModal(true);
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    if (
+      !window.confirm(
+        `Bạn có chắc chắn muốn xóa ${ids.length} bài tập đã chọn? Hành động này không thể hoàn tác.`
+      )
+    ) {
+      return;
+    }
+    try {
+      setBulkDeleting(true);
+      await deleteAssignments(ids);
+      setSelectedIds(new Set());
+      await loadAllAssignments();
+    } catch (err) {
+      alert(
+        'Không thể xóa bài tập: ' + (err.message || 'Lỗi không xác định')
+      );
+      console.error('Error bulk deleting assignments:', err);
+    } finally {
+      setBulkDeleting(false);
+    }
   };
 
   const handleCloseAssignModal = () => {
@@ -667,18 +707,14 @@ function AssignmentsList() {
               </button>
               {isTeacher && selectedIds.size > 0 && (
                 <button
-                  onClick={() => {
-                    if (
-                      window.confirm(
-                        `Bạn có chắc chắn muốn xóa ${selectedIds.size} bài tập đã chọn?`
-                      )
-                    ) {
-                      alert('Chức năng xóa nhiều bài tập sẽ được triển khai');
-                    }
-                  }}
-                  className="w-full rounded-2xl border border-rose-300/30 bg-rose-500/20 px-4 py-3 text-sm font-medium text-rose-50 shadow-lg shadow-rose-950/40 transition hover:-translate-y-0.5"
+                  type="button"
+                  onClick={handleBulkDelete}
+                  disabled={bulkDeleting}
+                  className="w-full rounded-2xl border border-rose-300/30 bg-rose-500/20 px-4 py-3 text-sm font-medium text-rose-50 shadow-lg shadow-rose-950/40 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  🗑️ Xóa đã chọn ({selectedIds.size})
+                  {bulkDeleting
+                    ? 'Đang xóa...'
+                    : `🗑️ Xóa đã chọn (${selectedIds.size})`}
                 </button>
               )}
             </div>
@@ -937,9 +973,7 @@ function AssignmentCard({
               Chọn bài này
             </label>
           )}
-          <span className="rounded-xl border border-cyan-300/15 bg-cyan-300/10 px-3 py-2 text-cyan-100">
-            {assignment.subject || 'Math'}
-          </span>
+          <SubjectHashtag subject={assignment.subject} />
           {assignment.grade_level && (
             <span className="rounded-xl border border-fuchsia-300/10 bg-fuchsia-300/10 px-3 py-2 text-fuchsia-100">
               Lớp {assignment.grade_level}
