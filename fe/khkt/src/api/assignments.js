@@ -45,15 +45,25 @@ export async function fetchAssignments() {
  */
 export async function fetchAssignmentById(id) {
   try {
+    const authHeader = getAuthHeader();
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    if (authHeader) {
+      headers['Authorization'] = authHeader;
+    }
+
     const response = await fetch(`${API_BASE_URL}/assignments/${id}`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
+      cache: 'no-store',
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch assignment: ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.detail || `Failed to fetch assignment: ${response.statusText}`
+      );
     }
 
     const data = await response.json();

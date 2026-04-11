@@ -18,6 +18,8 @@ const emptyFormData = () => ({
   title: '',
   description: '',
   grade_level: '',
+  /** YYYY-MM-DD — để trống = hiển thị cho HS ngay */
+  available_from_date: '',
   question_image: null,
   model_solution_image: null,
   question_image_url: '',
@@ -119,6 +121,12 @@ function CreateAssignmentForm() {
       }
       if (formData.grade_level) {
         formDataToSend.append('grade_level', formData.grade_level);
+      }
+      if (formData.available_from_date) {
+        formDataToSend.append(
+          'available_from_date',
+          formData.available_from_date
+        );
       }
 
       if (formData.question_image) {
@@ -233,6 +241,24 @@ function CreateAssignmentForm() {
               </option>
             ))}
           </select>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="available_from_date">
+            Ngày mở bài cho học sinh
+          </label>
+          <input
+            id="available_from_date"
+            type="date"
+            name="available_from_date"
+            value={formData.available_from_date}
+            onChange={handleInputChange}
+            disabled={isSubmitting}
+          />
+          <p className="form-hint">
+            Để trống: học sinh thấy bài ngay sau khi gán lớp. Chọn ngày: chỉ từ
+            0h ngày đó (giờ Việt Nam) học sinh mới thấy và nộp bài.
+          </p>
         </div>
 
         {/* Question Image */}

@@ -21,6 +21,7 @@ function EditAssignmentForm() {
     title: '',
     description: '',
     grade_level: '',
+    available_from_date: '',
     question_image: null,
     model_solution_image: null,
     question_image_url: '',
@@ -48,6 +49,7 @@ function EditAssignmentForm() {
           title: assignment.title || '',
           description: assignment.description || '',
           grade_level: assignment.grade_level || '',
+          available_from_date: assignment.available_from_date || '',
           question_image: null,
           model_solution_image: null,
           question_image_url: assignment.question_image_url || '',
@@ -164,6 +166,10 @@ function EditAssignmentForm() {
       if (formData.grade_level) {
         formDataToSend.append('grade_level', formData.grade_level);
       }
+      formDataToSend.append(
+        'available_from_date',
+        formData.available_from_date || ''
+      );
 
       if (formData.question_image) {
         formDataToSend.append('question_image', formData.question_image);
@@ -282,6 +288,24 @@ function EditAssignmentForm() {
               </option>
             ))}
           </select>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="available_from_date">
+            Ngày mở bài cho học sinh
+          </label>
+          <input
+            id="available_from_date"
+            type="date"
+            name="available_from_date"
+            value={formData.available_from_date}
+            onChange={handleInputChange}
+            disabled={isSubmitting}
+          />
+          <p className="form-hint">
+            Để trống: hiển thị ngay. Chọn ngày: học sinh chỉ thấy từ 0h ngày đó
+            (giờ Việt Nam).
+          </p>
         </div>
 
         {/* Question Image */}

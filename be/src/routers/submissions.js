@@ -8,6 +8,7 @@ import { fileURLToPath } from "url";
 import { getDB } from "../db.js";
 import { config } from "../config.js";
 import { gradeSubmissionWithAI } from "../services/aiService.js";
+import { isAssignmentReleased } from "../utils/assignmentRelease.js";
 import { uploadFileToS3 } from "../services/s3Service.js";
 import { authenticate } from "../middleware/auth.js";
 
@@ -267,6 +268,12 @@ router.post("/", authenticate, upload.array("files"), async (req, res) => {
 
     if (!assignment) {
       return res.status(404).json({ detail: "Assignment not found" });
+    }
+
+    if (req.user.role === "student" && !isAssignmentReleased(assignment)) {
+      return res.status(403).json({
+        detail: "Bài tập chưa đến ngày mở. Vui lòng quay lại sau.",
+      });
     }
 
     // Check if student is allowed to submit to this assignment

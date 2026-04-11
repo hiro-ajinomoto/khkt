@@ -288,6 +288,13 @@
   color: #7dd3fc;
 }
 
+.form-hint {
+  font-size: 0.82rem;
+  color: rgba(148, 163, 184, 0.95);
+  margin: 0.4rem 0 0 0;
+  line-height: 1.45;
+}
+
 @media (max-width: 768px) {
   .create-assignment-form-container {
     padding: 1.25rem 1rem 1.5rem;

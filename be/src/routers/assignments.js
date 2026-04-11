@@ -14,11 +14,30 @@ import {
   getPresignedUrl,
 } from "../services/s3Service.js";
 import { authenticate, requireTeacher, optionalAuthenticate } from "../middleware/auth.js";
+import {
+  todayStrHoChiMinh,
+  isAssignmentReleased,
+} from "../utils/assignmentRelease.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const router = express.Router();
+
+/** Ngày mở bài (YYYY-MM-DD) hoặc null = hiển thị ngay */
+function normalizeAvailableFromDate(raw) {
+  if (raw === undefined || raw === null || String(raw).trim() === "") {
+    return { value: null };
+  }
+  const s = String(raw).trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    return {
+      error:
+        "Ngày mở bài không hợp lệ (định dạng YYYY-MM-DD, ví dụ 2026-04-15)",
+    };
+  }
+  return { value: s };
+}
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, "..", "..", config.imageUpload.dir);
@@ -167,7 +186,20 @@ router.get("/", optionalAuthenticate, async (req, res) => {
     if (req.user && req.user.role === "student") {
       // Students: only show assignments assigned to their class
       if (assignmentIds.length > 0) {
-        query._id = { $in: assignmentIds };
+        const todayStr = todayStrHoChiMinh();
+        query = {
+          $and: [
+            { _id: { $in: assignmentIds } },
+            {
+              $or: [
+                { available_from_date: { $exists: false } },
+                { available_from_date: null },
+                { available_from_date: "" },
+                { available_from_date: { $lte: todayStr } },
+              ],
+            },
+          ],
+        };
         console.log("Student query:", JSON.stringify(query));
       } else {
         // Student has class but no assignments assigned yet
@@ -208,6 +240,7 @@ router.get("/", optionalAuthenticate, async (req, res) => {
           item.model_solution_image_url
         ),
         created_at: item.created_at || null,
+        available_from_date: item.available_from_date ?? null,
       }))
     );
 
@@ -269,6 +302,7 @@ router.get("/by-date", async (req, res) => {
           item.model_solution_image_url
         ),
         created_at: item.created_at || null,
+        available_from_date: item.available_from_date ?? null,
       }))
     );
 
@@ -333,6 +367,7 @@ router.get("/by-month", async (req, res) => {
           item.model_solution_image_url
         ),
         created_at: item.created_at || null,
+        available_from_date: item.available_from_date ?? null,
       }))
     );
 
@@ -346,8 +381,9 @@ router.get("/by-month", async (req, res) => {
 /**
  * GET /assignments/:id
  * Get a single assignment by ID
+ * — Học sinh: chỉ xem được nếu bài gán lớp và đã đến ngày mở; GV/Admin: luôn xem
  */
-router.get("/:id", async (req, res) => {
+router.get("/:id", optionalAuthenticate, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -368,6 +404,33 @@ router.get("/:id", async (req, res) => {
       return res.status(404).json({ detail: "Assignment not found" });
     }
 
+    const isTeacherOrAdmin =
+      req.user &&
+      (req.user.role === "teacher" || req.user.role === "admin");
+
+    if (req.user?.role === "student") {
+      const student = await db.collection("users").findOne({
+        _id: ObjectId.createFromHexString(req.user.id),
+      });
+      if (!student?.class_name) {
+        return res.status(403).json({ detail: "Forbidden" });
+      }
+      const assigned = await db.collection("assignment_classes").findOne({
+        assignment_id: objectId,
+        class_name: student.class_name,
+      });
+      if (!assigned || !isAssignmentReleased(assignment)) {
+        return res.status(404).json({
+          detail:
+            "Không tìm thấy bài tập hoặc bài chưa đến ngày mở cho học sinh",
+        });
+      }
+    } else if (!isTeacherOrAdmin && !isAssignmentReleased(assignment)) {
+      return res.status(404).json({
+        detail: "Không tìm thấy bài tập hoặc bài chưa đến ngày mở",
+      });
+    }
+
     // Convert ObjectId to string and convert S3/local paths to URLs
     const result = {
       id: assignment._id.toString(),
@@ -383,6 +446,7 @@ router.get("/:id", async (req, res) => {
         assignment.model_solution_image_url
       ),
       created_at: assignment.created_at || null,
+      available_from_date: assignment.available_from_date ?? null,
     };
 
     res.json(result);
@@ -417,7 +481,13 @@ router.post(
         grade_level,
         question_image_url,
         model_solution_image_url,
+        available_from_date: availableFromRaw,
       } = req.body;
+
+      const parsedDate = normalizeAvailableFromDate(availableFromRaw);
+      if (parsedDate.error) {
+        return res.status(400).json({ detail: parsedDate.error });
+      }
 
       const files = req.files || [];
 
@@ -516,6 +586,7 @@ router.post(
         question_image_url: finalQuestionImageUrl,
         model_solution_image_url: finalSolutionImageUrl,
         created_at: new Date(),
+        available_from_date: parsedDate.value,
       };
 
       const result = await db.collection("assignments").insertOne(assignment);
@@ -537,6 +608,7 @@ router.post(
           inserted.model_solution_image_url
         ),
         created_at: inserted.created_at || null,
+        available_from_date: inserted.available_from_date ?? null,
       });
     } catch (error) {
       console.error("Error creating assignment:", error);
@@ -572,6 +644,7 @@ router.patch(
         grade_level,
         question_image_url,
         model_solution_image_url,
+        available_from_date: availableFromRaw,
       } = req.body;
 
       const files = req.files || [];
@@ -628,6 +701,14 @@ router.patch(
       // Update grade_level if provided
       if (grade_level !== undefined) {
         updateData.grade_level = grade_level || null;
+      }
+
+      if (availableFromRaw !== undefined) {
+        const parsed = normalizeAvailableFromDate(availableFromRaw);
+        if (parsed.error) {
+          return res.status(400).json({ detail: parsed.error });
+        }
+        updateData.available_from_date = parsed.value;
       }
 
       // Handle question image update
@@ -781,6 +862,7 @@ router.patch(
           updated.model_solution_image_url
         ),
         created_at: updated.created_at || null,
+        available_from_date: updated.available_from_date ?? null,
       });
     } catch (error) {
       console.error("Error updating assignment:", error);

@@ -4,6 +4,10 @@ import { fetchAssignments, fetchAssignmentsByDate, fetchAssignmentsByMonth, dele
 import { fetchMySubmissions } from '../../api/submissions';
 import { useAuth } from '../../contexts/AuthContext';
 import OceanShell, { OceanPageLoading, OceanPageError } from '../layout/OceanShell';
+import {
+  formatVNDateFromYMD,
+  isAssignmentReleasedClient,
+} from '../../utils/assignmentRelease';
 import './AssignmentsList.css';
 
 /** Local calendar date for filtering (missing created_at → coi như hôm nay để vẫn hiện bài cũ). */
@@ -974,6 +978,14 @@ function AssignmentCard({
             </label>
           )}
           <SubjectHashtag subject={assignment.subject} />
+          {isTeacher &&
+            assignment.available_from_date &&
+            !isAssignmentReleasedClient(assignment.available_from_date) && (
+              <span className="rounded-xl border border-amber-400/40 bg-amber-500/20 px-3 py-2 text-xs font-medium text-amber-100">
+                Chưa mở HS — từ{' '}
+                {formatVNDateFromYMD(assignment.available_from_date)}
+              </span>
+            )}
           {assignment.grade_level && (
             <span className="rounded-xl border border-fuchsia-300/10 bg-fuchsia-300/10 px-3 py-2 text-fuchsia-100">
               Lớp {assignment.grade_level}
