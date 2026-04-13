@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { register as registerAPI } from '../../api/auth';
+import { fetchSchoolClasses } from '../../api/classes';
 import { getAuthErrorMessage } from '../../utils/authErrors';
 import OceanShell from '../layout/OceanShell';
 import './AuthPage.css';
@@ -17,6 +18,21 @@ function Register() {
   });
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [schoolClasses, setSchoolClasses] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchSchoolClasses()
+      .then((list) => {
+        if (!cancelled) setSchoolClasses(list);
+      })
+      .catch(() => {
+        if (!cancelled) setSchoolClasses([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -144,11 +160,11 @@ function Register() {
               disabled={isSubmitting}
             >
               <option value="">Chọn lớp (tùy chọn)</option>
-              <option value="8A1">8A1</option>
-              <option value="8A2">8A2</option>
-              <option value="8A3">8A3</option>
-              <option value="8A4">8A4</option>
-              <option value="8A5">8A5</option>
+              {schoolClasses.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
             </select>
             <p className="field-hint">
               * Lưu ý: Chỉ học sinh cần chọn lớp. Nếu bạn trở thành giáo viên sau này, bạn không cần lớp.

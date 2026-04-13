@@ -2,6 +2,12 @@ import express from 'express';
 import { ObjectId } from 'mongodb';
 import { getDB } from '../db.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
+import {
+  addClassDocument,
+  classNameExists,
+  listClassNames,
+  removeClassDocument,
+} from '../schoolClasses.js';
 
 const router = express.Router();
 
@@ -130,14 +136,17 @@ router.patch('/users/:id/class', async (req, res) => {
       });
     }
 
-    // Validate class_name (optional, can be null or empty string)
-    const validClasses = ['8A1', '8A2', '8A3', '8A4', '8A5'];
-    const finalClass = class_name && class_name.trim() !== '' ? class_name.trim() : null;
-    
-    if (finalClass && !validClasses.includes(finalClass)) {
-      return res.status(400).json({
-        detail: `Invalid class_name. Must be one of: ${validClasses.join(', ')} or null`,
-      });
+    const finalClass =
+      class_name && class_name.trim() !== '' ? class_name.trim() : null;
+
+    if (finalClass) {
+      const exists = await classNameExists(db, finalClass);
+      if (!exists) {
+        return res.status(400).json({
+          detail:
+            'Lớp phải thuộc danh sách lớp đã khai báo, hoặc để trống.',
+        });
+      }
     }
 
     // Update user class_name
@@ -162,6 +171,72 @@ router.patch('/users/:id/class', async (req, res) => {
   } catch (error) {
     console.error('Error updating user class:', error);
     res.status(500).json({ detail: 'Failed to update user class' });
+  }
+});
+
+/**
+ * GET /admin/classes
+ * Danh sách lớp (admin)
+ */
+router.get('/classes', async (req, res) => {
+  try {
+    const db = getDB();
+    const classes = await listClassNames(db);
+    res.json({ classes });
+  } catch (error) {
+    console.error('Error listing classes:', error);
+    res.status(500).json({ detail: 'Failed to fetch classes' });
+  }
+});
+
+/**
+ * POST /admin/classes
+ * Thêm lớp — body: { name: string }
+ */
+router.post('/classes', async (req, res) => {
+  try {
+    const { name } = req.body;
+    const db = getDB();
+    await addClassDocument(db, name);
+    const classes = await listClassNames(db);
+    res.status(201).json({
+      message: 'Class added successfully',
+      classes,
+    });
+  } catch (error) {
+    const status = error.status || 500;
+    if (status >= 400 && status < 500) {
+      return res.status(status).json({ detail: error.message });
+    }
+    console.error('Error adding class:', error);
+    res.status(500).json({ detail: 'Failed to add class' });
+  }
+});
+
+/**
+ * DELETE /admin/classes?name=8A1
+ * Xóa lớp — gỡ học sinh khỏi lớp và gán bài liên quan
+ */
+router.delete('/classes', async (req, res) => {
+  try {
+    const name = req.query.name;
+    if (!name || String(name).trim() === '') {
+      return res.status(400).json({ detail: 'Query parameter "name" is required' });
+    }
+    const db = getDB();
+    await removeClassDocument(db, name);
+    const classes = await listClassNames(db);
+    res.json({
+      message: 'Class deleted successfully',
+      classes,
+    });
+  } catch (error) {
+    const status = error.status || 500;
+    if (status >= 400 && status < 500) {
+      return res.status(status).json({ detail: error.message });
+    }
+    console.error('Error deleting class:', error);
+    res.status(500).json({ detail: 'Failed to delete class' });
   }
 });
 

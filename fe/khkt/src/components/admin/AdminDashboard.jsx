@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchUsers, updateUserRole, updateUserClass, deleteUser, fetchStats } from '../../api/admin';
+import { fetchSchoolClasses, createSchoolClass, deleteSchoolClass } from '../../api/classes';
 import OceanShell, { OceanPageLoading } from '../layout/OceanShell';
 import './AdminDashboard.css';
 
@@ -12,10 +13,14 @@ function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [editingRole, setEditingRole] = useState(null);
+  /** Một dòng đang sửa quyền + lớp cùng lúc */
+  const [editingUserId, setEditingUserId] = useState(null);
   const [newRole, setNewRole] = useState('');
-  const [editingClass, setEditingClass] = useState(null);
   const [newClass, setNewClass] = useState('');
+  const [schoolClasses, setSchoolClasses] = useState([]);
+  const [newClassName, setNewClassName] = useState('');
+  const [classBusy, setClassBusy] = useState(false);
+  const [userFilter, setUserFilter] = useState('');
 
   useEffect(() => {
     loadData();
@@ -25,12 +30,14 @@ function AdminDashboard() {
     try {
       setLoading(true);
       setError(null);
-      const [usersData, statsData] = await Promise.all([
+      const [usersData, statsData, classesList] = await Promise.all([
         fetchUsers(),
         fetchStats(),
+        fetchSchoolClasses(),
       ]);
       setUsers(usersData);
       setStats(statsData);
+      setSchoolClasses(classesList);
     } catch (err) {
       setError(err.message || 'Không thể tải dữ liệu');
       console.error('Error loading data:', err);
@@ -39,49 +46,83 @@ function AdminDashboard() {
     }
   };
 
-  const handleRoleChange = async (userId, currentRole) => {
-    setEditingRole(userId);
-    setNewRole(currentRole);
+  const startEditUser = (u) => {
+    setEditingUserId(u.id);
+    setNewRole(u.role);
+    setNewClass(u.class_name || '');
   };
 
-  const handleRoleSave = async (userId) => {
-    try {
-      await updateUserRole(userId, newRole);
-      await loadData(); // Reload data
-      setEditingRole(null);
-      setNewRole('');
-    } catch (err) {
-      alert('Không thể cập nhật quyền: ' + (err.message || 'Lỗi không xác định'));
-      console.error('Error updating role:', err);
-    }
-  };
-
-  const handleRoleCancel = () => {
-    setEditingRole(null);
+  const cancelEditUser = () => {
+    setEditingUserId(null);
     setNewRole('');
+    setNewClass('');
   };
 
-  const handleClassChange = async (userId, currentClass) => {
-    setEditingClass(userId);
-    setNewClass(currentClass || '');
-  };
+  const saveEditUser = async () => {
+    if (!editingUserId) return;
+    const u = users.find((x) => x.id === editingUserId);
+    if (!u) return;
 
-  const handleClassSave = async (userId) => {
+    const finalClass =
+      newClass && newClass.trim() !== '' ? newClass.trim() : null;
+
     try {
-      const finalClass = newClass && newClass.trim() !== '' ? newClass.trim() : null;
-      await updateUserClass(userId, finalClass);
-      await loadData(); // Reload data
-      setEditingClass(null);
-      setNewClass('');
+      if (newRole !== u.role) {
+        await updateUserRole(editingUserId, newRole);
+      }
+      if (newRole === 'student') {
+        await updateUserClass(editingUserId, finalClass);
+      }
+      await loadData();
+      cancelEditUser();
     } catch (err) {
-      alert('Không thể cập nhật lớp: ' + (err.message || 'Lỗi không xác định'));
-      console.error('Error updating class:', err);
+      alert(
+        err.message ||
+          'Không thể cập nhật. Kiểm tra quyền và lớp (lớp chỉ áp dụng cho học sinh).'
+      );
+      console.error('Error saving user edit:', err);
     }
   };
 
-  const handleClassCancel = () => {
-    setEditingClass(null);
-    setNewClass('');
+  const handleAddSchoolClass = async (e) => {
+    e.preventDefault();
+    const name = newClassName.trim();
+    if (!name) {
+      alert('Nhập tên lớp (ví dụ: 8A6).');
+      return;
+    }
+    try {
+      setClassBusy(true);
+      const list = await createSchoolClass(name);
+      setSchoolClasses(list);
+      setNewClassName('');
+    } catch (err) {
+      alert(err.message || 'Không thể thêm lớp');
+    } finally {
+      setClassBusy(false);
+    }
+  };
+
+  const handleDeleteSchoolClass = async (classLabel) => {
+    if (
+      !window.confirm(
+        `Xóa lớp "${classLabel}"? Học sinh thuộc lớp sẽ mất gán lớp; gán bài cho lớp này cũng bị gỡ.`
+      )
+    ) {
+      return;
+    }
+    try {
+      setClassBusy(true);
+      const list = await deleteSchoolClass(classLabel);
+      setSchoolClasses(list);
+      const [usersData, statsData] = await Promise.all([fetchUsers(), fetchStats()]);
+      setUsers(usersData);
+      setStats(statsData);
+    } catch (err) {
+      alert(err.message || 'Không thể xóa lớp');
+    } finally {
+      setClassBusy(false);
+    }
   };
 
   const handleDeleteUser = async (userId, username) => {
@@ -115,6 +156,191 @@ function AdminDashboard() {
     };
     return colors[role] || '#94a3b8';
   };
+
+  const UNASSIGNED_CLASS_LABEL = 'Chưa phân lớp';
+
+  const filteredUsers = useMemo(() => {
+    const q = userFilter.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter((u) => {
+      const blob = [
+        u.username,
+        u.name || '',
+        u.class_name || '',
+        u.role === 'admin' ? 'quản trị' : '',
+        u.role === 'teacher' ? 'giáo viên' : '',
+        u.role === 'student' ? 'học sinh' : '',
+      ]
+        .join(' ')
+        .toLowerCase();
+      return blob.includes(q);
+    });
+  }, [users, userFilter]);
+
+  const admins = useMemo(
+    () =>
+      [...filteredUsers.filter((u) => u.role === 'admin')].sort((a, b) =>
+        a.username.localeCompare(b.username, 'vi')
+      ),
+    [filteredUsers]
+  );
+
+  const teachers = useMemo(
+    () =>
+      [...filteredUsers.filter((u) => u.role === 'teacher')].sort((a, b) =>
+        a.username.localeCompare(b.username, 'vi')
+      ),
+    [filteredUsers]
+  );
+
+  const studentGroups = useMemo(() => {
+    const students = filteredUsers.filter((u) => u.role === 'student');
+    const byClass = new Map();
+    for (const s of students) {
+      const label = s.class_name?.trim() ? s.class_name.trim() : UNASSIGNED_CLASS_LABEL;
+      if (!byClass.has(label)) byClass.set(label, []);
+      byClass.get(label).push(s);
+    }
+    for (const list of byClass.values()) {
+      list.sort((a, b) => a.username.localeCompare(b.username, 'vi'));
+    }
+    const keys = Array.from(byClass.keys());
+    keys.sort((a, b) => {
+      if (a === UNASSIGNED_CLASS_LABEL) return 1;
+      if (b === UNASSIGNED_CLASS_LABEL) return -1;
+      const ia = schoolClasses.indexOf(a);
+      const ib = schoolClasses.indexOf(b);
+      if (ia !== -1 && ib !== -1) return ia - ib;
+      if (ia !== -1) return -1;
+      if (ib !== -1) return 1;
+      return a.localeCompare(b, 'vi', { numeric: true });
+    });
+    return keys.map((label) => ({
+      label,
+      users: byClass.get(label),
+    }));
+  }, [filteredUsers, schoolClasses]);
+
+  const renderUserRow = (u) => (
+    <tr key={u.id}>
+      <td>{u.username}</td>
+      <td>{u.name || u.username}</td>
+      <td>
+        {editingUserId === u.id ? (
+          <div className="role-edit">
+            <select
+              value={newRole}
+              onChange={(e) => setNewRole(e.target.value)}
+              className="role-select"
+              aria-label="Chọn quyền"
+            >
+              <option value="student">Học sinh</option>
+              <option value="teacher">Giáo viên</option>
+              <option value="admin">Quản trị viên</option>
+            </select>
+            {newRole === 'teacher' || newRole === 'admin' ? (
+              <span className="role-edit-hint">(Giáo viên / quản trị không cần lớp)</span>
+            ) : null}
+          </div>
+        ) : (
+          <span
+            className="role-badge"
+            style={{ backgroundColor: getRoleColor(u.role) }}
+          >
+            {getRoleLabel(u.role)}
+          </span>
+        )}
+      </td>
+      <td>
+        {editingUserId === u.id ? (
+          newRole === 'student' ? (
+            <div className="class-edit">
+              <select
+                value={newClass}
+                onChange={(e) => setNewClass(e.target.value)}
+                className="class-select"
+                aria-label="Chọn lớp"
+              >
+                <option value="">Chưa có lớp</option>
+                {schoolClasses.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <span className="class-na">—</span>
+          )
+        ) : u.role === 'student' ? (
+          <span className="class-badge">{u.class_name || 'Chưa có lớp'}</span>
+        ) : (
+          <span className="class-na">-</span>
+        )}
+      </td>
+      <td>
+        {u.created_at ? new Date(u.created_at).toLocaleDateString('vi-VN') : 'N/A'}
+      </td>
+      <td>
+        <div className="action-buttons">
+          {editingUserId === u.id ? (
+            <>
+              <button
+                type="button"
+                onClick={saveEditUser}
+                className="save-button"
+                title="Lưu quyền và lớp"
+              >
+                ✓
+              </button>
+              <button
+                type="button"
+                onClick={cancelEditUser}
+                className="cancel-button"
+                title="Hủy"
+              >
+                ✕
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => startEditUser(u)}
+                className="edit-button"
+                title="Sửa quyền và lớp"
+              >
+                ✏️
+              </button>
+              {u.id !== user?.id && (
+                <button
+                  type="button"
+                  onClick={() => handleDeleteUser(u.id, u.username)}
+                  className="delete-button"
+                  title="Xóa người dùng"
+                >
+                  🗑️
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+
+  const userTableHead = (
+    <thead>
+      <tr>
+        <th>Tên đăng nhập</th>
+        <th>Họ và tên</th>
+        <th>Quyền</th>
+        <th>Lớp</th>
+        <th>Ngày tạo</th>
+        <th>Thao tác</th>
+      </tr>
+    </thead>
+  );
 
   if (loading) {
     return <OceanPageLoading message="Đang tải bảng quản trị..." />;
@@ -179,155 +405,150 @@ function AdminDashboard() {
 
       <div className="users-section">
         <div className="section-header">
+          <h2>Quản lý lớp</h2>
+        </div>
+        <form className="admin-class-form" onSubmit={handleAddSchoolClass}>
+          <p className="admin-class-hint">
+            Đặt tên lớp tùy ý (ví dụ <strong>8A1</strong>, <strong>Lớp chọn Toán</strong>, <strong>Khối 8 - Tổ 2</strong>), tối đa 80 ký tự,
+            có ít nhất một chữ hoặc số; không chứa ký tự điều khiển hoặc các ký tự nhỏ hơn, lớn hơn, gạch chéo ngược. Lớp mới dùng cho đăng ký và gán bài.
+          </p>
+          <div className="admin-class-row">
+            <input
+              type="text"
+              value={newClassName}
+              onChange={(e) => setNewClassName(e.target.value)}
+              placeholder="Ví dụ: 8A6"
+              disabled={classBusy}
+              className="admin-class-input"
+              autoComplete="off"
+            />
+            <button type="submit" className="refresh-button" disabled={classBusy}>
+              ➕ Thêm lớp
+            </button>
+          </div>
+        </form>
+        <ul className="admin-class-list">
+          {schoolClasses.length === 0 ? (
+            <li className="empty-state">Chưa có lớp nào</li>
+          ) : (
+            schoolClasses.map((c) => (
+              <li key={c} className="admin-class-item">
+                <span className="class-badge">{c}</span>
+                <button
+                  type="button"
+                  className="delete-button"
+                  title="Xóa lớp"
+                  disabled={classBusy}
+                  onClick={() => handleDeleteSchoolClass(c)}
+                >
+                  🗑️
+                </button>
+              </li>
+            ))
+          )}
+        </ul>
+      </div>
+
+      <div className="users-section">
+        <div className="section-header">
           <h2>Quản lý người dùng</h2>
-          <button onClick={loadData} className="refresh-button">
+          <button type="button" onClick={loadData} className="refresh-button">
             🔄 Làm mới
           </button>
         </div>
 
-        <div className="users-table-container">
-          <table className="users-table">
-            <thead>
-              <tr>
-                <th>Tên đăng nhập</th>
-                <th>Họ và tên</th>
-                <th>Quyền</th>
-                <th>Lớp</th>
-                <th>Ngày tạo</th>
-                <th>Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="empty-state">
-                    Chưa có người dùng nào
-                  </td>
-                </tr>
+        <div className="user-filter-bar">
+          <label htmlFor="admin-user-search" className="user-filter-label">
+            Tìm nhanh
+          </label>
+          <input
+            id="admin-user-search"
+            type="search"
+            className="user-filter-input"
+            value={userFilter}
+            onChange={(e) => setUserFilter(e.target.value)}
+            placeholder="Tên đăng nhập, họ tên, lớp, vai trò…"
+            autoComplete="off"
+          />
+        </div>
+
+        {users.length === 0 ? (
+          <p className="user-group-empty">Chưa có người dùng nào.</p>
+        ) : filteredUsers.length === 0 ? (
+          <p className="user-group-empty">Không có người dùng khớp bộ lọc.</p>
+        ) : (
+          <>
+            <div className="user-group-block">
+              <h3 className="user-group-title">
+                <span className="user-group-title-icon">🛡️</span>
+                Quản trị viên
+                <span className="user-group-count">({admins.length})</span>
+              </h3>
+              {admins.length === 0 ? (
+                <p className="user-group-empty muted">Không có quản trị viên trong kết quả lọc.</p>
               ) : (
-                users.map((u) => (
-                  <tr key={u.id}>
-                    <td>{u.username}</td>
-                    <td>{u.name || u.username}</td>
-                    <td>
-                      {editingRole === u.id ? (
-                        <div className="role-edit">
-                          <select
-                            value={newRole}
-                            onChange={(e) => setNewRole(e.target.value)}
-                            className="role-select"
-                          >
-                            <option value="student">Học sinh</option>
-                            <option value="teacher">Giáo viên</option>
-                            <option value="admin">Quản trị viên</option>
-                          </select>
-                          <button
-                            onClick={() => handleRoleSave(u.id)}
-                            className="save-button"
-                          >
-                            ✓
-                          </button>
-                          <button
-                            onClick={handleRoleCancel}
-                            className="cancel-button"
-                          >
-                            ✕
-                          </button>
-                          {newRole === 'teacher' || newRole === 'admin' ? (
-                            <span style={{ fontSize: '0.75rem', color: '#999', fontStyle: 'italic', marginLeft: '0.5rem' }}>
-                              (Không cần lớp)
-                            </span>
-                          ) : null}
-                        </div>
+                <div className="users-table-container">
+                  <table className="users-table">
+                    {userTableHead}
+                    <tbody>{admins.map(renderUserRow)}</tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div className="user-group-block">
+              <h3 className="user-group-title">
+                <span className="user-group-title-icon">👩‍🏫</span>
+                Giáo viên
+                <span className="user-group-count">({teachers.length})</span>
+              </h3>
+              {teachers.length === 0 ? (
+                <p className="user-group-empty muted">Không có giáo viên trong kết quả lọc.</p>
+              ) : (
+                <div className="users-table-container">
+                  <table className="users-table">
+                    {userTableHead}
+                    <tbody>{teachers.map(renderUserRow)}</tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div className="user-group-block user-group-block--students-wrap">
+              <h3 className="user-group-title user-group-title--major">
+                <span className="user-group-title-icon">🎒</span>
+                Học sinh theo lớp
+                <span className="user-group-count">
+                  ({studentGroups.reduce((n, g) => n + g.users.length, 0)})
+                </span>
+              </h3>
+              {studentGroups.length === 0 ? (
+                <p className="user-group-empty muted">Không có học sinh trong kết quả lọc.</p>
+              ) : (
+                studentGroups.map(({ label, users: groupUsers }) => (
+                  <div key={label} className="user-subgroup">
+                    <h4 className="user-subgroup-title">
+                      {label === UNASSIGNED_CLASS_LABEL ? (
+                        <>Chưa phân lớp</>
                       ) : (
-                        <span
-                          className="role-badge"
-                          style={{ backgroundColor: getRoleColor(u.role) }}
-                        >
-                          {getRoleLabel(u.role)}
-                        </span>
+                        <>
+                          Lớp <strong>{label}</strong>
+                        </>
                       )}
-                    </td>
-                    <td>
-                      {u.role === 'student' ? (
-                        editingClass === u.id ? (
-                          <div className="class-edit">
-                            <select
-                              value={newClass}
-                              onChange={(e) => setNewClass(e.target.value)}
-                              className="class-select"
-                            >
-                              <option value="">Chưa có lớp</option>
-                              <option value="8A1">8A1</option>
-                              <option value="8A2">8A2</option>
-                              <option value="8A3">8A3</option>
-                              <option value="8A4">8A4</option>
-                              <option value="8A5">8A5</option>
-                            </select>
-                            <button
-                              onClick={() => handleClassSave(u.id)}
-                              className="save-button"
-                            >
-                              ✓
-                            </button>
-                            <button
-                              onClick={handleClassCancel}
-                              className="cancel-button"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="class-display">
-                            <span className="class-badge">
-                              {u.class_name || 'Chưa có lớp'}
-                            </span>
-                            <button
-                              onClick={() => handleClassChange(u.id, u.class_name)}
-                              className="edit-class-button"
-                              title="Sửa lớp"
-                            >
-                              ✏️
-                            </button>
-                          </div>
-                        )
-                      ) : (
-                        <span className="class-na">-</span>
-                      )}
-                    </td>
-                    <td>
-                      {u.created_at
-                        ? new Date(u.created_at).toLocaleDateString('vi-VN')
-                        : 'N/A'}
-                    </td>
-                    <td>
-                      <div className="action-buttons">
-                        {editingRole !== u.id && (
-                          <button
-                            onClick={() => handleRoleChange(u.id, u.role)}
-                            className="edit-button"
-                            title="Sửa quyền"
-                          >
-                            ✏️
-                          </button>
-                        )}
-                        {u.id !== user?.id && (
-                          <button
-                            onClick={() => handleDeleteUser(u.id, u.username)}
-                            className="delete-button"
-                            title="Xóa người dùng"
-                          >
-                            🗑️
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
+                      <span className="user-group-count">({groupUsers.length})</span>
+                    </h4>
+                    <div className="users-table-container">
+                      <table className="users-table">
+                        {userTableHead}
+                        <tbody>{groupUsers.map(renderUserRow)}</tbody>
+                      </table>
+                    </div>
+                  </div>
                 ))
               )}
-            </tbody>
-          </table>
-        </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
     </OceanShell>

@@ -5,6 +5,7 @@ import { ObjectId } from 'mongodb';
 import { getDB } from '../db.js';
 import { config } from '../config.js';
 import { authenticate } from '../middleware/auth.js';
+import { classNameExists, listClassNames } from '../schoolClasses.js';
 
 const router = express.Router();
 
@@ -91,6 +92,20 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ detail: 'Tên đăng nhập đã được sử dụng.' });
     }
 
+    let class_name =
+      req.body.class_name != null && String(req.body.class_name).trim() !== ''
+        ? String(req.body.class_name).trim()
+        : null;
+    if (class_name) {
+      const exists = await classNameExists(db, class_name);
+      if (!exists) {
+        return res.status(400).json({
+          detail:
+            'Lớp không hợp lệ hoặc chưa được khai báo trong hệ thống.',
+        });
+      }
+    }
+
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -100,7 +115,7 @@ router.post('/register', async (req, res) => {
       password: hashedPassword,
       role: userRole,
       name: name || username,
-      class_name: req.body.class_name || null, // For students: 8A1, 8A2, etc.
+      class_name,
       created_at: new Date(),
     };
 
@@ -125,6 +140,21 @@ router.post('/register', async (req, res) => {
   } catch (error) {
     console.error('Registration error:', error);
     res.status(500).json({ detail: 'Đăng ký thất bại. Vui lòng thử lại.' });
+  }
+});
+
+/**
+ * GET /auth/classes
+ * Danh sách lớp (công khai — dùng cho form đăng ký)
+ */
+router.get('/classes', async (req, res) => {
+  try {
+    const db = getDB();
+    const classes = await listClassNames(db);
+    res.json({ classes });
+  } catch (error) {
+    console.error('Error listing classes:', error);
+    res.status(500).json({ detail: 'Không thể tải danh sách lớp' });
   }
 });
 

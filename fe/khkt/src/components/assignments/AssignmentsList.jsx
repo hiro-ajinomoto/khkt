@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchAssignments, fetchAssignmentsByDate, fetchAssignmentsByMonth, deleteAssignment, deleteAssignments, assignAssignmentsToClasses, getAssignmentClasses } from '../../api/assignments';
+import { fetchSchoolClasses, groupClassesByGrade } from '../../api/classes';
 import { fetchMySubmissions } from '../../api/submissions';
 import { useAuth } from '../../contexts/AuthContext';
 import OceanShell, { OceanPageLoading, OceanPageError } from '../layout/OceanShell';
@@ -1084,14 +1085,12 @@ function AssignAssignmentModal({ assignmentIds, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [loadingClasses, setLoadingClasses] = useState(true);
+  const [availableClasses, setAvailableClasses] = useState([]);
 
-  // Organize classes by grade level
-  const CLASSES_BY_GRADE = {
-    'Khối 6': ['6A1', '6A2', '6A3', '6A4', '6A5'],
-    'Khối 7': ['7A1', '7A2', '7A3', '7A4', '7A5'],
-    'Khối 8': ['8A1', '8A2', '8A3', '8A4', '8A5'],
-    'Khối 9': ['9A1', '9A2', '9A3', '9A4', '9A5'],
-  };
+  const classesByGrade = useMemo(
+    () => groupClassesByGrade(availableClasses),
+    [availableClasses]
+  );
 
   const assignmentCount = assignmentIds?.length ?? 0;
 
@@ -1100,9 +1099,11 @@ function AssignAssignmentModal({ assignmentIds, onClose, onSuccess }) {
       if (!assignmentIds?.length) return;
       try {
         setLoadingClasses(true);
-        const lists = await Promise.all(
-          assignmentIds.map((id) => getAssignmentClasses(id))
-        );
+        const [schoolList, ...lists] = await Promise.all([
+          fetchSchoolClasses(),
+          ...assignmentIds.map((id) => getAssignmentClasses(id)),
+        ]);
+        setAvailableClasses(schoolList);
         const union = new Set();
         lists.forEach((list) => {
           list.forEach((c) => union.add(c.class_name));
@@ -1208,9 +1209,13 @@ function AssignAssignmentModal({ assignmentIds, onClose, onSuccess }) {
               <div className="rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-6 text-center text-slate-300">
                 Đang tải...
               </div>
+            ) : classesByGrade.length === 0 ? (
+              <div className="rounded-2xl border border-amber-400/25 bg-amber-500/10 px-4 py-4 text-sm text-amber-100">
+                Chưa có lớp nào trong hệ thống. Vui lòng nhờ quản trị viên thêm lớp ở trang Quản trị.
+              </div>
             ) : (
               <div className="flex max-h-[min(50vh,420px)] flex-col gap-4 overflow-y-auto pr-1">
-                {Object.entries(CLASSES_BY_GRADE).map(([gradeName, gradeClasses]) => {
+                {classesByGrade.map(([gradeName, gradeClasses]) => {
                   const allSelected = gradeClasses.every((className) =>
                     selectedClasses.includes(className)
                   );

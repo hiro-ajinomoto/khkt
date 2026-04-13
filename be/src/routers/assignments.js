@@ -22,6 +22,10 @@ import {
   parseMaxSubmissionsRaw,
   storedMaxSubmissionsForApi,
 } from "../utils/submissionLimits.js";
+import {
+  assertClassNamesRegistered,
+  validateClassNameFormat,
+} from "../schoolClasses.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1152,18 +1156,25 @@ router.post("/:id/assign", authenticate, requireTeacher, async (req, res) => {
       });
     }
 
-    // Validate class name format (e.g., 8A1, 8A2, etc.)
-    const classPattern = /^\d+[A-Z]\d+$/;
-    const invalidClasses = class_names.filter(
-      (className) => !classPattern.test(className)
-    );
-    if (invalidClasses.length > 0) {
-      return res.status(400).json({
-        detail: `Invalid class names: ${invalidClasses.join(", ")}. Format should be like 8A1, 8A2, etc.`,
-      });
+    const normalizedClassNames = [];
+    for (const raw of class_names) {
+      const v = validateClassNameFormat(raw);
+      if (!v.ok) {
+        return res.status(400).json({ detail: v.error });
+      }
+      normalizedClassNames.push(v.name);
     }
 
     const db = getDB();
+
+    try {
+      await assertClassNamesRegistered(db, normalizedClassNames);
+    } catch (e) {
+      if (e.status === 400) {
+        return res.status(400).json({ detail: e.message });
+      }
+      throw e;
+    }
 
     // Check if assignment exists
     const assignment = await db.collection("assignments").findOne({
@@ -1175,7 +1186,7 @@ router.post("/:id/assign", authenticate, requireTeacher, async (req, res) => {
     }
 
     // Create assignment_class documents
-    const assignmentClasses = class_names.map((className) => ({
+    const assignmentClasses = normalizedClassNames.map((className) => ({
       assignment_id: assignmentObjectId,
       class_name: className,
       assigned_by: ObjectId.createFromHexString(req.user.id),
@@ -1200,7 +1211,7 @@ router.post("/:id/assign", authenticate, requireTeacher, async (req, res) => {
     res.status(200).json({
       message: "Assignment assigned to classes successfully",
       assignment_id: id,
-      class_names: class_names,
+      class_names: normalizedClassNames,
     });
   } catch (error) {
     console.error("Error assigning assignment to classes:", error);
