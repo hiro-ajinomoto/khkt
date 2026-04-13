@@ -31,7 +31,7 @@ export function ThemeProvider({ children }) {
     } catch {
       /* ignore */
     }
-    return 'dark';
+    return 'light';
   });
 
   useLayoutEffect(() => {

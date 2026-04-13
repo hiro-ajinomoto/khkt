@@ -4,9 +4,9 @@
     <script>
       try {
         var t = localStorage.getItem('khkt_theme');
-        document.documentElement.classList.toggle('dark', t !== 'light');
+        document.documentElement.classList.toggle('dark', t === 'dark');
       } catch (e) {
-        document.documentElement.classList.add('dark');
+        document.documentElement.classList.remove('dark');
       }
     </script>
     <meta charset="UTF-8" />
