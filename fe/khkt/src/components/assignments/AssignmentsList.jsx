@@ -50,6 +50,8 @@ function AssignmentsList() {
   );
   /** Học sinh: chỉ hiện bài chưa nộp */
   const [studentOnlyUnsubmitted, setStudentOnlyUnsubmitted] = useState(false);
+  /** Admin: null = tất cả GV; '' = bài cũ không có người tạo; string = id giáo viên */
+  const [adminTeacherFilterId, setAdminTeacherFilterId] = useState(null);
 
   // For teachers: filter by date
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -160,12 +162,44 @@ function AssignmentsList() {
     // This effect just triggers re-render when filters change
   };
 
+  const assignmentsForAdminView = useMemo(() => {
+    if (!isAdmin || adminTeacherFilterId === null) return allAssignments;
+    if (adminTeacherFilterId === '') {
+      return allAssignments.filter((a) => !a.created_by);
+    }
+    return allAssignments.filter(
+      (a) => (a.created_by || '') === adminTeacherFilterId
+    );
+  }, [allAssignments, isAdmin, adminTeacherFilterId]);
+
+  const adminTeacherOptions = useMemo(() => {
+    if (!isAdmin) return [];
+    const map = new Map();
+    for (const a of allAssignments) {
+      const id = a.created_by || '';
+      const key = id || '__legacy__';
+      if (!map.has(key)) {
+        map.set(key, {
+          id,
+          label:
+            a.created_by_name ||
+            (id ? 'Giáo viên' : 'Chưa ghi người tạo (bài cũ)'),
+        });
+      }
+    }
+    return Array.from(map.values()).sort((x, y) =>
+      x.label.localeCompare(y.label, 'vi')
+    );
+  }, [allAssignments, isAdmin]);
+
   // Filter and group assignments by date for teachers
   const filteredAndGroupedByDate = useMemo(() => {
     if (!isTeacher && !isAdmin) return {};
-    
+
+    const source = isAdmin ? assignmentsForAdminView : allAssignments;
+
     // Filter by selected date
-    const filtered = allAssignments.filter((assignment) => {
+    const filtered = source.filter((assignment) => {
       if (!assignment.created_at) return false;
       const date = new Date(assignment.created_at);
       const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
@@ -193,7 +227,13 @@ function AssignmentsList() {
     });
 
     return sortedGroups;
-  }, [allAssignments, isTeacher, isAdmin, selectedDate]);
+  }, [
+    allAssignments,
+    assignmentsForAdminView,
+    isTeacher,
+    isAdmin,
+    selectedDate,
+  ]);
 
   // Filter and group assignments by date within month for students
   const filteredAndGroupedByDateInMonth = useMemo(() => {
@@ -362,17 +402,18 @@ function AssignmentsList() {
   // Get available dates for teacher date selector (from all assignments)
   const availableDates = useMemo(() => {
     if (!isTeacher && !isAdmin) return [];
-    
+
+    const source = isAdmin ? assignmentsForAdminView : allAssignments;
     const dates = new Set();
-    allAssignments.forEach((assignment) => {
+    source.forEach((assignment) => {
       if (assignment.created_at) {
         const date = new Date(assignment.created_at);
         dates.add(date.toISOString().split('T')[0]);
       }
     });
-    
+
     return Array.from(dates).sort((a, b) => b.localeCompare(a));
-  }, [allAssignments, isTeacher, isAdmin]);
+  }, [allAssignments, assignmentsForAdminView, isTeacher, isAdmin]);
 
   // Get current filtered assignments count
   const filteredAssignments = useMemo(() => {
@@ -492,6 +533,55 @@ function AssignmentsList() {
             )}
           </div>
         </header>
+
+        {isAdmin && allAssignments.length > 0 && (
+          <section
+            className="mb-6 rounded-[28px] border border-amber-300/25 bg-gradient-to-br from-amber-950/50 to-slate-950/60 p-5 shadow-lg shadow-amber-950/20"
+            aria-label="Lọc bài tập theo giáo viên"
+          >
+            <h2 className="mb-1 text-sm font-semibold uppercase tracking-[0.2em] text-amber-100/90">
+              Theo giáo viên
+            </h2>
+            <p className="mb-4 text-sm text-slate-400">
+              Chọn tên để chỉ xem các bài do giáo viên đó tạo (kết hợp với bộ lọc ngày bên dưới).
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setAdminTeacherFilterId(null)}
+                className={`rounded-xl border px-3 py-2 text-sm font-medium transition ${
+                  adminTeacherFilterId === null
+                    ? 'border-amber-300/70 bg-amber-500/25 text-amber-50 ring-1 ring-amber-400/40'
+                    : 'border-white/10 bg-slate-900/60 text-slate-200 hover:border-amber-400/30'
+                }`}
+              >
+                Tất cả
+              </button>
+              {adminTeacherOptions.map((opt) => {
+                const active =
+                  opt.id === ''
+                    ? adminTeacherFilterId === ''
+                    : adminTeacherFilterId === opt.id;
+                return (
+                  <button
+                    key={opt.id || '__legacy__'}
+                    type="button"
+                    onClick={() =>
+                      setAdminTeacherFilterId(opt.id === '' ? '' : opt.id)
+                    }
+                    className={`rounded-xl border px-3 py-2 text-sm font-medium transition ${
+                      active
+                        ? 'border-amber-300/70 bg-amber-500/25 text-amber-50 ring-1 ring-amber-400/40'
+                        : 'border-white/10 bg-slate-900/60 text-slate-200 hover:border-amber-400/30'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {/* Filters + quick actions */}
         <section className="mb-8 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
@@ -795,7 +885,7 @@ function AssignmentsList() {
                     <h2 className="text-base font-semibold text-slate-100">
                       {formatDateHeader(date)}
                     </h2>
-                    <section className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3 [&>*]:h-full [&>*]:min-h-0">
+                    <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6 xl:grid-cols-4 [&>*]:h-full [&>*]:min-h-0">
                       {assignments.map((assignment, idx) => (
                         <AssignmentCard
                           key={assignment.id}
@@ -827,7 +917,7 @@ function AssignmentsList() {
                         <h2 className="text-base font-semibold text-slate-100">
                           {formatDateHeader(date)}
                         </h2>
-                        <section className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3 [&>*]:h-full [&>*]:min-h-0">
+                        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6 xl:grid-cols-4 [&>*]:h-full [&>*]:min-h-0">
                           {assignments.map((assignment, idx) => (
                             <AssignmentCard
                               key={assignment.id}
@@ -922,6 +1012,14 @@ function AssignmentCard({
             <p className="mt-2 text-base text-slate-300 line-clamp-2">
               {assignment.description || assignment.subtitle || 'Bài tập tự luận'}
             </p>
+            {isTeacher && (
+              <p className="mt-2 text-xs text-slate-500">
+                Người tạo:{' '}
+                <span className="font-medium text-slate-300">
+                  {assignment.created_by_name || '—'}
+                </span>
+              </p>
+            )}
           </div>
           <div className="flex flex-col items-end gap-2">
             <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-sm text-cyan-100">

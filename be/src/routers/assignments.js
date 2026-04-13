@@ -13,7 +13,11 @@ import {
   extractS3Key,
   getPresignedUrl,
 } from "../services/s3Service.js";
-import { authenticate, requireTeacher, optionalAuthenticate } from "../middleware/auth.js";
+import {
+  authenticate,
+  requireTeacher,
+  optionalAuthenticate,
+} from "../middleware/auth.js";
 import {
   todayStrHoChiMinh,
   isAssignmentReleased,
@@ -66,7 +70,7 @@ const storage = multer.diskStorage({
 
 // Configure multer with file size limits
 // Allow up to 10MB per file, max 10 files
-const upload = multer({ 
+const upload = multer({
   storage,
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB per file
@@ -81,24 +85,24 @@ const upload = multer({
  */
 function normalizeS3Url(url) {
   if (!url) return null;
-  
+
   // Remove query parameters if present (presigned URL)
-  const urlWithoutQuery = url.split('?')[0];
-  
+  const urlWithoutQuery = url.split("?")[0];
+
   // Check if it's an S3 URL pattern
   // Pattern: https://bucket-name.s3.region.amazonaws.com/key
   const s3Pattern = /https:\/\/([^/]+)\.s3(?:\.([^.]+))?\.amazonaws\.com\/(.+)/;
   const match = urlWithoutQuery.match(s3Pattern);
-  
+
   if (match) {
     const bucketName = match[1];
-    const region = match[2] || config.aws.region || 'us-east-1';
+    const region = match[2] || config.aws.region || "us-east-1";
     const key = decodeURIComponent(match[3]);
-    
+
     // Reconstruct base S3 URL
     return `https://${bucketName}.s3.${region}.amazonaws.com/${key}`;
   }
-  
+
   // If it's already a base S3 URL or not an S3 URL, return as is
   return url;
 }
@@ -138,6 +142,67 @@ async function convertToAccessibleUrl(urlOrPath) {
   return `${baseUrl}/uploads/${filename}`;
 }
 
+function assignmentCreatedByString(created_by) {
+  if (!created_by) return null;
+  try {
+    return (
+      created_by instanceof ObjectId
+        ? created_by
+        : ObjectId.createFromHexString(String(created_by))
+    ).toString();
+  } catch {
+    return null;
+  }
+}
+
+async function loadCreatorMapForAssignments(db, assignments) {
+  const idSet = new Set();
+  for (const a of assignments) {
+    const s = assignmentCreatedByString(a.created_by);
+    if (s) idSet.add(s);
+  }
+  if (idSet.size === 0) return new Map();
+  const oids = [...idSet].map((s) => ObjectId.createFromHexString(s));
+  const users = await db
+    .collection("users")
+    .find({ _id: { $in: oids } })
+    .project({ name: 1, username: 1 })
+    .toArray();
+  const map = new Map();
+  for (const u of users) {
+    map.set(u._id.toString(), {
+      name:
+        (u.name && String(u.name).trim()) || u.username || u._id.toString(),
+      username: u.username,
+    });
+  }
+  return map;
+}
+
+async function mapAssignmentDocToApi(item, creatorMap) {
+  const cid = assignmentCreatedByString(item.created_by);
+  const cr = cid ? creatorMap.get(cid) : null;
+  return {
+    id: item._id.toString(),
+    title: item.title,
+    description: item.description || null,
+    subject: item.subject,
+    grade_level: item.grade_level || null,
+    model_solution: item.model_solution,
+    question_image_url: await convertToAccessibleUrl(item.question_image_url),
+    model_solution_image_url: await convertToAccessibleUrl(
+      item.model_solution_image_url,
+    ),
+    created_at: item.created_at || null,
+    available_from_date: item.available_from_date ?? null,
+    due_date: item.due_date ?? null,
+    max_submissions_per_student: storedMaxSubmissionsForApi(item),
+    created_by: cid,
+    created_by_name: cr ? cr.name : null,
+    created_by_username: cr ? cr.username : null,
+  };
+}
+
 /**
  * GET /assignments
  * List assignments
@@ -149,7 +214,10 @@ router.get("/", optionalAuthenticate, async (req, res) => {
     const db = getDB();
     let assignmentIds = [];
 
-    console.log("GET /assignments - req.user:", req.user ? { id: req.user.id, role: req.user.role } : "not authenticated");
+    console.log(
+      "GET /assignments - req.user:",
+      req.user ? { id: req.user.id, role: req.user.role } : "not authenticated",
+    );
 
     // If user is authenticated and is a student, filter by their class
     if (req.user && req.user.role === "student") {
@@ -158,7 +226,12 @@ router.get("/", optionalAuthenticate, async (req, res) => {
         _id: ObjectId.createFromHexString(req.user.id),
       });
 
-      console.log("Student found:", student ? { id: student._id.toString(), class_name: student.class_name } : "not found");
+      console.log(
+        "Student found:",
+        student
+          ? { id: student._id.toString(), class_name: student.class_name }
+          : "not found",
+      );
 
       if (student && student.class_name) {
         // Get assignment IDs assigned to this class
@@ -179,7 +252,9 @@ router.get("/", optionalAuthenticate, async (req, res) => {
             }
           })
           .filter(Boolean);
-        console.log(`Found ${assignmentIds.length} assignments for class ${student.class_name}`);
+        console.log(
+          `Found ${assignmentIds.length} assignments for class ${student.class_name}`,
+        );
       } else {
         // Student has no class, return empty array
         console.log("Student has no class_name, returning empty array");
@@ -190,7 +265,7 @@ router.get("/", optionalAuthenticate, async (req, res) => {
 
     // Build query
     let query = {};
-    
+
     if (req.user && req.user.role === "student") {
       // Students: only show assignments assigned to their class
       if (assignmentIds.length > 0) {
@@ -211,10 +286,15 @@ router.get("/", optionalAuthenticate, async (req, res) => {
         console.log("Student query:", JSON.stringify(query));
       } else {
         // Student has class but no assignments assigned yet
-        console.log("Student has class but no assignments assigned, returning empty array");
+        console.log(
+          "Student has class but no assignments assigned, returning empty array",
+        );
         return res.json([]);
       }
-    } else if (req.user && (req.user.role === "teacher" || req.user.role === "admin")) {
+    } else if (
+      req.user &&
+      (req.user.role === "teacher" || req.user.role === "admin")
+    ) {
       // Teachers and admins see all assignments
       query = {};
       console.log("Teacher/Admin query: {} (all assignments)");
@@ -232,26 +312,9 @@ router.get("/", optionalAuthenticate, async (req, res) => {
 
     console.log(`Found ${assignments.length} assignments`);
 
-    // Convert ObjectId to string and convert S3/local paths to URLs
+    const creatorMap = await loadCreatorMapForAssignments(db, assignments);
     const result = await Promise.all(
-      assignments.map(async (item) => ({
-        id: item._id.toString(),
-        title: item.title,
-        description: item.description || null,
-        subject: item.subject,
-        grade_level: item.grade_level || null,
-        model_solution: item.model_solution,
-        question_image_url: await convertToAccessibleUrl(
-          item.question_image_url
-        ),
-        model_solution_image_url: await convertToAccessibleUrl(
-          item.model_solution_image_url
-        ),
-        created_at: item.created_at || null,
-        available_from_date: item.available_from_date ?? null,
-        due_date: item.due_date ?? null,
-        max_submissions_per_student: storedMaxSubmissionsForApi(item),
-      }))
+      assignments.map((item) => mapAssignmentDocToApi(item, creatorMap)),
     );
 
     res.json(result);
@@ -297,25 +360,9 @@ router.get("/by-date", async (req, res) => {
       .sort({ created_at: -1 }) // Sort by newest first
       .toArray();
 
+    const creatorMap = await loadCreatorMapForAssignments(db, assignments);
     const result = await Promise.all(
-      assignments.map(async (item) => ({
-        id: item._id.toString(),
-        title: item.title,
-        description: item.description || null,
-        subject: item.subject,
-        grade_level: item.grade_level || null,
-        model_solution: item.model_solution,
-        question_image_url: await convertToAccessibleUrl(
-          item.question_image_url
-        ),
-        model_solution_image_url: await convertToAccessibleUrl(
-          item.model_solution_image_url
-        ),
-        created_at: item.created_at || null,
-        available_from_date: item.available_from_date ?? null,
-        due_date: item.due_date ?? null,
-        max_submissions_per_student: storedMaxSubmissionsForApi(item),
-      }))
+      assignments.map((item) => mapAssignmentDocToApi(item, creatorMap)),
     );
 
     res.json(result);
@@ -342,10 +389,13 @@ router.get("/by-month", async (req, res) => {
     const yearNum = parseInt(year, 10);
     const monthNum = parseInt(month, 10);
 
-    if (Number.isNaN(yearNum) || Number.isNaN(monthNum) || monthNum < 1 || monthNum > 12) {
-      return res
-        .status(400)
-        .json({ detail: "Invalid year or month format" });
+    if (
+      Number.isNaN(yearNum) ||
+      Number.isNaN(monthNum) ||
+      monthNum < 1 ||
+      monthNum > 12
+    ) {
+      return res.status(400).json({ detail: "Invalid year or month format" });
     }
 
     // Parse month as UTC range [start, end)
@@ -364,25 +414,9 @@ router.get("/by-month", async (req, res) => {
       .sort({ created_at: -1 }) // Sort by newest first
       .toArray();
 
+    const creatorMap = await loadCreatorMapForAssignments(db, assignments);
     const result = await Promise.all(
-      assignments.map(async (item) => ({
-        id: item._id.toString(),
-        title: item.title,
-        description: item.description || null,
-        subject: item.subject,
-        grade_level: item.grade_level || null,
-        model_solution: item.model_solution,
-        question_image_url: await convertToAccessibleUrl(
-          item.question_image_url
-        ),
-        model_solution_image_url: await convertToAccessibleUrl(
-          item.model_solution_image_url
-        ),
-        created_at: item.created_at || null,
-        available_from_date: item.available_from_date ?? null,
-        due_date: item.due_date ?? null,
-        max_submissions_per_student: storedMaxSubmissionsForApi(item),
-      }))
+      assignments.map((item) => mapAssignmentDocToApi(item, creatorMap)),
     );
 
     res.json(result);
@@ -419,8 +453,7 @@ router.get("/:id", optionalAuthenticate, async (req, res) => {
     }
 
     const isTeacherOrAdmin =
-      req.user &&
-      (req.user.role === "teacher" || req.user.role === "admin");
+      req.user && (req.user.role === "teacher" || req.user.role === "admin");
 
     if (req.user?.role === "student") {
       const student = await db.collection("users").findOne({
@@ -445,25 +478,8 @@ router.get("/:id", optionalAuthenticate, async (req, res) => {
       });
     }
 
-    // Convert ObjectId to string and convert S3/local paths to URLs
-    const result = {
-      id: assignment._id.toString(),
-      title: assignment.title,
-      description: assignment.description || null,
-      subject: assignment.subject,
-      grade_level: assignment.grade_level || null,
-      model_solution: assignment.model_solution,
-      question_image_url: await convertToAccessibleUrl(
-        assignment.question_image_url
-      ),
-      model_solution_image_url: await convertToAccessibleUrl(
-        assignment.model_solution_image_url
-      ),
-      created_at: assignment.created_at || null,
-      available_from_date: assignment.available_from_date ?? null,
-      due_date: assignment.due_date ?? null,
-      max_submissions_per_student: storedMaxSubmissionsForApi(assignment),
-    };
+    const creatorMap = await loadCreatorMapForAssignments(db, [assignment]);
+    const result = await mapAssignmentDocToApi(assignment, creatorMap);
 
     if (req.user && req.user.role === "student") {
       result.my_submission_count = await db
@@ -540,10 +556,10 @@ router.post(
 
       // Find uploaded files by field name
       const questionImageFile = files.find(
-        (f) => f.fieldname === "question_image"
+        (f) => f.fieldname === "question_image",
       );
       const solutionImageFile = files.find(
-        (f) => f.fieldname === "model_solution_image"
+        (f) => f.fieldname === "model_solution_image",
       );
 
       // Validation - required fields
@@ -636,6 +652,7 @@ router.post(
         available_from_date: parsedDate.value,
         due_date: parsedDue.value,
         max_submissions_per_student: parsedMax.value,
+        created_by: ObjectId.createFromHexString(req.user.id),
       };
 
       const result = await db.collection("assignments").insertOne(assignment);
@@ -643,29 +660,14 @@ router.post(
         _id: result.insertedId,
       });
 
-      res.status(201).json({
-        id: inserted._id.toString(),
-        title: inserted.title,
-        description: inserted.description || null,
-        subject: inserted.subject,
-        grade_level: inserted.grade_level || null,
-        model_solution: inserted.model_solution,
-        question_image_url: await convertToAccessibleUrl(
-          inserted.question_image_url
-        ),
-        model_solution_image_url: await convertToAccessibleUrl(
-          inserted.model_solution_image_url
-        ),
-        created_at: inserted.created_at || null,
-        available_from_date: inserted.available_from_date ?? null,
-        due_date: inserted.due_date ?? null,
-        max_submissions_per_student: storedMaxSubmissionsForApi(inserted),
-      });
+      const creatorMap = await loadCreatorMapForAssignments(db, [inserted]);
+      const body = await mapAssignmentDocToApi(inserted, creatorMap);
+      res.status(201).json(body);
     } catch (error) {
       console.error("Error creating assignment:", error);
       res.status(500).json({ detail: "Failed to create assignment" });
     }
-  }
+  },
 );
 
 /**
@@ -704,10 +706,10 @@ router.patch(
 
       // Find uploaded files by field name
       const questionImageFile = files.find(
-        (f) => f.fieldname === "question_image"
+        (f) => f.fieldname === "question_image",
       );
       const solutionImageFile = files.find(
-        (f) => f.fieldname === "model_solution_image"
+        (f) => f.fieldname === "model_solution_image",
       );
 
       // Validate ID
@@ -805,7 +807,7 @@ router.patch(
               } catch (error) {
                 console.error(
                   `Failed to delete old question image from S3: ${oldS3Key}`,
-                  error
+                  error,
                 );
                 // Continue even if deletion fails
               }
@@ -818,11 +820,14 @@ router.patch(
         }
       } else if (question_image_url !== undefined) {
         // Normalize URL - if it's a presigned URL, extract base S3 URL
-        const normalizedUrl = normalizeS3Url(question_image_url) || question_image_url;
+        const normalizedUrl =
+          normalizeS3Url(question_image_url) || question_image_url;
         updateData.question_image_url = normalizedUrl || null;
 
         // Delete old image from S3 if it exists and new URL is different
-        const oldNormalizedUrl = normalizeS3Url(assignment.question_image_url) || assignment.question_image_url;
+        const oldNormalizedUrl =
+          normalizeS3Url(assignment.question_image_url) ||
+          assignment.question_image_url;
         if (oldNormalizedUrl && oldNormalizedUrl !== normalizedUrl) {
           const oldS3Key = extractS3Key(oldNormalizedUrl);
           if (oldS3Key) {
@@ -832,7 +837,7 @@ router.patch(
             } catch (error) {
               console.error(
                 `Failed to delete old question image from S3: ${oldS3Key}`,
-                error
+                error,
               );
               // Continue even if deletion fails
             }
@@ -865,7 +870,7 @@ router.patch(
               } catch (error) {
                 console.error(
                   `Failed to delete old solution image from S3: ${oldS3Key}`,
-                  error
+                  error,
                 );
                 // Continue even if deletion fails
               }
@@ -878,11 +883,14 @@ router.patch(
         }
       } else if (model_solution_image_url !== undefined) {
         // Normalize URL - if it's a presigned URL, extract base S3 URL
-        const normalizedUrl = normalizeS3Url(model_solution_image_url) || model_solution_image_url;
+        const normalizedUrl =
+          normalizeS3Url(model_solution_image_url) || model_solution_image_url;
         updateData.model_solution_image_url = normalizedUrl || null;
 
         // Delete old image from S3 if it exists and new URL is different
-        const oldNormalizedUrl = normalizeS3Url(assignment.model_solution_image_url) || assignment.model_solution_image_url;
+        const oldNormalizedUrl =
+          normalizeS3Url(assignment.model_solution_image_url) ||
+          assignment.model_solution_image_url;
         if (oldNormalizedUrl && oldNormalizedUrl !== normalizedUrl) {
           const oldS3Key = extractS3Key(oldNormalizedUrl);
           if (oldS3Key) {
@@ -892,7 +900,7 @@ router.patch(
             } catch (error) {
               console.error(
                 `Failed to delete old solution image from S3: ${oldS3Key}`,
-                error
+                error,
               );
               // Continue even if deletion fails
             }
@@ -914,6 +922,10 @@ router.patch(
         });
       }
 
+      if (!assignment.created_by) {
+        updateData.created_by = ObjectId.createFromHexString(req.user.id);
+      }
+
       // If no fields to update, return error
       if (Object.keys(updateData).length === 0) {
         return res.status(400).json({
@@ -931,29 +943,14 @@ router.patch(
         _id: objectId,
       });
 
-      res.json({
-        id: updated._id.toString(),
-        title: updated.title,
-        description: updated.description || null,
-        subject: updated.subject,
-        grade_level: updated.grade_level || null,
-        model_solution: updated.model_solution,
-        question_image_url: await convertToAccessibleUrl(
-          updated.question_image_url
-        ),
-        model_solution_image_url: await convertToAccessibleUrl(
-          updated.model_solution_image_url
-        ),
-        created_at: updated.created_at || null,
-        available_from_date: updated.available_from_date ?? null,
-        due_date: updated.due_date ?? null,
-        max_submissions_per_student: storedMaxSubmissionsForApi(updated),
-      });
+      const creatorMap = await loadCreatorMapForAssignments(db, [updated]);
+      const body = await mapAssignmentDocToApi(updated, creatorMap);
+      res.json(body);
     } catch (error) {
       console.error("Error updating assignment:", error);
       res.status(500).json({ detail: "Failed to update assignment" });
     }
-  }
+  },
 );
 
 /**
@@ -1084,7 +1081,9 @@ router.delete("/:id", authenticate, requireTeacher, async (req, res) => {
 
     if (assignment.question_image_url) {
       // Normalize URL before extracting key (handle presigned URLs)
-      const normalizedUrl = normalizeS3Url(assignment.question_image_url) || assignment.question_image_url;
+      const normalizedUrl =
+        normalizeS3Url(assignment.question_image_url) ||
+        assignment.question_image_url;
       const s3Key = extractS3Key(normalizedUrl);
       if (s3Key) {
         imagesToDelete.push(s3Key);
@@ -1093,7 +1092,9 @@ router.delete("/:id", authenticate, requireTeacher, async (req, res) => {
 
     if (assignment.model_solution_image_url) {
       // Normalize URL before extracting key (handle presigned URLs)
-      const normalizedUrl = normalizeS3Url(assignment.model_solution_image_url) || assignment.model_solution_image_url;
+      const normalizedUrl =
+        normalizeS3Url(assignment.model_solution_image_url) ||
+        assignment.model_solution_image_url;
       const s3Key = extractS3Key(normalizedUrl);
       if (s3Key) {
         imagesToDelete.push(s3Key);
@@ -1150,7 +1151,11 @@ router.post("/:id/assign", authenticate, requireTeacher, async (req, res) => {
     }
 
     // Validate class_names
-    if (!class_names || !Array.isArray(class_names) || class_names.length === 0) {
+    if (
+      !class_names ||
+      !Array.isArray(class_names) ||
+      class_names.length === 0
+    ) {
       return res.status(400).json({
         detail: "class_names must be a non-empty array",
       });
