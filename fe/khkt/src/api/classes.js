@@ -22,7 +22,12 @@ export function groupClassesByGrade(classNames) {
     if (!map.has(label)) map.set(label, []);
     map.get(label).push(c);
   }
-  return Array.from(map.entries());
+  const rank = (label) => {
+    if (label === 'Khác') return Number.MAX_SAFE_INTEGER;
+    const kh = label.match(/^Khối (\d+)$/);
+    return kh ? parseInt(kh[1], 10) : 10000;
+  };
+  return Array.from(map.entries()).sort((a, b) => rank(a[0]) - rank(b[0]));
 }
 
 /** Công khai — không cần đăng nhập */
@@ -51,6 +56,26 @@ export async function createSchoolClass(name) {
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.detail || 'Không thể thêm lớp');
+  }
+  const data = await response.json();
+  return Array.isArray(data.classes) ? data.classes : [];
+}
+
+/** Admin — đổi tên lớp (cập nhật học sinh và gán bài) */
+export async function renameSchoolClass(fromName, toName) {
+  const authHeader = getAuthHeader();
+  if (!authHeader) throw new Error('Authentication required');
+  const response = await fetch(`${API_BASE_URL}/admin/classes`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: authHeader,
+    },
+    body: JSON.stringify({ from: fromName, to: toName }),
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Không thể đổi tên lớp');
   }
   const data = await response.json();
   return Array.isArray(data.classes) ? data.classes : [];

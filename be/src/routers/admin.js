@@ -7,6 +7,7 @@ import {
   classNameExists,
   listClassNames,
   removeClassDocument,
+  renameClassDocument,
 } from '../schoolClasses.js';
 
 const router = express.Router();
@@ -210,6 +211,33 @@ router.post('/classes', async (req, res) => {
     }
     console.error('Error adding class:', error);
     res.status(500).json({ detail: 'Failed to add class' });
+  }
+});
+
+/**
+ * PATCH /admin/classes
+ * Đổi tên lớp — body: { from: string, to: string }
+ */
+router.patch('/classes', async (req, res) => {
+  try {
+    const { from, to } = req.body;
+    if (from == null || to == null) {
+      return res.status(400).json({ detail: 'Thiếu from hoặc to' });
+    }
+    const db = getDB();
+    await renameClassDocument(db, from, to);
+    const classes = await listClassNames(db);
+    res.json({
+      message: 'Class renamed successfully',
+      classes,
+    });
+  } catch (error) {
+    const status = error.status || 500;
+    if (status >= 400 && status < 500) {
+      return res.status(status).json({ detail: error.message });
+    }
+    console.error('Error renaming class:', error);
+    res.status(500).json({ detail: 'Failed to rename class' });
   }
 });
 

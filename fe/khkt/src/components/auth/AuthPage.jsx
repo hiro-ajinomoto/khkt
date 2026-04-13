@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { register as registerAPI } from '../../api/auth';
-import { fetchSchoolClasses } from '../../api/classes';
+import { fetchSchoolClasses, groupClassesByGrade } from '../../api/classes';
 import { getAuthErrorMessage, normalizeLoginPayload } from '../../utils/authErrors';
 import OceanShell from '../layout/OceanShell';
 import './AuthPage.css';
@@ -28,6 +28,11 @@ function AuthPage() {
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [schoolClasses, setSchoolClasses] = useState([]);
+
+  const schoolClassesByGrade = useMemo(
+    () => groupClassesByGrade(schoolClasses),
+    [schoolClasses]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -300,10 +305,14 @@ function AuthPage() {
                 disabled={isSubmitting}
               >
                 <option value="">Chọn lớp (tùy chọn)</option>
-                {schoolClasses.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
+                {schoolClassesByGrade.map(([gradeTitle, classesInGrade]) => (
+                  <optgroup key={gradeTitle} label={gradeTitle}>
+                    {classesInGrade.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
               <p className="field-hint">

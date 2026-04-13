@@ -474,6 +474,35 @@
   color: #7dd3fc;
 }
 
+.admin-class-empty {
+  margin: 0;
+  padding: 0.35rem 0 0.25rem 0;
+  font-size: 0.9rem;
+  color: #94a3b8;
+}
+
+.admin-class-by-grade {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+.admin-class-grade-block {
+  border-radius: 1rem;
+  border: 1px solid rgba(103, 232, 249, 0.12);
+  background: rgba(15, 23, 42, 0.35);
+  padding: 0.85rem 1rem 1rem 1rem;
+}
+
+.admin-class-grade-title {
+  margin: 0 0 0.65rem 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #7dd3fc;
+}
+
 .admin-class-hint {
   margin: 0 0 0.75rem 0;
   font-size: 0.9rem;
@@ -523,6 +552,19 @@
   border-radius: 0.75rem;
   border: 1px solid rgba(148, 163, 184, 0.2);
   background: rgba(15, 23, 42, 0.5);
+}
+
+.admin-class-item--editing {
+  flex-wrap: wrap;
+  min-width: min(100%, 16rem);
+}
+
+.admin-class-input--inline {
+  min-width: 8rem;
+  max-width: 18rem;
+  flex: 1;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.88rem;
 }
 
 @media (max-width: 768px) {

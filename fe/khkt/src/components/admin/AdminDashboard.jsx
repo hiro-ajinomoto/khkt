@@ -2,7 +2,13 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchUsers, updateUserRole, updateUserClass, deleteUser, fetchStats } from '../../api/admin';
-import { fetchSchoolClasses, createSchoolClass, deleteSchoolClass } from '../../api/classes';
+import {
+  fetchSchoolClasses,
+  createSchoolClass,
+  deleteSchoolClass,
+  renameSchoolClass,
+  groupClassesByGrade,
+} from '../../api/classes';
 import OceanShell, { OceanPageLoading } from '../layout/OceanShell';
 import './AdminDashboard.css';
 
@@ -20,6 +26,8 @@ function AdminDashboard() {
   const [schoolClasses, setSchoolClasses] = useState([]);
   const [newClassName, setNewClassName] = useState('');
   const [classBusy, setClassBusy] = useState(false);
+  /** Đang đổi tên một lớp: { from, draft } */
+  const [classRename, setClassRename] = useState(null);
   const [userFilter, setUserFilter] = useState('');
 
   useEffect(() => {
@@ -98,6 +106,40 @@ function AdminDashboard() {
       setNewClassName('');
     } catch (err) {
       alert(err.message || 'Không thể thêm lớp');
+    } finally {
+      setClassBusy(false);
+    }
+  };
+
+  const startRenameClass = (name) => {
+    setClassRename({ from: name, draft: name });
+  };
+
+  const cancelRenameClass = () => {
+    setClassRename(null);
+  };
+
+  const saveRenameClass = async () => {
+    if (!classRename) return;
+    const next = classRename.draft.trim();
+    if (!next) {
+      alert('Tên lớp không được để trống.');
+      return;
+    }
+    if (next === classRename.from) {
+      setClassRename(null);
+      return;
+    }
+    try {
+      setClassBusy(true);
+      const list = await renameSchoolClass(classRename.from, next);
+      setSchoolClasses(list);
+      setClassRename(null);
+      const [usersData, statsData] = await Promise.all([fetchUsers(), fetchStats()]);
+      setUsers(usersData);
+      setStats(statsData);
+    } catch (err) {
+      alert(err.message || 'Không thể đổi tên lớp');
     } finally {
       setClassBusy(false);
     }
@@ -193,6 +235,11 @@ function AdminDashboard() {
     [filteredUsers]
   );
 
+  const schoolClassesByGrade = useMemo(
+    () => groupClassesByGrade(schoolClasses),
+    [schoolClasses]
+  );
+
   const studentGroups = useMemo(() => {
     const students = filteredUsers.filter((u) => u.role === 'student');
     const byClass = new Map();
@@ -262,10 +309,14 @@ function AdminDashboard() {
                 aria-label="Chọn lớp"
               >
                 <option value="">Chưa có lớp</option>
-                {schoolClasses.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
+                {schoolClassesByGrade.map(([gradeTitle, classesInGrade]) => (
+                  <optgroup key={gradeTitle} label={gradeTitle}>
+                    {classesInGrade.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </div>
@@ -409,8 +460,8 @@ function AdminDashboard() {
         </div>
         <form className="admin-class-form" onSubmit={handleAddSchoolClass}>
           <p className="admin-class-hint">
-            Đặt tên lớp tùy ý (ví dụ <strong>8A1</strong>, <strong>Lớp chọn Toán</strong>, <strong>Khối 8 - Tổ 2</strong>), tối đa 80 ký tự,
-            có ít nhất một chữ hoặc số; không chứa ký tự điều khiển hoặc các ký tự nhỏ hơn, lớn hơn, gạch chéo ngược. Lớp mới dùng cho đăng ký và gán bài.
+            Đặt tên lớp tùy ý (ví dụ <strong>8A1</strong>, <strong>Lớp chọn Toán</strong>), tối đa 80 ký tự, có ít nhất một chữ hoặc số.
+            Có thể <strong>sửa tên</strong> lớp (học sinh và gán bài sẽ theo tên mới), <strong>xóa</strong> khi không còn dùng.
           </p>
           <div className="admin-class-row">
             <input
@@ -418,35 +469,104 @@ function AdminDashboard() {
               value={newClassName}
               onChange={(e) => setNewClassName(e.target.value)}
               placeholder="Ví dụ: 8A6"
-              disabled={classBusy}
+              disabled={classBusy || classRename != null}
               className="admin-class-input"
               autoComplete="off"
             />
-            <button type="submit" className="refresh-button" disabled={classBusy}>
+            <button
+              type="submit"
+              className="refresh-button"
+              disabled={classBusy || classRename != null}
+            >
               ➕ Thêm lớp
             </button>
           </div>
         </form>
-        <ul className="admin-class-list">
-          {schoolClasses.length === 0 ? (
-            <li className="empty-state">Chưa có lớp nào</li>
-          ) : (
-            schoolClasses.map((c) => (
-              <li key={c} className="admin-class-item">
-                <span className="class-badge">{c}</span>
-                <button
-                  type="button"
-                  className="delete-button"
-                  title="Xóa lớp"
-                  disabled={classBusy}
-                  onClick={() => handleDeleteSchoolClass(c)}
-                >
-                  🗑️
-                </button>
-              </li>
-            ))
-          )}
-        </ul>
+        {schoolClasses.length === 0 ? (
+          <p className="admin-class-empty">Chưa có lớp nào.</p>
+        ) : (
+          <div className="admin-class-by-grade">
+            {schoolClassesByGrade.map(([gradeTitle, classesInGrade]) => (
+              <div key={gradeTitle} className="admin-class-grade-block">
+                <h4 className="admin-class-grade-title">{gradeTitle}</h4>
+                <ul className="admin-class-list">
+                  {classesInGrade.map((c) => (
+                    <li
+                      key={c}
+                      className={`admin-class-item${classRename?.from === c ? ' admin-class-item--editing' : ''}`}
+                    >
+                      {classRename?.from === c ? (
+                        <>
+                          <input
+                            type="text"
+                            className="admin-class-input admin-class-input--inline"
+                            value={classRename.draft}
+                            onChange={(e) =>
+                              setClassRename((prev) =>
+                                prev ? { ...prev, draft: e.target.value } : prev
+                              )
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                saveRenameClass();
+                              } else if (e.key === 'Escape') {
+                                cancelRenameClass();
+                              }
+                            }}
+                            disabled={classBusy}
+                            autoComplete="off"
+                            aria-label="Tên lớp mới"
+                          />
+                          <button
+                            type="button"
+                            className="save-button"
+                            title="Lưu tên lớp"
+                            disabled={classBusy}
+                            onClick={saveRenameClass}
+                          >
+                            ✓
+                          </button>
+                          <button
+                            type="button"
+                            className="cancel-button"
+                            title="Hủy"
+                            disabled={classBusy}
+                            onClick={cancelRenameClass}
+                          >
+                            ✕
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <span className="class-badge">{c}</span>
+                          <button
+                            type="button"
+                            className="edit-button"
+                            title="Sửa tên lớp"
+                            disabled={classBusy || classRename != null}
+                            onClick={() => startRenameClass(c)}
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            type="button"
+                            className="delete-button"
+                            title="Xóa lớp"
+                            disabled={classBusy || classRename != null}
+                            onClick={() => handleDeleteSchoolClass(c)}
+                          >
+                            🗑️
+                          </button>
+                        </>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="users-section">

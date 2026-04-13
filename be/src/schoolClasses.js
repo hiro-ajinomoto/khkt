@@ -128,3 +128,62 @@ export async function removeClassDocument(db, rawName) {
   await db.collection('assignment_classes').deleteMany({ class_name: v.name });
   return v.name;
 }
+
+/**
+ * Đổi tên lớp: cập nhật registry, học sinh và gán bài.
+ */
+export async function renameClassDocument(db, rawOldName, rawNewName) {
+  const vOld = validateClassNameFormat(rawOldName);
+  if (!vOld.ok) {
+    const err = new Error(vOld.error);
+    err.status = 400;
+    throw err;
+  }
+  const vNew = validateClassNameFormat(rawNewName);
+  if (!vNew.ok) {
+    const err = new Error(vNew.error);
+    err.status = 400;
+    throw err;
+  }
+  if (vOld.name === vNew.name) {
+    const err = new Error('Tên mới phải khác tên hiện tại');
+    err.status = 400;
+    throw err;
+  }
+
+  await ensureDefaultClasses(db);
+  const coll = db.collection(COLLECTION);
+  const docOld = await coll.findOne({ name: vOld.name });
+  if (!docOld) {
+    const err = new Error('Không tìm thấy lớp cần đổi tên');
+    err.status = 404;
+    throw err;
+  }
+  const docNewExists = await coll.findOne({ name: vNew.name });
+  if (docNewExists) {
+    const err = new Error('Tên lớp mới đã tồn tại');
+    err.status = 409;
+    throw err;
+  }
+
+  const upd = await coll.updateOne(
+    { name: vOld.name },
+    { $set: { name: vNew.name } }
+  );
+  if (upd.matchedCount === 0) {
+    const err = new Error('Không tìm thấy lớp');
+    err.status = 404;
+    throw err;
+  }
+
+  await db.collection('users').updateMany(
+    { class_name: vOld.name },
+    { $set: { class_name: vNew.name } }
+  );
+  await db.collection('assignment_classes').updateMany(
+    { class_name: vOld.name },
+    { $set: { class_name: vNew.name } }
+  );
+
+  return { oldName: vOld.name, newName: vNew.name };
+}
