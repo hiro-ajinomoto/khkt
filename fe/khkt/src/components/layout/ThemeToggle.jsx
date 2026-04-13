@@ -1,7 +1,39 @@
 import { useTheme } from '../../contexts/ThemeContext';
 
+function SunIcon({ className }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden
+    >
+      <path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.166a.75.75 0 00-1.06-1.06l-1.591 1.59a.75.75 0 101.06 1.061l1.59-1.591zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.834 18.894a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 10-1.061 1.06l1.59 1.591zM12 18a.75.75 0 01.75.75V21a.75.75 0 01-1.5 0v-2.25A.75.75 0 0112 18zM7.758 17.303a.75.75 0 00-1.061-1.06l-1.591 1.59a.75.75 0 001.06 1.061l1.591-1.591zM6 12a.75.75 0 01-.75.75H3a.75.75 0 010-1.5h2.25A.75.75 0 016 12zM6.697 7.757a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 00-1.061 1.06l1.59 1.591z" />
+    </svg>
+  );
+}
+
+function MoonIcon({ className }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden
+    >
+      <path
+        fillRule="evenodd"
+        d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69.75.75 0 01.981.98 10.503 10.503 0 01-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 01.818.162z"
+        clipRule="evenodd"
+      />
+    </svg>
+  );
+}
+
 /**
- * Nút bật/tắt giao diện sáng · tối (Ocean Flame light / Ocean dark).
+ * Một nút: đang tối → mặt trời (bấm sang sáng) · đang sáng → mặt trăng (bấm sang tối).
  */
 export default function ThemeToggle({ className = '' }) {
   const { theme, toggleTheme } = useTheme();
@@ -11,22 +43,18 @@ export default function ThemeToggle({ className = '' }) {
     <button
       type="button"
       onClick={toggleTheme}
-      className={`inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold shadow-sm transition hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-transparent ${className} border-sky-200/80 bg-white/90 text-slate-700 shadow-[0_8px_24px_rgba(86,132,214,0.12)] hover:border-orange-200 hover:bg-[linear-gradient(135deg,#fffefb,#fff5e6)] dark:border-cyan-400/25 dark:bg-slate-900/60 dark:text-cyan-100 dark:shadow-cyan-950/30 dark:hover:border-cyan-300/45 dark:hover:bg-slate-800/80`}
-      aria-pressed={isDark}
-      title={isDark ? 'Chuyển giao diện sáng' : 'Chuyển giao diện tối'}
+      aria-label={isDark ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối'}
+      title={isDark ? 'Sáng (mặt trời)' : 'Tối (mặt trăng)'}
+      className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border shadow-md transition hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+        isDark
+          ? 'border-amber-400/40 bg-gradient-to-b from-slate-800 to-slate-900 text-amber-300 shadow-black/30 focus:ring-amber-400/50 focus:ring-offset-slate-950 hover:border-amber-300/60 hover:text-amber-200'
+          : 'border-sky-200/90 bg-white text-indigo-600 shadow-sky-200/50 focus:ring-sky-400/50 focus:ring-offset-white hover:border-sky-300 hover:bg-sky-50 hover:text-indigo-700'
+      } ${className}`}
     >
-      <span className="relative flex h-7 w-7 items-center justify-center rounded-full bg-[linear-gradient(135deg,#7fb7ff_0%,#ffd36a_55%,#ff8d4d_100%)] text-white shadow-[0_4px_12px_rgba(255,140,61,0.25)] dark:bg-gradient-to-br dark:from-slate-700 dark:via-slate-800 dark:to-slate-900 dark:shadow-none">
-        {isDark ? (
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden>
-            <path d="M12 3a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0V4a1 1 0 0 0-1-1zm0 15a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1zm8-9h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2zM5 11H4a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2zm13.657-5.657a1 1 0 0 0-1.414 0l-.707.707a1 1 0 1 0 1.414 1.414l.707-.707a1 1 0 0 0 0-1.414zM7.05 16.95a1 1 0 0 0-1.414 0 1 1 0 0 0 0 1.414l.707.707a1 1 0 1 0 1.414-1.414l-.707-.707zm10.607 0a1 1 0 1 0-1.414 1.414l.707.707a1 1 0 0 0 1.414-1.414l-.707-.707zM7.05 7.05 6.343 6.343a1 1 0 0 0-1.414 1.414l.707.707A1 1 0 1 0 7.757 7.757L7.05 7.05zM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" />
-          </svg>
-        ) : (
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden>
-            <path d="M21 14.5A7.5 7.5 0 0 1 9.59 3.17 7.5 7.5 0 1 0 21 14.5z" />
-          </svg>
-        )}
+      <span className="sr-only">
+        {isDark ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối'}
       </span>
-      <span className="hidden sm:inline">{isDark ? 'Giao diện tối' : 'Giao diện sáng'}</span>
+      {isDark ? <SunIcon className="h-6 w-6" /> : <MoonIcon className="h-6 w-6" />}
     </button>
   );
 }
