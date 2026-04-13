@@ -5,6 +5,7 @@ import { fetchSchoolClasses, groupClassesByGrade } from '../../api/classes';
 import { fetchMySubmissions } from '../../api/submissions';
 import { useAuth } from '../../contexts/AuthContext';
 import OceanShell, { OceanPageLoading, OceanPageError } from '../layout/OceanShell';
+import ThemeToggle from '../layout/ThemeToggle';
 import {
   formatVNDateFromYMD,
   isAssignmentReleasedClient,
@@ -26,7 +27,7 @@ function SubjectHashtag({ subject }) {
       .trim()
       .toLowerCase() || 'math';
   return (
-    <span className="inline-flex items-center rounded-full border border-violet-300/45 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-indigo-600 px-3 py-1.5 text-xs font-semibold tracking-wide text-white shadow-lg shadow-violet-950/45 ring-1 ring-white/15">
+    <span className="inline-flex items-center rounded-full border border-sky-200/70 bg-[linear-gradient(135deg,#e0f2fe_0%,#fff7ed_45%,#ffe4d5_100%)] px-3 py-1.5 text-xs font-semibold tracking-wide text-slate-800 shadow-md shadow-sky-900/10 ring-1 ring-white/90 dark:border-violet-300/45 dark:bg-gradient-to-r dark:from-violet-600 dark:via-fuchsia-600 dark:to-indigo-600 dark:text-white dark:shadow-violet-950/45 dark:ring-white/15">
       #{raw}
     </span>
   );
@@ -464,30 +465,35 @@ function AssignmentsList() {
   return (
     <OceanShell>
         {/* Header */}
-        <header className="mb-10 flex flex-col gap-6 rounded-[28px] border border-cyan-300/15 bg-white/5 p-6 shadow-2xl shadow-cyan-950/30 backdrop-blur-xl lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-4">
-            <div className="relative h-16 w-16 overflow-hidden rounded-2xl border border-cyan-300/30 bg-gradient-to-br from-cyan-300/20 via-sky-400/10 to-blue-500/20 p-1 shadow-lg shadow-cyan-950/40">
-              <div className="flex h-full w-full items-center justify-center rounded-[14px] bg-slate-900/80 text-xl font-bold text-cyan-200">
+        <header className="relative mb-10 flex flex-col gap-6 overflow-hidden rounded-[28px] border border-sky-200/60 bg-white/70 p-6 shadow-[0_12px_40px_rgba(86,132,214,0.12)] backdrop-blur-xl dark:border-cyan-300/15 dark:bg-white/5 dark:shadow-2xl dark:shadow-cyan-950/30 lg:flex-row lg:items-center lg:justify-between">
+          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(191,217,255,0.18),rgba(255,211,106,0.08),rgba(255,122,89,0.05))] dark:bg-transparent" />
+          <div className="relative flex items-center gap-4">
+            <div className="relative h-16 w-16 overflow-hidden rounded-2xl border border-sky-200/70 bg-[linear-gradient(135deg,#dbeafe_0%,#fff7ed_50%,#ffedd5_100%)] p-1 shadow-lg shadow-orange-200/30 dark:border-cyan-300/30 dark:bg-gradient-to-br dark:from-cyan-300/20 dark:via-sky-400/10 dark:to-blue-500/20 dark:shadow-cyan-950/40">
+              <div className="flex h-full w-full items-center justify-center rounded-[14px] bg-white/95 text-xl font-bold text-sky-700 dark:bg-slate-900/80 dark:text-cyan-200">
                 {user?.name?.[0] || user?.username?.[0] || 'ST'}
               </div>
-              <div className="absolute inset-x-1 top-1 h-4 rounded-full bg-cyan-300/20 blur-md" />
+              <div className="absolute inset-x-1 top-1 h-4 rounded-full bg-orange-200/50 blur-md dark:bg-cyan-300/20" />
             </div>
             <div>
-              <p className="mb-2 text-xs uppercase tracking-[0.35em] text-cyan-200/80">
+              <p className="mb-2 text-xs uppercase tracking-[0.35em] text-sky-600/90 dark:text-cyan-200/80">
                 Cuộc thi khoa học kỹ thuật
               </p>
-              <h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
-                Danh sách bài tập &amp; thử thách
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl dark:text-white">
+                Danh sách{' '}
+                <span className="bg-[linear-gradient(135deg,#2563eb,#ea580c,#c2410c)] bg-clip-text text-transparent">
+                  bài tập
+                </span>{' '}
+                &amp; thử thách
               </h1>
             </div>
           </div>
 
-          <div className="flex flex-col items-start gap-3 lg:items-end">
+          <div className="relative flex flex-col items-start gap-3 lg:items-end">
             {isAuthenticated ? (
               <>
-                <div className="rounded-2xl border border-white/10 bg-slate-900/50 px-4 py-3 text-sm text-slate-300 backdrop-blur">
+                <div className="rounded-2xl border border-sky-100 bg-white/90 px-4 py-3 text-sm text-slate-700 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/50 dark:text-slate-300">
                   {user?.name || user?.username}{' '}
-                  <span className="text-cyan-200">
+                  <span className="text-sky-600 dark:text-cyan-200">
                     (
                     {user?.role === 'admin'
                       ? 'Quản trị viên'
@@ -497,35 +503,37 @@ function AssignmentsList() {
                     )
                   </span>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  <ThemeToggle />
                   {isAdmin && (
                     <button
                       onClick={() => navigate('/admin')}
-                      className="group relative overflow-hidden rounded-2xl border border-amber-300/40 bg-gradient-to-r from-amber-500/40 via-amber-400/30 to-amber-500/40 px-5 py-3 text-sm font-medium text-amber-50 shadow-lg shadow-amber-950/40 transition hover:-translate-y-0.5"
+                      className="group relative overflow-hidden rounded-2xl border border-amber-200/80 bg-[linear-gradient(135deg,#fff7ed_0%,#ffedd5_100%)] px-5 py-3 text-sm font-medium text-amber-900 shadow-md shadow-amber-200/40 transition hover:-translate-y-0.5 dark:border-amber-300/40 dark:bg-gradient-to-r dark:from-amber-500/40 dark:via-amber-400/30 dark:to-amber-500/40 dark:text-amber-50 dark:shadow-amber-950/40"
                     >
                       <span className="relative z-10">⚙️ Trang quản trị</span>
                     </button>
                   )}
                   <button
                     onClick={logout}
-                    className="group relative overflow-hidden rounded-2xl border border-cyan-300/30 bg-gradient-to-r from-sky-500/20 via-cyan-400/20 to-blue-500/20 px-5 py-3 text-sm font-medium text-white shadow-lg shadow-cyan-950/30 transition hover:-translate-y-0.5 hover:border-cyan-200/40 hover:shadow-cyan-900/50"
+                    className="group relative overflow-hidden rounded-2xl border border-orange-200/80 bg-white/90 px-5 py-3 text-sm font-medium text-orange-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-[linear-gradient(135deg,#ffd36a_0%,#ff9b3d_55%,#ff7a59_100%)] hover:text-white dark:border-cyan-300/30 dark:bg-gradient-to-r dark:from-sky-500/20 dark:via-cyan-400/20 dark:to-blue-500/20 dark:text-white dark:shadow-lg dark:shadow-cyan-950/30 dark:hover:border-cyan-200/40 dark:hover:bg-gradient-to-r dark:hover:from-sky-500/20 dark:hover:shadow-cyan-900/50 dark:hover:text-white"
                   >
                     <span className="relative z-10">Đăng xuất</span>
-                    <span className="absolute inset-0 bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.18),transparent)] translate-x-[-120%] group-hover:translate-x-[120%] transition duration-1000" />
+                    <span className="absolute inset-0 hidden translate-x-[-120%] bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.18),transparent)] transition duration-1000 group-hover:translate-x-[120%] dark:block" />
                   </button>
                 </div>
               </>
             ) : (
-              <div className="flex gap-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <ThemeToggle />
                 <button
                   onClick={() => navigate('/login')}
-                  className="rounded-2xl border border-cyan-300/40 bg-slate-900/70 px-5 py-3 text-sm font-medium text-cyan-100 shadow-lg shadow-cyan-950/40 hover:-translate-y-0.5 transition"
+                  className="rounded-2xl border border-sky-200/80 bg-white px-5 py-3 text-sm font-medium text-sky-800 shadow-sm transition hover:-translate-y-0.5 dark:border-cyan-300/40 dark:bg-slate-900/70 dark:text-cyan-100 dark:shadow-lg dark:shadow-cyan-950/40"
                 >
                   Đăng nhập
                 </button>
                 <button
                   onClick={() => navigate('/register')}
-                  className="rounded-2xl border border-fuchsia-300/40 bg-gradient-to-r from-fuchsia-500/70 to-violet-600/80 px-5 py-3 text-sm font-medium text-white shadow-lg shadow-fuchsia-950/40 hover:-translate-y-0.5 transition"
+                  className="rounded-2xl border border-orange-200/80 bg-[linear-gradient(135deg,#ffd36a_0%,#fb923c_100%)] px-5 py-3 text-sm font-medium text-white shadow-md shadow-orange-200/40 transition hover:-translate-y-0.5 dark:border-fuchsia-300/40 dark:bg-gradient-to-r dark:from-fuchsia-500/70 dark:to-violet-600/80 dark:shadow-fuchsia-950/40"
                 >
                   Đăng ký
                 </button>
@@ -536,13 +544,13 @@ function AssignmentsList() {
 
         {isAdmin && allAssignments.length > 0 && (
           <section
-            className="mb-6 rounded-[28px] border border-amber-300/25 bg-gradient-to-br from-amber-950/50 to-slate-950/60 p-5 shadow-lg shadow-amber-950/20"
+            className="mb-6 rounded-[28px] border border-amber-200/60 bg-[linear-gradient(135deg,#fffbeb_0%,#fff7ed_100%)] p-5 shadow-md shadow-amber-100/50 dark:border-amber-300/25 dark:bg-gradient-to-br dark:from-amber-950/50 dark:to-slate-950/60 dark:shadow-lg dark:shadow-amber-950/20"
             aria-label="Lọc bài tập theo giáo viên"
           >
-            <h2 className="mb-1 text-sm font-semibold uppercase tracking-[0.2em] text-amber-100/90">
+            <h2 className="mb-1 text-sm font-semibold uppercase tracking-[0.2em] text-amber-800 dark:text-amber-100/90">
               Theo giáo viên
             </h2>
-            <p className="mb-4 text-sm text-slate-400">
+            <p className="mb-4 text-sm text-slate-600 dark:text-slate-400">
               Chọn tên để chỉ xem các bài do giáo viên đó tạo (kết hợp với bộ lọc ngày bên dưới).
             </p>
             <div className="flex flex-wrap gap-2">
@@ -551,8 +559,8 @@ function AssignmentsList() {
                 onClick={() => setAdminTeacherFilterId(null)}
                 className={`rounded-xl border px-3 py-2 text-sm font-medium transition ${
                   adminTeacherFilterId === null
-                    ? 'border-amber-300/70 bg-amber-500/25 text-amber-50 ring-1 ring-amber-400/40'
-                    : 'border-white/10 bg-slate-900/60 text-slate-200 hover:border-amber-400/30'
+                    ? 'border-amber-400/80 bg-amber-100 text-amber-950 ring-1 ring-amber-300/60 dark:border-amber-300/70 dark:bg-amber-500/25 dark:text-amber-50 dark:ring-amber-400/40'
+                    : 'border-slate-200/80 bg-white/90 text-slate-700 hover:border-amber-300/50 dark:border-white/10 dark:bg-slate-900/60 dark:text-slate-200 dark:hover:border-amber-400/30'
                 }`}
               >
                 Tất cả
@@ -571,8 +579,8 @@ function AssignmentsList() {
                     }
                     className={`rounded-xl border px-3 py-2 text-sm font-medium transition ${
                       active
-                        ? 'border-amber-300/70 bg-amber-500/25 text-amber-50 ring-1 ring-amber-400/40'
-                        : 'border-white/10 bg-slate-900/60 text-slate-200 hover:border-amber-400/30'
+                        ? 'border-amber-400/80 bg-amber-100 text-amber-950 ring-1 ring-amber-300/60 dark:border-amber-300/70 dark:bg-amber-500/25 dark:text-amber-50 dark:ring-amber-400/40'
+                        : 'border-slate-200/80 bg-white/90 text-slate-700 hover:border-amber-300/50 dark:border-white/10 dark:bg-slate-900/60 dark:text-slate-200 dark:hover:border-amber-400/30'
                     }`}
                   >
                     {opt.label}
@@ -585,37 +593,37 @@ function AssignmentsList() {
 
         {/* Filters + quick actions */}
         <section className="mb-8 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="rounded-[28px] border border-cyan-300/15 bg-white/5 p-5 backdrop-blur-xl">
+          <div className="rounded-[28px] border border-sky-200/70 bg-white/72 p-5 shadow-[0_12px_32px_rgba(86,132,214,0.08)] backdrop-blur-xl dark:border-cyan-300/15 dark:bg-white/5 dark:shadow-none">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">Bộ lọc thời gian</h2>
-              <div className="h-px flex-1 mx-4 bg-gradient-to-r from-cyan-300/30 to-transparent" />
-              <span className="text-xs uppercase tracking-[0.28em] text-cyan-200/70">
-                Ocean UI
+              <h2 className="text-lg font-semibold text-slate-800 dark:text-white">Bộ lọc thời gian</h2>
+              <div className="mx-4 h-px flex-1 bg-[linear-gradient(90deg,#7fb7ff,#ffd36a,#ff8d4d)] opacity-80 dark:bg-gradient-to-r dark:from-cyan-300/30 dark:to-transparent" />
+              <span className="text-xs uppercase tracking-[0.28em] text-sky-500 dark:text-cyan-200/70">
+                Ocean Flame
               </span>
             </div>
 
             {isTeacher || isAdmin ? (
               <div className="grid gap-4 md:grid-cols-3">
-                <div className="group rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-400">
+                <div className="group rounded-2xl border border-slate-200/80 bg-[linear-gradient(180deg,rgba(245,249,255,0.95),rgba(255,248,242,0.98))] p-4 dark:border-white/10 dark:bg-slate-950/40">
+                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">
                     Ngày
                   </label>
                   <input
                     type="date"
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    className="w-full rounded-xl border border-cyan-400/20 bg-gradient-to-r from-slate-900 to-sky-950/60 px-4 py-3 text-slate-100 outline-none ring-0 focus:border-cyan-300/60"
+                    className="w-full rounded-xl border border-sky-200/80 bg-white px-4 py-3 text-slate-800 outline-none ring-0 focus:border-sky-400 dark:border-cyan-400/20 dark:bg-gradient-to-r dark:from-slate-900 dark:to-sky-950/60 dark:text-slate-100 dark:focus:border-cyan-300/60"
                   />
                 </div>
 
-                <div className="group rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-400">
+                <div className="group rounded-2xl border border-slate-200/80 bg-[linear-gradient(180deg,rgba(245,249,255,0.95),rgba(255,248,242,0.98))] p-4 dark:border-white/10 dark:bg-slate-950/40">
+                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">
                     Ngày có bài tập
                   </label>
                   <select
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    className="w-full rounded-xl border border-cyan-400/20 bg-gradient-to-r from-slate-900 to-sky-950/60 px-4 py-3 text-slate-100 outline-none ring-0"
+                    className="w-full rounded-xl border border-sky-200/80 bg-white px-4 py-3 text-slate-800 outline-none ring-0 dark:border-cyan-400/20 dark:bg-gradient-to-r dark:from-slate-900 dark:to-sky-950/60 dark:text-slate-100"
                   >
                     {availableDates.length === 0 ? (
                       <option value={selectedDate}>{formatDateHeader(selectedDate)}</option>
@@ -629,11 +637,11 @@ function AssignmentsList() {
                   </select>
                 </div>
 
-                <div className="group rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-400">
+                <div className="group rounded-2xl border border-slate-200/80 bg-[linear-gradient(180deg,rgba(245,249,255,0.95),rgba(255,248,242,0.98))] p-4 dark:border-white/10 dark:bg-slate-950/40">
+                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">
                     Thống kê
                   </label>
-                  <div className="rounded-xl border border-cyan-400/10 bg-gradient-to-r from-slate-900 to-sky-950/60 px-4 py-3 text-sm text-slate-100">
+                  <div className="rounded-xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-700 dark:border-cyan-400/10 dark:bg-gradient-to-r dark:from-slate-900 dark:to-sky-950/60 dark:text-slate-100">
                     {filteredAssignments.length} bài tập vào ngày{' '}
                     {formatDateHeader(selectedDate)}
                   </div>
@@ -641,8 +649,8 @@ function AssignmentsList() {
               </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-3">
-                <div className="group rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-400">
+                <div className="group rounded-2xl border border-slate-200/80 bg-[linear-gradient(180deg,rgba(245,249,255,0.95),rgba(255,248,242,0.98))] p-4 dark:border-white/10 dark:bg-slate-950/40">
+                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">
                     Năm
                   </label>
                   <input
@@ -653,17 +661,17 @@ function AssignmentsList() {
                     }
                     min="2020"
                     max="2100"
-                    className="w-full rounded-xl border border-cyan-400/20 bg-gradient-to-r from-slate-900 to-sky-950/60 px-4 py-3 text-slate-100 outline-none ring-0"
+                    className="w-full rounded-xl border border-sky-200/80 bg-white px-4 py-3 text-slate-800 outline-none ring-0 dark:border-cyan-400/20 dark:bg-gradient-to-r dark:from-slate-900 dark:to-sky-950/60 dark:text-slate-100"
                   />
                 </div>
-                <div className="group rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-400">
+                <div className="group rounded-2xl border border-slate-200/80 bg-[linear-gradient(180deg,rgba(245,249,255,0.95),rgba(255,248,242,0.98))] p-4 dark:border-white/10 dark:bg-slate-950/40">
+                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">
                     Tháng
                   </label>
                   <select
                     value={selectedMonth}
                     onChange={(e) => setSelectedMonth(parseInt(e.target.value, 10))}
-                    className="w-full rounded-xl border border-cyan-400/20 bg-gradient-to-r from-slate-900 to-sky-950/60 px-4 py-3 text-slate-100 outline-none ring-0"
+                    className="w-full rounded-xl border border-sky-200/80 bg-white px-4 py-3 text-slate-800 outline-none ring-0 dark:border-cyan-400/20 dark:bg-gradient-to-r dark:from-slate-900 dark:to-sky-950/60 dark:text-slate-100"
                   >
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((month) => (
                       <option key={month} value={month}>
@@ -672,8 +680,8 @@ function AssignmentsList() {
                     ))}
                   </select>
                 </div>
-                <div className="group rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-400">
+                <div className="group rounded-2xl border border-slate-200/80 bg-[linear-gradient(180deg,rgba(245,249,255,0.95),rgba(255,248,242,0.98))] p-4 dark:border-white/10 dark:bg-slate-950/40">
+                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">
                     Tháng có bài tập
                   </label>
                   <select
@@ -683,7 +691,7 @@ function AssignmentsList() {
                       setSelectedYear(year);
                       setSelectedMonth(month);
                     }}
-                    className="w-full rounded-xl border border-cyan-400/20 bg-gradient-to-r from-slate-900 to-sky-950/60 px-4 py-3 text-slate-100 outline-none ring-0"
+                    className="w-full rounded-xl border border-sky-200/80 bg-white px-4 py-3 text-slate-800 outline-none ring-0 dark:border-cyan-400/20 dark:bg-gradient-to-r dark:from-slate-900 dark:to-sky-950/60 dark:text-slate-100"
                   >
                     {availableMonths.length === 0 ? (
                       <option value={`${selectedYear}-${selectedMonth}`}>
@@ -702,14 +710,14 @@ function AssignmentsList() {
             )}
           </div>
 
-          <div className="rounded-[28px] border border-cyan-300/15 bg-gradient-to-br from-cyan-400/10 via-sky-400/5 to-blue-500/10 p-5 backdrop-blur-xl">
+          <div className="rounded-[28px] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,255,255,0.85),rgba(255,251,245,0.92))] p-5 shadow-[0_12px_32px_rgba(86,132,214,0.09)] backdrop-blur-xl dark:border-cyan-300/15 dark:bg-gradient-to-br dark:from-cyan-400/10 dark:via-sky-400/5 dark:to-blue-500/10 dark:shadow-none">
             <div className="mb-5 flex items-center gap-3">
-              <div className="h-10 w-10 rounded-2xl bg-cyan-300/10 flex items-center justify-center text-cyan-200">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#dcebff,#fff1b8)] text-lg text-sky-700 dark:bg-cyan-300/10 dark:text-cyan-200">
                 ✦
               </div>
               <div>
-                <h3 className="font-semibold text-white">Thống kê nhanh</h3>
-                <p className="text-sm text-slate-300">
+                <h3 className="font-semibold text-slate-800 dark:text-white">Thống kê nhanh</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-300">
                   {filteredAssignments.length} bài tập trong{' '}
                   {isTeacher || isAdmin
                     ? formatDateHeader(selectedDate)
@@ -721,7 +729,7 @@ function AssignmentsList() {
               {isStudent && (
                 <button
                   onClick={() => navigate('/my-submissions')}
-                  className="w-full rounded-2xl border border-fuchsia-300/20 bg-gradient-to-r from-fuchsia-500/80 to-violet-600/80 px-4 py-3 font-medium text-white shadow-lg shadow-fuchsia-950/30 transition hover:-translate-y-0.5"
+                  className="w-full rounded-2xl border border-fuchsia-200/60 bg-[linear-gradient(135deg,#e879f9_0%,#a855f7_55%,#6366f1_100%)] px-4 py-3 font-medium text-white shadow-lg shadow-fuchsia-200/40 transition hover:-translate-y-0.5 dark:border-fuchsia-300/20 dark:shadow-fuchsia-950/30"
                 >
                   📝 Bài đã nộp
                 </button>
@@ -781,7 +789,7 @@ function AssignmentsList() {
               {isTeacher && (
                 <button
                   onClick={() => navigate('/assignments/create')}
-                  className="w-full rounded-2xl border border-emerald-300/20 bg-gradient-to-r from-emerald-500/80 to-cyan-500/80 px-4 py-3 font-medium text-white shadow-lg shadow-emerald-950/30 transition hover:-translate-y-0.5"
+                  className="w-full rounded-2xl border border-emerald-200/70 bg-[linear-gradient(135deg,#34d399_0%,#14b8a6_55%,#0ea5e9_100%)] px-4 py-3 font-medium text-white shadow-lg shadow-emerald-200/35 transition hover:-translate-y-0.5 dark:border-emerald-300/20 dark:shadow-emerald-950/30"
                 >
                   ➕ Tạo bài tập mới
                 </button>
@@ -790,14 +798,14 @@ function AssignmentsList() {
                 <button
                   type="button"
                   onClick={handleBulkAssignFromSelection}
-                  className="w-full rounded-2xl border border-cyan-300/35 bg-gradient-to-r from-cyan-500/50 to-sky-600/60 px-4 py-3 font-medium text-white shadow-lg shadow-cyan-950/30 transition hover:-translate-y-0.5"
+                  className="w-full rounded-2xl border border-sky-200/80 bg-[linear-gradient(135deg,#7dd3fc_0%,#38bdf8_50%,#0ea5e9_100%)] px-4 py-3 font-medium text-white shadow-lg shadow-sky-200/40 transition hover:-translate-y-0.5 dark:border-cyan-300/35 dark:from-cyan-500/50 dark:to-sky-600/60 dark:shadow-cyan-950/30"
                 >
                   📋 Gán các bài đã chọn ({selectedIds.size})
                 </button>
               )}
               <button
                 onClick={loadAllAssignments}
-                className="w-full rounded-2xl border border-cyan-300/20 bg-gradient-to-r from-cyan-500/70 to-blue-600/80 px-4 py-3 font-medium text-white shadow-lg shadow-cyan-950/30 transition hover:-translate-y-0.5"
+                className="w-full rounded-2xl border border-sky-200/80 bg-[linear-gradient(135deg,#dbeafe_0%,#8fc2ff_35%,#ffd36a_100%)] px-4 py-3 font-medium text-slate-800 shadow-[0_10px_28px_rgba(86,132,214,0.14)] transition hover:-translate-y-0.5 dark:border-cyan-300/20 dark:bg-gradient-to-r dark:from-cyan-500/70 dark:to-blue-600/80 dark:text-white dark:shadow-cyan-950/30"
               >
                 ↻ Làm mới dữ liệu
               </button>
@@ -806,7 +814,7 @@ function AssignmentsList() {
                   type="button"
                   onClick={handleBulkDelete}
                   disabled={bulkDeleting}
-                  className="w-full rounded-2xl border border-rose-300/30 bg-rose-500/20 px-4 py-3 text-sm font-medium text-rose-50 shadow-lg shadow-rose-950/40 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="w-full rounded-2xl border border-rose-200/80 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800 shadow-md shadow-rose-100 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-300/30 dark:bg-rose-500/20 dark:text-rose-50 dark:shadow-rose-950/40"
                 >
                   {bulkDeleting
                     ? 'Đang xóa...'
@@ -819,30 +827,32 @@ function AssignmentsList() {
 
         {/* Timeline banner */}
         <section className="mb-6">
-          <div className="relative overflow-hidden rounded-[28px] border border-cyan-300/20 bg-gradient-to-r from-blue-500/70 via-sky-500/65 to-violet-600/60 px-6 py-5 shadow-2xl shadow-sky-950/30">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.18),transparent_20%),radial-gradient(circle_at_80%_0%,rgba(255,255,255,0.14),transparent_18%)]" />
-            <div className="relative">
-              <p className="text-xs uppercase tracking-[0.3em] text-cyan-50/75">
-                Mốc thời gian
-              </p>
-              <h2 className="mt-1 text-2xl font-semibold text-white">
-                {isTeacher || isAdmin
-                  ? formatDateHeader(selectedDate)
-                  : `Tháng ${selectedMonth}, ${selectedYear}`}
-              </h2>
+          <div className="rounded-[32px] bg-[linear-gradient(135deg,#8fc2ff_0%,#5aa3ff_22%,#ffd36a_58%,#ff8d4d_100%)] p-[1px] shadow-[0_18px_42px_rgba(86,132,214,0.14)] dark:rounded-[28px] dark:bg-none dark:p-0 dark:shadow-2xl dark:shadow-sky-950/30">
+            <div className="relative overflow-hidden rounded-[31px] bg-[linear-gradient(135deg,rgba(255,255,255,0.55),rgba(255,255,255,0.35))] px-6 py-5 text-slate-900 shadow-inner backdrop-blur-xl dark:rounded-[28px] dark:border dark:border-cyan-300/20 dark:bg-gradient-to-r dark:from-blue-500/70 dark:via-sky-500/65 dark:to-violet-600/60 dark:text-white dark:shadow-none">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.5),transparent_22%),radial-gradient(circle_at_80%_0%,rgba(255,211,106,0.2),transparent_20%)] dark:bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.18),transparent_20%),radial-gradient(circle_at_80%_0%,rgba(255,255,255,0.14),transparent_18%)]" />
+              <div className="relative">
+                <p className="text-xs uppercase tracking-[0.3em] text-sky-800/80 dark:text-cyan-50/75">
+                  Mốc thời gian
+                </p>
+                <h2 className="mt-1 text-2xl font-semibold text-slate-900 dark:text-white">
+                  {isTeacher || isAdmin
+                    ? formatDateHeader(selectedDate)
+                    : `Tháng ${selectedMonth}, ${selectedYear}`}
+                </h2>
+              </div>
             </div>
           </div>
         </section>
 
         {/* Empty states */}
         {allAssignments.length === 0 ? (
-          <div className="mt-10 rounded-3xl border border-white/10 bg-slate-900/70 px-6 py-10 text-center text-slate-200">
+          <div className="mt-10 rounded-3xl border border-sky-200/70 bg-white/80 px-6 py-10 text-center text-slate-700 shadow-md shadow-sky-100/50 dark:border-white/10 dark:bg-slate-900/70 dark:text-slate-200">
             {isTeacher || isAdmin
               ? 'Chưa có bài tập nào. Hãy tạo bài tập mới cho học sinh nhé!'
               : 'Chưa có bài tập nào được gán cho lớp của bạn.'}
           </div>
         ) : filteredAssignments.length === 0 ? (
-          <div className="mt-10 rounded-3xl border border-white/10 bg-slate-900/70 px-6 py-10 text-center text-slate-200">
+          <div className="mt-10 rounded-3xl border border-sky-200/70 bg-white/80 px-6 py-10 text-center text-slate-700 shadow-md shadow-sky-100/50 dark:border-white/10 dark:bg-slate-900/70 dark:text-slate-200">
             {isTeacher || isAdmin
               ? `Chưa có bài tập nào vào ngày ${formatDateHeader(
                   selectedDate
@@ -860,18 +870,18 @@ function AssignmentsList() {
         ) : (
           <>
             {/* Stats line */}
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-200">
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600 dark:text-slate-200">
               <span>
                 Tổng số: {filteredAssignments.length} bài tập
                 {isTeacher || isAdmin
                   ? ` vào ngày ${formatDateHeader(selectedDate)}`
                   : ` trong tháng ${formatMonthYear(selectedYear, selectedMonth)}`}
                 {isStudent && studentOnlyUnsubmitted && (
-                  <span className="text-cyan-200/90"> · lọc: tôi chưa nộp</span>
+                  <span className="text-sky-700 dark:text-cyan-200/90"> · lọc: tôi chưa nộp</span>
                 )}
               </span>
               {isTeacher && selectedIds.size > 0 && (
-                <span className="rounded-full border border-cyan-300/30 bg-cyan-500/10 px-3 py-1 text-xs text-cyan-100">
+                <span className="rounded-full border border-sky-200/80 bg-sky-50 px-3 py-1 text-xs text-sky-800 dark:border-cyan-300/30 dark:bg-cyan-500/10 dark:text-cyan-100">
                   Đã chọn: {selectedIds.size}
                 </span>
               )}
@@ -882,7 +892,7 @@ function AssignmentsList() {
               <div className="space-y-6">
                 {Object.entries(filteredAndGroupedByDate).map(([date, assignments]) => (
                   <div key={date} className="space-y-4">
-                    <h2 className="text-base font-semibold text-slate-100">
+                    <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">
                       {formatDateHeader(date)}
                     </h2>
                     <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6 xl:grid-cols-4 [&>*]:h-full [&>*]:min-h-0">
@@ -914,7 +924,7 @@ function AssignmentsList() {
                   {Object.entries(filteredAndGroupedByDateInMonth).map(
                     ([date, assignments]) => (
                       <div key={date} className="space-y-4">
-                        <h2 className="text-base font-semibold text-slate-100">
+                        <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">
                           {formatDateHeader(date)}
                         </h2>
                         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6 xl:grid-cols-4 [&>*]:h-full [&>*]:min-h-0">
@@ -956,7 +966,7 @@ function AssignmentsList() {
             onClick={() =>
               window.scrollTo({ top: 0, left: 0, behavior: 'smooth' })
             }
-            className="fixed bottom-24 right-5 z-[600] flex h-12 w-12 items-center justify-center rounded-2xl border border-cyan-300/35 bg-gradient-to-br from-cyan-500/50 to-sky-700/55 text-lg text-white shadow-lg shadow-cyan-950/40 backdrop-blur-md transition hover:-translate-y-0.5 hover:border-cyan-200/40 hover:shadow-cyan-900/50 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 sm:bottom-10 sm:right-8"
+            className="fixed bottom-24 right-5 z-[600] flex h-12 w-12 items-center justify-center rounded-2xl border border-sky-200/80 bg-[linear-gradient(135deg,#7dd3fc_0%,#38bdf8_50%,#ffd36a_100%)] text-lg text-white shadow-[0_10px_28px_rgba(86,132,214,0.2)] backdrop-blur-md transition hover:-translate-y-0.5 hover:border-orange-200/60 focus:outline-none focus:ring-2 focus:ring-sky-400/50 dark:border-cyan-300/35 dark:bg-gradient-to-br dark:from-cyan-500/50 dark:to-sky-700/55 dark:shadow-cyan-950/40 dark:hover:border-cyan-200/40 dark:hover:shadow-cyan-900/50 dark:focus:ring-cyan-400/50 sm:bottom-10 sm:right-8"
             aria-label="Lên đầu trang"
             title="Lên đầu trang"
           >
@@ -997,32 +1007,34 @@ function AssignmentCard({
 }) {
   return (
     <article
-      className={`group relative flex h-full min-h-0 flex-col overflow-hidden rounded-[30px] border border-white/10 bg-white/6 p-5 shadow-xl shadow-slate-950/30 backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-cyan-300/30 hover:shadow-cyan-950/40 cursor-pointer ${
-        selectedIds.has(assignment.id) ? 'ring-2 ring-cyan-300/70 ring-offset-2 ring-offset-slate-900' : ''
+      className={`group relative flex h-full min-h-0 cursor-pointer flex-col overflow-hidden rounded-[30px] border border-sky-200/70 bg-white/85 p-5 shadow-[0_10px_28px_rgba(86,132,214,0.08)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-orange-200 hover:shadow-[0_18px_38px_rgba(255,140,61,0.12)] dark:border-white/10 dark:bg-white/6 dark:shadow-xl dark:shadow-slate-950/30 dark:hover:border-cyan-300/30 dark:hover:shadow-cyan-950/40 ${
+        selectedIds.has(assignment.id)
+          ? 'ring-2 ring-orange-300/80 ring-offset-2 ring-offset-amber-50 dark:ring-cyan-300/70 dark:ring-offset-slate-900'
+          : ''
       }`}
       onClick={() => onView(assignment.id)}
     >
-      <div className="absolute inset-0 opacity-0 transition group-hover:opacity-100 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.16),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(96,165,250,0.16),transparent_28%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,211,106,0.12),transparent_32%),radial-gradient(circle_at_bottom_left,rgba(143,194,255,0.14),transparent_28%)] opacity-0 transition group-hover:opacity-100 dark:bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.16),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(96,165,250,0.16),transparent_28%)]" />
       <div className="relative flex min-h-0 flex-1 flex-col">
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
-            <h3 className="text-3xl font-semibold tracking-tight text-white line-clamp-1">
+            <h3 className="line-clamp-1 text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">
               {assignment.title || `Bài ${index + 1}`}
             </h3>
-            <p className="mt-2 text-base text-slate-300 line-clamp-2">
+            <p className="mt-2 line-clamp-2 text-base text-slate-600 dark:text-slate-300">
               {assignment.description || assignment.subtitle || 'Bài tập tự luận'}
             </p>
             {isTeacher && (
-              <p className="mt-2 text-xs text-slate-500">
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-500">
                 Người tạo:{' '}
-                <span className="font-medium text-slate-300">
+                <span className="font-medium text-slate-700 dark:text-slate-300">
                   {assignment.created_by_name || '—'}
                 </span>
               </p>
             )}
           </div>
           <div className="flex flex-col items-end gap-2">
-            <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-sm text-cyan-100">
+            <div className="rounded-2xl border border-sky-200/70 bg-sky-50 px-3 py-2 text-sm font-bold text-sky-800 dark:border-cyan-300/20 dark:bg-cyan-300/10 dark:text-cyan-100">
               {String(index + 1).padStart(2, '0')}
             </div>
             {isTeacher && (
@@ -1032,7 +1044,7 @@ function AssignmentCard({
                     e.stopPropagation();
                     onAssign(assignment.id);
                   }}
-                  className="rounded-xl border border-cyan-300/30 bg-cyan-500/10 px-2 py-1 text-cyan-100 hover:bg-cyan-500/20"
+                  className="rounded-xl border border-sky-200/80 bg-sky-50 px-2 py-1 text-sky-800 hover:bg-sky-100 dark:border-cyan-300/30 dark:bg-cyan-500/10 dark:text-cyan-100 dark:hover:bg-cyan-500/20"
                   title="Gán bài tập cho lớp"
                 >
                   📋
@@ -1042,7 +1054,7 @@ function AssignmentCard({
                     e.stopPropagation();
                     onEdit(assignment.id);
                   }}
-                  className="rounded-xl border border-amber-300/30 bg-amber-500/10 px-2 py-1 text-amber-100 hover:bg-amber-500/20"
+                  className="rounded-xl border border-amber-200/80 bg-amber-50 px-2 py-1 text-amber-900 hover:bg-amber-100 dark:border-amber-300/30 dark:bg-amber-500/10 dark:text-amber-100 dark:hover:bg-amber-500/20"
                   title="Sửa bài tập"
                 >
                   ✏️
@@ -1052,7 +1064,7 @@ function AssignmentCard({
                     e.stopPropagation();
                     onDelete(assignment.id);
                   }}
-                  className="rounded-xl border border-rose-300/30 bg-rose-500/10 px-2 py-1 text-rose-100 hover:bg-rose-500/20"
+                  className="rounded-xl border border-rose-200/80 bg-rose-50 px-2 py-1 text-rose-800 hover:bg-rose-100 dark:border-rose-300/30 dark:bg-rose-500/10 dark:text-rose-100 dark:hover:bg-rose-500/20"
                   title="Xóa bài tập"
                 >
                   🗑️
@@ -1065,14 +1077,14 @@ function AssignmentCard({
         <div className="mb-5 flex flex-wrap gap-2 text-sm">
           {isTeacher && (
             <label
-              className="flex items-center gap-2 rounded-xl border border-cyan-300/20 bg-slate-900/50 px-3 py-2 text-xs text-slate-200"
+              className="flex items-center gap-2 rounded-xl border border-sky-200/70 bg-white/90 px-3 py-2 text-xs text-slate-700 dark:border-cyan-300/20 dark:bg-slate-900/50 dark:text-slate-200"
               onClick={(e) => e.stopPropagation()}
             >
               <input
                 type="checkbox"
                 checked={selectedIds.has(assignment.id)}
                 onChange={() => onSelect(assignment.id)}
-                className="h-4 w-4 rounded border-cyan-300/40 bg-slate-900 text-cyan-400"
+                className="h-4 w-4 rounded border-sky-300 bg-white text-sky-600 dark:border-cyan-300/40 dark:bg-slate-900 dark:text-cyan-400"
               />
               Chọn bài này
             </label>
@@ -1157,7 +1169,7 @@ function AssignmentCard({
               e.stopPropagation();
               onView(assignment.id);
             }}
-            className="flex-1 rounded-2xl border border-cyan-300/25 bg-gradient-to-r from-cyan-500/80 to-blue-600/80 px-4 py-3 font-medium text-white shadow-lg shadow-cyan-950/30 transition hover:-translate-y-0.5"
+            className="flex-1 rounded-2xl border border-orange-200/70 bg-[linear-gradient(135deg,#ffd36a_0%,#ff9b3d_55%,#ff7a59_100%)] px-4 py-3 font-medium text-white shadow-[0_10px_24px_rgba(255,140,61,0.18)] transition hover:-translate-y-0.5 dark:border-cyan-300/25 dark:bg-gradient-to-r dark:from-cyan-500/80 dark:to-blue-600/80 dark:shadow-cyan-950/30"
           >
             Xem chi tiết
           </button>
@@ -1166,7 +1178,7 @@ function AssignmentCard({
               e.stopPropagation();
               onView(assignment.id);
             }}
-            className="rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-slate-200 transition hover:bg-white/12"
+            className="rounded-2xl border border-sky-200/80 bg-white/90 px-4 py-3 text-slate-600 transition hover:bg-sky-50 dark:border-white/10 dark:bg-white/8 dark:text-slate-200 dark:hover:bg-white/12"
           >
             ⋯
           </button>
@@ -1265,26 +1277,26 @@ function AssignAssignmentModal({ assignmentIds, onClose, onSuccess }) {
 
   return (
     <div
-      className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/75 px-4 py-8 backdrop-blur-md"
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-900/25 px-4 py-8 backdrop-blur-md dark:bg-slate-950/75"
       onClick={onClose}
       role="presentation"
     >
       <div
-        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-cyan-300/20 bg-slate-900/95 p-6 shadow-2xl shadow-cyan-950/50 backdrop-blur-xl"
+        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-sky-200/80 bg-white/95 p-6 shadow-[0_24px_60px_rgba(86,132,214,0.15)] backdrop-blur-xl dark:border-cyan-300/20 dark:bg-slate-900/95 dark:shadow-2xl dark:shadow-cyan-950/50"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby="assign-modal-title"
       >
-        <div className="mb-5 flex items-center justify-between border-b border-white/10 pb-4">
+        <div className="mb-5 flex items-center justify-between border-b border-slate-200/80 pb-4 dark:border-white/10">
           <div>
-            <h2 id="assign-modal-title" className="text-lg font-semibold text-white">
+            <h2 id="assign-modal-title" className="text-lg font-semibold text-slate-900 dark:text-white">
               {assignmentCount > 1
                 ? `Gán ${assignmentCount} bài tập cho lớp`
                 : 'Gán bài tập cho lớp'}
             </h2>
             {assignmentCount > 1 && (
-              <p className="mt-1 text-sm text-slate-400">
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
                 Các lớp bạn chọn sẽ được gán cho tất cả bài đã chọn.
               </p>
             )}
@@ -1292,7 +1304,7 @@ function AssignAssignmentModal({ assignmentIds, onClose, onSuccess }) {
           <button
             type="button"
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 text-slate-300 transition hover:bg-white/10"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200/80 text-slate-500 transition hover:bg-slate-100 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/10"
           >
             ✕
           </button>
@@ -1300,15 +1312,15 @@ function AssignAssignmentModal({ assignmentIds, onClose, onSuccess }) {
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           <div>
-            <label className="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">
+            <label className="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
               Chọn lớp
             </label>
             {loadingClasses ? (
-              <div className="rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-6 text-center text-slate-300">
+              <div className="rounded-2xl border border-sky-100 bg-sky-50/80 px-4 py-6 text-center text-slate-600 dark:border-white/10 dark:bg-slate-950/50 dark:text-slate-300">
                 Đang tải...
               </div>
             ) : classesByGrade.length === 0 ? (
-              <div className="rounded-2xl border border-amber-400/25 bg-amber-500/10 px-4 py-4 text-sm text-amber-100">
+              <div className="rounded-2xl border border-amber-200/60 bg-amber-50 px-4 py-4 text-sm text-amber-900 dark:border-amber-400/25 dark:bg-amber-500/10 dark:text-amber-100">
                 Chưa có lớp nào trong hệ thống. Vui lòng nhờ quản trị viên thêm lớp ở trang Quản trị.
               </div>
             ) : (
@@ -1324,19 +1336,19 @@ function AssignAssignmentModal({ assignmentIds, onClose, onSuccess }) {
                   return (
                     <div
                       key={gradeName}
-                      className="rounded-2xl border border-white/10 bg-slate-950/40 p-4"
+                      className="rounded-2xl border border-sky-100 bg-slate-50/90 p-4 dark:border-white/10 dark:bg-slate-950/40"
                     >
-                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
-                        <h3 className="m-0 text-base font-semibold text-slate-100">{gradeName}</h3>
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 pb-3 dark:border-white/10">
+                        <h3 className="m-0 text-base font-semibold text-slate-800 dark:text-slate-100">{gradeName}</h3>
                         <button
                           type="button"
                           onClick={() => handleSelectGrade(gradeClasses)}
                           className={`rounded-xl border px-3 py-1.5 text-xs font-medium transition ${
                             allSelected
-                              ? 'border-emerald-400/40 bg-emerald-500/20 text-emerald-100'
+                              ? 'border-emerald-300/80 bg-emerald-100 text-emerald-900 dark:border-emerald-400/40 dark:bg-emerald-500/20 dark:text-emerald-100'
                               : someSelected
-                                ? 'border-amber-400/40 bg-amber-500/15 text-amber-100'
-                                : 'border-cyan-400/30 bg-cyan-500/10 text-cyan-100 hover:bg-cyan-500/20'
+                                ? 'border-amber-300/80 bg-amber-100 text-amber-900 dark:border-amber-400/40 dark:bg-amber-500/15 dark:text-amber-100'
+                                : 'border-sky-200/80 bg-white text-sky-800 hover:bg-sky-50 dark:border-cyan-400/30 dark:bg-cyan-500/10 dark:text-cyan-100 dark:hover:bg-cyan-500/20'
                           }`}
                           disabled={loading}
                         >
@@ -1352,22 +1364,22 @@ function AssignAssignmentModal({ assignmentIds, onClose, onSuccess }) {
                               key={className}
                               className={`relative flex cursor-pointer flex-col items-center rounded-xl border px-2 py-3 text-center text-sm transition ${
                                 isSelected
-                                  ? 'border-cyan-400/50 bg-cyan-500/15 text-cyan-50'
+                                  ? 'border-sky-400/70 bg-sky-100 text-sky-950 dark:border-cyan-400/50 dark:bg-cyan-500/15 dark:text-cyan-50'
                                   : isAssigned
-                                    ? 'border-emerald-400/35 bg-emerald-500/10 text-emerald-100'
-                                    : 'border-white/10 bg-slate-900/40 text-slate-200 hover:border-cyan-400/30'
+                                    ? 'border-emerald-300/70 bg-emerald-50 text-emerald-900 dark:border-emerald-400/35 dark:bg-emerald-500/10 dark:text-emerald-100'
+                                    : 'border-slate-200/80 bg-white text-slate-700 hover:border-sky-300 dark:border-white/10 dark:bg-slate-900/40 dark:text-slate-200 dark:hover:border-cyan-400/30'
                               }`}
                             >
                               <input
                                 type="checkbox"
-                                className="mb-1 h-4 w-4 rounded border-cyan-400/40 bg-slate-900 text-cyan-400"
+                                className="mb-1 h-4 w-4 rounded border-sky-300 bg-white text-sky-600 dark:border-cyan-400/40 dark:bg-slate-900 dark:text-cyan-400"
                                 checked={isSelected}
                                 onChange={() => handleClassToggle(className)}
                                 disabled={loading}
                               />
                               <span className="font-medium">{className}</span>
                               {isAssigned && (
-                                <span className="mt-1 rounded-full bg-emerald-500/30 px-2 py-0.5 text-[0.65rem] text-emerald-100">
+                                <span className="mt-1 rounded-full bg-emerald-200/80 px-2 py-0.5 text-[0.65rem] text-emerald-900 dark:bg-emerald-500/30 dark:text-emerald-100">
                                   {assignmentCount > 1 ? 'Đã gán (≥1 bài)' : 'Đã gán'}
                                 </span>
                               )}
@@ -1383,23 +1395,23 @@ function AssignAssignmentModal({ assignmentIds, onClose, onSuccess }) {
           </div>
 
           {error && (
-            <div className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+            <div className="rounded-xl border border-rose-200/80 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-400/30 dark:bg-rose-500/10 dark:text-rose-100">
               {error}
             </div>
           )}
 
-          <div className="flex justify-end gap-3 border-t border-white/10 pt-4">
+          <div className="flex justify-end gap-3 border-t border-slate-200/80 pt-4 dark:border-white/10">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-2xl border border-white/15 bg-slate-800/80 px-5 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-slate-700/80"
+              className="rounded-2xl border border-slate-200/80 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-white/15 dark:bg-slate-800/80 dark:text-slate-200 dark:hover:bg-slate-700/80"
               disabled={loading}
             >
               Hủy
             </button>
             <button
               type="submit"
-              className="rounded-2xl border border-cyan-400/30 bg-gradient-to-r from-cyan-500/80 to-blue-600/80 px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-cyan-950/40 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-2xl border border-orange-200/80 bg-[linear-gradient(135deg,#ffd36a_0%,#ff9b3d_55%,#ff7a2f_100%)] px-5 py-2.5 text-sm font-medium text-white shadow-md shadow-orange-200/40 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 dark:border-cyan-400/30 dark:bg-gradient-to-r dark:from-cyan-500/80 dark:to-blue-600/80 dark:shadow-lg dark:shadow-cyan-950/40"
               disabled={loading || selectedClasses.length === 0}
             >
               {loading

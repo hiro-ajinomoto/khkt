@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Đồng bộ với /assignments: nền slate sâu, viền cyan, kính mờ, accent cyan → violet */
+/* Dark — mặc định :root; giao diện sáng ghi đè ở html:not(.dark) */
 :root {
   --ocean-bg-deep: #020617;
   --ocean-border: rgba(103, 232, 249, 0.15);
@@ -27,6 +27,32 @@
   );
 }
 
+/* Light — Ocean Flame: nền ivory/sky, viền xanh nhạt, accent cam/vàng */
+html:not(.dark) {
+  --ocean-bg-deep: #f8fbff;
+  --ocean-border: rgba(79, 143, 232, 0.16);
+  --ocean-border-strong: rgba(255, 180, 100, 0.28);
+  --ocean-surface-glass: rgba(255, 255, 255, 0.72);
+  --ocean-surface-raised: rgba(255, 255, 255, 0.9);
+  --ocean-shadow-panel: 0 20px 45px -12px rgba(86, 132, 214, 0.12);
+  --ocean-text: #0f172a;
+  --ocean-text-muted: #64748b;
+  --ocean-text-body: #334155;
+  --ocean-eyebrow: rgba(14, 116, 200, 0.75);
+  --ocean-gradient-banner: linear-gradient(
+    135deg,
+    rgba(143, 194, 255, 0.85),
+    rgba(255, 211, 106, 0.55),
+    rgba(255, 141, 77, 0.65)
+  );
+  --ocean-gradient-button: linear-gradient(
+    135deg,
+    #ffd36a 0%,
+    #ff9b3d 55%,
+    #ff7a2f 100%
+  );
+}
+
 /* Dòng phụ đề uppercase (giống header /assignments) */
 .ocean-page-eyebrow {
   margin: 0 0 0.5rem 0;
@@ -42,6 +68,10 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background-color: var(--ocean-bg-deep);
+  color: var(--ocean-text-body);
+}
+
+html.dark body {
   color: #e2e8f0;
 }
 

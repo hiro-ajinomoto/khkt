@@ -1,6 +1,14 @@
 <!doctype html>
 <html lang="vi">
   <head>
+    <script>
+      try {
+        var t = localStorage.getItem('khkt_theme');
+        document.documentElement.classList.toggle('dark', t !== 'light');
+      } catch (e) {
+        document.documentElement.classList.add('dark');
+      }
+    </script>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
