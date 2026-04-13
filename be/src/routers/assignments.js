@@ -171,8 +171,7 @@ async function loadCreatorMapForAssignments(db, assignments) {
   const map = new Map();
   for (const u of users) {
     map.set(u._id.toString(), {
-      name:
-        (u.name && String(u.name).trim()) || u.username || u._id.toString(),
+      name: (u.name && String(u.name).trim()) || u.username || u._id.toString(),
       username: u.username,
     });
   }
@@ -498,6 +497,62 @@ router.get("/:id", optionalAuthenticate, async (req, res) => {
 });
 
 /**
+ * Chuẩn hóa danh sách lớp từ body (JSON hoặc multipart: chuỗi JSON).
+ * @returns {{ names: string[] } | { error: string }}
+ */
+function parseClassNamesFromBody(raw) {
+  if (raw == null || raw === "") return { names: [] };
+  let arr;
+  if (typeof raw === "string") {
+    try {
+      arr = JSON.parse(raw);
+    } catch {
+      return { error: "class_names phải là mảng JSON hợp lệ" };
+    }
+  } else if (Array.isArray(raw)) {
+    arr = raw;
+  } else {
+    return { error: "class_names không hợp lệ" };
+  }
+  if (!Array.isArray(arr)) {
+    return { error: "class_names phải là mảng" };
+  }
+  const normalized = [];
+  for (const rawName of arr) {
+    const v = validateClassNameFormat(rawName);
+    if (!v.ok) return { error: v.error };
+    normalized.push(v.name);
+  }
+  return { names: [...new Set(normalized)] };
+}
+
+async function upsertAssignmentClasses(
+  db,
+  assignmentObjectId,
+  normalizedClassNames,
+  assignedByUserId,
+) {
+  if (!normalizedClassNames.length) return;
+  const assignmentClasses = normalizedClassNames.map((className) => ({
+    assignment_id: assignmentObjectId,
+    class_name: className,
+    assigned_by: assignedByUserId,
+    assigned_at: new Date(),
+  }));
+  const operations = assignmentClasses.map((ac) => ({
+    updateOne: {
+      filter: {
+        assignment_id: ac.assignment_id,
+        class_name: ac.class_name,
+      },
+      update: { $set: ac },
+      upsert: true,
+    },
+  }));
+  await db.collection("assignment_classes").bulkWrite(operations);
+}
+
+/**
  * POST /assignments
  * Create a new assignment (Teacher only)
  * Required fields:
@@ -507,6 +562,7 @@ router.get("/:id", optionalAuthenticate, async (req, res) => {
  * Optional fields:
  * - description: string
  * - subject: string (default: "math")
+ * - class_names: JSON string (multipart) hoặc mảng — gán lớp ngay khi tạo
  */
 router.post(
   "/",
@@ -656,6 +712,31 @@ router.post(
       };
 
       const result = await db.collection("assignments").insertOne(assignment);
+
+      const classParse = parseClassNamesFromBody(req.body.class_names);
+      if (classParse.error) {
+        await db.collection("assignments").deleteOne({ _id: result.insertedId });
+        return res.status(400).json({ detail: classParse.error });
+      }
+
+      if (classParse.names.length > 0) {
+        try {
+          await assertClassNamesRegistered(db, classParse.names);
+        } catch (e) {
+          await db.collection("assignments").deleteOne({ _id: result.insertedId });
+          if (e.status === 400) {
+            return res.status(400).json({ detail: e.message });
+          }
+          throw e;
+        }
+        await upsertAssignmentClasses(
+          db,
+          result.insertedId,
+          classParse.names,
+          ObjectId.createFromHexString(req.user.id),
+        );
+      }
+
       const inserted = await db.collection("assignments").findOne({
         _id: result.insertedId,
       });
@@ -1150,25 +1231,17 @@ router.post("/:id/assign", authenticate, requireTeacher, async (req, res) => {
       return res.status(400).json({ detail: "Invalid assignment id" });
     }
 
-    // Validate class_names
-    if (
-      !class_names ||
-      !Array.isArray(class_names) ||
-      class_names.length === 0
-    ) {
+    const parsed = parseClassNamesFromBody(class_names);
+    if (parsed.error) {
+      return res.status(400).json({ detail: parsed.error });
+    }
+    if (parsed.names.length === 0) {
       return res.status(400).json({
         detail: "class_names must be a non-empty array",
       });
     }
 
-    const normalizedClassNames = [];
-    for (const raw of class_names) {
-      const v = validateClassNameFormat(raw);
-      if (!v.ok) {
-        return res.status(400).json({ detail: v.error });
-      }
-      normalizedClassNames.push(v.name);
-    }
+    const normalizedClassNames = parsed.names;
 
     const db = getDB();
 
@@ -1190,28 +1263,12 @@ router.post("/:id/assign", authenticate, requireTeacher, async (req, res) => {
       return res.status(404).json({ detail: "Assignment not found" });
     }
 
-    // Create assignment_class documents
-    const assignmentClasses = normalizedClassNames.map((className) => ({
-      assignment_id: assignmentObjectId,
-      class_name: className,
-      assigned_by: ObjectId.createFromHexString(req.user.id),
-      assigned_at: new Date(),
-    }));
-
-    // Insert or update assignment_class documents
-    // Use upsert to avoid duplicates
-    const operations = assignmentClasses.map((ac) => ({
-      updateOne: {
-        filter: {
-          assignment_id: ac.assignment_id,
-          class_name: ac.class_name,
-        },
-        update: { $set: ac },
-        upsert: true,
-      },
-    }));
-
-    await db.collection("assignment_classes").bulkWrite(operations);
+    await upsertAssignmentClasses(
+      db,
+      assignmentObjectId,
+      normalizedClassNames,
+      ObjectId.createFromHexString(req.user.id),
+    );
 
     res.status(200).json({
       message: "Assignment assigned to classes successfully",

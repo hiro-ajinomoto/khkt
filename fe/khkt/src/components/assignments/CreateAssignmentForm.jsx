@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createAssignment } from '../../api/assignments';
+import { fetchSchoolClasses, groupClassesByGrade } from '../../api/classes';
 import OceanShell from '../layout/OceanShell';
 import './CreateAssignmentForm.css';
 
@@ -45,6 +46,57 @@ function CreateAssignmentForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
+
+  const [availableClasses, setAvailableClasses] = useState([]);
+  const [loadingClasses, setLoadingClasses] = useState(true);
+  const [selectedClasses, setSelectedClasses] = useState([]);
+
+  const classesByGrade = useMemo(
+    () => groupClassesByGrade(availableClasses),
+    [availableClasses],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoadingClasses(true);
+        const list = await fetchSchoolClasses();
+        if (!cancelled) setAvailableClasses(list);
+      } catch (err) {
+        console.error('Error loading school classes:', err);
+        if (!cancelled) setAvailableClasses([]);
+      } finally {
+        if (!cancelled) setLoadingClasses(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleClassToggle = (className) => {
+    setSelectedClasses((prev) =>
+      prev.includes(className)
+        ? prev.filter((c) => c !== className)
+        : [...prev, className],
+    );
+    setError(null);
+    setSuccessMessage(null);
+  };
+
+  const handleSelectGrade = (gradeClasses) => {
+    const allSelected = gradeClasses.every((cn) => selectedClasses.includes(cn));
+    setSelectedClasses((prev) => {
+      if (allSelected) {
+        return prev.filter((cn) => !gradeClasses.includes(cn));
+      }
+      const add = gradeClasses.filter((cn) => !prev.includes(cn));
+      return [...prev, ...add];
+    });
+    setError(null);
+    setSuccessMessage(null);
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -140,6 +192,10 @@ function CreateAssignmentForm() {
         formData.max_submissions_per_student ?? '5'
       );
 
+      if (selectedClasses.length > 0) {
+        formDataToSend.append('class_names', JSON.stringify(selectedClasses));
+      }
+
       if (formData.question_image) {
         formDataToSend.append('question_image', formData.question_image);
       } else if (formData.question_image_url) {
@@ -164,6 +220,7 @@ function CreateAssignmentForm() {
       if (previewUrls.solution) URL.revokeObjectURL(previewUrls.solution);
 
       setFormData(emptyFormData());
+      setSelectedClasses([]);
       setPreviewUrls({ question: null, solution: null });
       setFileInputKey((k) => k + 1);
       setSuccessMessage(
@@ -235,9 +292,9 @@ function CreateAssignmentForm() {
           />
         </div>
 
-        {/* Grade Level */}
+        {/* Nhãn cấp đề (metadata) — khác với gán lớp nhận bài bên dưới */}
         <div className="form-group">
-          <label htmlFor="grade_level">Khối lớp</label>
+          <label htmlFor="grade_level">Nhãn cấp đề (hiển thị)</label>
           <select
             id="grade_level"
             name="grade_level"
@@ -245,13 +302,89 @@ function CreateAssignmentForm() {
             onChange={handleInputChange}
             disabled={isSubmitting}
           >
-            <option value="">Chọn khối lớp (tùy chọn)</option>
+            <option value="">Không chọn</option>
             {GRADE_LEVELS.map((grade) => (
               <option key={grade} value={grade}>
                 {grade}
               </option>
             ))}
           </select>
+          <p className="form-hint">
+            Gợi ý mức đề (ví dụ Lớp 8). Để giao bài cho học sinh, dùng mục &quot;Gán
+            cho lớp&quot; bên dưới.
+          </p>
+        </div>
+
+        <div className="form-group create-form-assign-classes">
+          <label>Gán cho lớp (tùy chọn)</label>
+          <p className="form-hint">
+            Chọn từng lớp hoặc dùng &quot;Chọn cả khối&quot; để gán toàn bộ lớp
+            trong khối (theo tên lớp bắt đầu bằng số: 8A1 → Khối 8). Để trống:
+            tạo bài trước, gán lớp sau trong danh sách bài tập.
+          </p>
+          {loadingClasses ? (
+            <div className="create-form-class-loading">Đang tải danh sách lớp…</div>
+          ) : classesByGrade.length === 0 ? (
+            <div className="create-form-class-empty">
+              Chưa có lớp trong hệ thống. Nhờ quản trị viên thêm lớp ở trang Quản
+              trị, hoặc tạo bài và gán lớp sau.
+            </div>
+          ) : (
+            <div className="create-form-class-scroll">
+              {classesByGrade.map(([gradeName, gradeClasses]) => {
+                const allSelected = gradeClasses.every((cn) =>
+                  selectedClasses.includes(cn),
+                );
+                const someSelected = gradeClasses.some((cn) =>
+                  selectedClasses.includes(cn),
+                );
+                return (
+                  <div key={gradeName} className="create-form-grade-block">
+                    <div className="create-form-grade-head">
+                      <h3 className="create-form-grade-title">{gradeName}</h3>
+                      <button
+                        type="button"
+                        className={`create-form-grade-toggle ${
+                          allSelected
+                            ? 'create-form-grade-toggle--all'
+                            : someSelected
+                              ? 'create-form-grade-toggle--some'
+                              : ''
+                        }`}
+                        onClick={() => handleSelectGrade(gradeClasses)}
+                        disabled={isSubmitting}
+                      >
+                        {allSelected ? 'Bỏ chọn cả khối' : 'Chọn cả khối'}
+                      </button>
+                    </div>
+                    <div className="create-form-class-chips">
+                      {gradeClasses.map((className) => {
+                        const isSelected = selectedClasses.includes(className);
+                        return (
+                          <button
+                            key={className}
+                            type="button"
+                            className={`create-form-class-chip ${
+                              isSelected ? 'create-form-class-chip--on' : ''
+                            }`}
+                            onClick={() => handleClassToggle(className)}
+                            disabled={isSubmitting}
+                          >
+                            {className}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {selectedClasses.length > 0 && (
+            <p className="create-form-selected-count" aria-live="polite">
+              Đã chọn {selectedClasses.length} lớp
+            </p>
+          )}
         </div>
 
         <div className="form-group">
