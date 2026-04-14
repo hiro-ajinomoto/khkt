@@ -491,7 +491,7 @@ function AssignmentsList() {
           <div className="relative flex flex-col items-start gap-3 lg:items-end">
             {isAuthenticated ? (
               <>
-                <div className="rounded-2xl border border-sky-100 bg-white/90 px-4 py-3 text-sm text-slate-700 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/50 dark:text-slate-300">
+                <div className="rounded-2xl border border-sky-100 bg-white/90 px-4 py-3 text-sm text-slate-700 shadow-sm backdrop-blur dark:border-slate-500/30 dark:bg-slate-900/72 dark:text-slate-100">
                   {user?.name || user?.username}{' '}
                   <span className="text-sky-600 dark:text-cyan-200">
                     (
@@ -550,7 +550,7 @@ function AssignmentsList() {
             <h2 className="mb-1 text-sm font-semibold uppercase tracking-[0.2em] text-amber-800 dark:text-amber-100/90">
               Theo giáo viên
             </h2>
-            <p className="mb-4 text-sm text-slate-600 dark:text-slate-400">
+            <p className="mb-4 text-sm text-slate-600 dark:text-slate-300">
               Chọn tên để chỉ xem các bài do giáo viên đó tạo (kết hợp với bộ lọc ngày bên dưới).
             </p>
             <div className="flex flex-wrap gap-2">
@@ -605,7 +605,7 @@ function AssignmentsList() {
             {isTeacher || isAdmin ? (
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="group rounded-2xl border border-slate-200/80 bg-[linear-gradient(180deg,rgba(245,249,255,0.95),rgba(255,248,242,0.98))] p-4 dark:border-white/10 dark:bg-slate-950/40">
-                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">
+                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-500 dark:text-slate-300">
                     Ngày
                   </label>
                   <input
@@ -617,7 +617,7 @@ function AssignmentsList() {
                 </div>
 
                 <div className="group rounded-2xl border border-slate-200/80 bg-[linear-gradient(180deg,rgba(245,249,255,0.95),rgba(255,248,242,0.98))] p-4 dark:border-white/10 dark:bg-slate-950/40">
-                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">
+                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-500 dark:text-slate-300">
                     Ngày có bài tập
                   </label>
                   <select
@@ -638,7 +638,7 @@ function AssignmentsList() {
                 </div>
 
                 <div className="group rounded-2xl border border-slate-200/80 bg-[linear-gradient(180deg,rgba(245,249,255,0.95),rgba(255,248,242,0.98))] p-4 dark:border-white/10 dark:bg-slate-950/40">
-                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">
+                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-500 dark:text-slate-300">
                     Thống kê
                   </label>
                   <div className="rounded-xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-700 dark:border-cyan-400/10 dark:bg-gradient-to-r dark:from-slate-900 dark:to-sky-950/60 dark:text-slate-100">
@@ -650,7 +650,7 @@ function AssignmentsList() {
             ) : (
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="group rounded-2xl border border-slate-200/80 bg-[linear-gradient(180deg,rgba(245,249,255,0.95),rgba(255,248,242,0.98))] p-4 dark:border-white/10 dark:bg-slate-950/40">
-                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">
+                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-500 dark:text-slate-300">
                     Năm
                   </label>
                   <input
@@ -665,7 +665,7 @@ function AssignmentsList() {
                   />
                 </div>
                 <div className="group rounded-2xl border border-slate-200/80 bg-[linear-gradient(180deg,rgba(245,249,255,0.95),rgba(255,248,242,0.98))] p-4 dark:border-white/10 dark:bg-slate-950/40">
-                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">
+                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-500 dark:text-slate-300">
                     Tháng
                   </label>
                   <select
@@ -681,7 +681,7 @@ function AssignmentsList() {
                   </select>
                 </div>
                 <div className="group rounded-2xl border border-slate-200/80 bg-[linear-gradient(180deg,rgba(245,249,255,0.95),rgba(255,248,242,0.98))] p-4 dark:border-white/10 dark:bg-slate-950/40">
-                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">
+                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-500 dark:text-slate-300">
                     Tháng có bài tập
                   </label>
                   <select
@@ -717,7 +717,7 @@ function AssignmentsList() {
               </div>
               <div>
                 <h3 className="font-semibold text-slate-800 dark:text-white">Thống kê nhanh</h3>
-                <p className="text-sm text-slate-600 dark:text-slate-300">
+                <p className="text-sm text-slate-600 dark:text-slate-200">
                   {filteredAssignments.length} bài tập trong{' '}
                   {isTeacher || isAdmin
                     ? formatDateHeader(selectedDate)
@@ -1007,7 +1007,7 @@ function AssignmentCard({
 }) {
   return (
     <article
-      className={`group relative flex h-full min-h-0 cursor-pointer flex-col overflow-hidden rounded-[30px] border border-sky-200/70 bg-white/85 p-5 shadow-[0_10px_28px_rgba(86,132,214,0.08)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-orange-200 hover:shadow-[0_18px_38px_rgba(255,140,61,0.12)] dark:border-white/10 dark:bg-white/6 dark:shadow-xl dark:shadow-slate-950/30 dark:hover:border-cyan-300/30 dark:hover:shadow-cyan-950/40 ${
+      className={`group relative flex h-full min-h-0 cursor-pointer flex-col overflow-hidden rounded-[30px] border border-sky-200/70 bg-white/85 p-5 shadow-[0_10px_28px_rgba(86,132,214,0.08)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-orange-200 hover:shadow-[0_18px_38px_rgba(255,140,61,0.12)] dark:border-slate-600/70 dark:bg-slate-900 dark:shadow-2xl dark:shadow-black/50 dark:hover:border-cyan-400/55 dark:hover:shadow-cyan-950/55 ${
         selectedIds.has(assignment.id)
           ? 'ring-2 ring-orange-300/80 ring-offset-2 ring-offset-amber-50 dark:ring-cyan-300/70 dark:ring-offset-slate-900'
           : ''
@@ -1018,23 +1018,23 @@ function AssignmentCard({
       <div className="relative flex min-h-0 flex-1 flex-col">
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
-            <h3 className="line-clamp-1 text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">
+            <h3 className="line-clamp-1 text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
               {assignment.title || `Bài ${index + 1}`}
             </h3>
             <p className="mt-2 line-clamp-2 text-base text-slate-600 dark:text-slate-300">
               {assignment.description || assignment.subtitle || 'Bài tập tự luận'}
             </p>
             {isTeacher && (
-              <p className="mt-2 text-xs text-slate-500 dark:text-slate-500">
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-300">
                 Người tạo:{' '}
-                <span className="font-medium text-slate-700 dark:text-slate-300">
+                <span className="font-medium text-slate-700 dark:text-slate-100">
                   {assignment.created_by_name || '—'}
                 </span>
               </p>
             )}
           </div>
           <div className="flex flex-col items-end gap-2">
-            <div className="rounded-2xl border border-sky-200/70 bg-sky-50 px-3 py-2 text-sm font-bold text-sky-800 dark:border-cyan-300/20 dark:bg-cyan-300/10 dark:text-cyan-100">
+            <div className="rounded-2xl border border-sky-200/70 bg-sky-50 px-3 py-2 text-sm font-bold text-sky-800 dark:border-cyan-400/50 dark:bg-slate-800 dark:text-cyan-200">
               {String(index + 1).padStart(2, '0')}
             </div>
             {isTeacher && (
@@ -1044,7 +1044,7 @@ function AssignmentCard({
                     e.stopPropagation();
                     onAssign(assignment.id);
                   }}
-                  className="rounded-xl border border-sky-200/80 bg-sky-50 px-2 py-1 text-sky-800 hover:bg-sky-100 dark:border-cyan-300/30 dark:bg-cyan-500/10 dark:text-cyan-100 dark:hover:bg-cyan-500/20"
+                  className="rounded-xl border border-sky-200/80 bg-sky-50 px-2 py-1 text-sky-800 hover:bg-sky-100 dark:border-cyan-400/45 dark:bg-slate-800 dark:text-cyan-200 dark:hover:bg-slate-700"
                   title="Gán bài tập cho lớp"
                 >
                   📋
@@ -1054,7 +1054,7 @@ function AssignmentCard({
                     e.stopPropagation();
                     onEdit(assignment.id);
                   }}
-                  className="rounded-xl border border-amber-200/80 bg-amber-50 px-2 py-1 text-amber-900 hover:bg-amber-100 dark:border-amber-300/30 dark:bg-amber-500/10 dark:text-amber-100 dark:hover:bg-amber-500/20"
+                  className="rounded-xl border border-amber-200/80 bg-amber-50 px-2 py-1 text-amber-900 hover:bg-amber-100 dark:border-amber-400/45 dark:bg-slate-800 dark:text-amber-200 dark:hover:bg-slate-700"
                   title="Sửa bài tập"
                 >
                   ✏️
@@ -1064,7 +1064,7 @@ function AssignmentCard({
                     e.stopPropagation();
                     onDelete(assignment.id);
                   }}
-                  className="rounded-xl border border-rose-200/80 bg-rose-50 px-2 py-1 text-rose-800 hover:bg-rose-100 dark:border-rose-300/30 dark:bg-rose-500/10 dark:text-rose-100 dark:hover:bg-rose-500/20"
+                  className="rounded-xl border border-rose-200/80 bg-rose-50 px-2 py-1 text-rose-800 hover:bg-rose-100 dark:border-rose-400/45 dark:bg-slate-800 dark:text-rose-200 dark:hover:bg-slate-700"
                   title="Xóa bài tập"
                 >
                   🗑️
@@ -1077,7 +1077,7 @@ function AssignmentCard({
         <div className="mb-5 flex flex-wrap gap-2 text-sm">
           {isTeacher && (
             <label
-              className="flex items-center gap-2 rounded-xl border border-sky-200/70 bg-white/90 px-3 py-2 text-xs text-slate-700 dark:border-cyan-300/20 dark:bg-slate-900/50 dark:text-slate-200"
+              className="flex items-center gap-2 rounded-xl border border-sky-200/70 bg-white/90 px-3 py-2 text-xs text-slate-700 dark:border-slate-600/60 dark:bg-slate-800 dark:text-slate-200"
               onClick={(e) => e.stopPropagation()}
             >
               <input
@@ -1093,13 +1093,13 @@ function AssignmentCard({
           {isTeacher &&
             assignment.available_from_date &&
             !isAssignmentReleasedClient(assignment.available_from_date) && (
-              <span className="rounded-xl border border-amber-400/40 bg-amber-500/20 px-3 py-2 text-xs font-medium text-amber-100">
+              <span className="rounded-xl border border-amber-300/55 bg-amber-500/25 px-3 py-2 text-xs font-medium text-amber-950 dark:border-amber-500/50 dark:bg-amber-950/75 dark:text-amber-100">
                 Chưa mở HS — từ{' '}
                 {formatVNDateFromYMD(assignment.available_from_date)}
               </span>
             )}
           {isTeacher && assignment.due_date && (
-            <span className="rounded-xl border border-slate-400/30 bg-slate-800/70 px-3 py-2 text-xs text-slate-200">
+            <span className="rounded-xl border border-slate-400/30 bg-slate-800/70 px-3 py-2 text-xs text-slate-200 dark:border-slate-500/50 dark:bg-slate-950 dark:text-slate-200">
               Hạn nộp: {formatVNDateFromYMD(assignment.due_date)}
             </span>
           )}
@@ -1108,10 +1108,10 @@ function AssignmentCard({
             if (!r) return null;
             const cls =
               r.tone === 'overdue'
-                ? 'border-rose-400/45 bg-rose-600/25 text-rose-100'
+                ? 'border-rose-400/45 bg-rose-600/25 text-rose-100 dark:border-rose-500/55 dark:bg-rose-950/80 dark:text-rose-100'
                 : r.tone === 'today'
-                  ? 'border-orange-400/50 bg-orange-500/30 text-orange-50'
-                  : 'border-emerald-400/40 bg-emerald-600/20 text-emerald-100';
+                  ? 'border-orange-400/50 bg-orange-500/30 text-orange-50 dark:border-orange-500/55 dark:bg-orange-950/75 dark:text-orange-100'
+                  : 'border-emerald-400/40 bg-emerald-600/20 text-emerald-100 dark:border-emerald-500/50 dark:bg-emerald-950/75 dark:text-emerald-100';
             return (
               <span
                 className={`rounded-xl border px-3 py-2 text-xs font-medium ${cls}`}
@@ -1121,19 +1121,19 @@ function AssignmentCard({
             );
           })()}
           {assignment.grade_level && (
-            <span className="rounded-xl border border-fuchsia-300/10 bg-fuchsia-300/10 px-3 py-2 text-fuchsia-100">
+            <span className="rounded-xl border border-fuchsia-300/10 bg-fuchsia-300/10 px-3 py-2 text-fuchsia-800 dark:border-fuchsia-400/45 dark:bg-fuchsia-950/85 dark:text-fuchsia-100">
               Lớp {assignment.grade_level}
             </span>
           )}
-          <span className="rounded-xl border border-sky-300/15 bg-sky-300/10 px-3 py-2 text-sky-100">
+          <span className="rounded-xl border border-sky-300/15 bg-sky-300/10 px-3 py-2 text-sky-800 dark:border-sky-500/45 dark:bg-slate-950 dark:text-sky-200">
             {formatDate(assignment.created_at)}
           </span>
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col">
-          <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-[24px] border border-white/10 bg-gradient-to-br from-white/95 to-cyan-50 p-6 text-slate-900 shadow-inner">
-          <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full border-[18px] border-cyan-300/40" />
-          <div className="absolute -left-10 bottom-0 h-16 w-28 rounded-t-full border-t-[10px] border-cyan-400/30" />
+          <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-[24px] border border-white/10 bg-gradient-to-br from-white/95 to-cyan-50 p-6 text-slate-900 shadow-inner dark:border-slate-600/50 dark:from-slate-900 dark:to-slate-800 dark:text-slate-100">
+          <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full border-[18px] border-cyan-300/40 dark:border-cyan-500/25" />
+          <div className="absolute -left-10 bottom-0 h-16 w-28 rounded-t-full border-t-[10px] border-cyan-400/30 dark:border-cyan-500/20" />
 
           {assignment.question_image_url ? (
             <div className="flex flex-col items-center gap-3">
@@ -1149,7 +1149,7 @@ function AssignmentCard({
                   e.currentTarget.style.display = 'none';
                 }}
               />
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Bấm để xem chi tiết bài và nộp bài.
               </p>
             </div>
