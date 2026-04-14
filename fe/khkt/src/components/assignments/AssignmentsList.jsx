@@ -829,33 +829,19 @@ function AssignmentsList() {
                   ➕ Tạo bài tập mới
                 </button>
               )}
-              {isTeacher && selectedIds.size > 0 && (
-                <button
-                  type="button"
-                  onClick={handleBulkAssignFromSelection}
-                  className="w-full rounded-2xl border border-sky-200/80 bg-[linear-gradient(135deg,#7dd3fc_0%,#38bdf8_50%,#0ea5e9_100%)] px-4 py-3 font-medium text-white shadow-lg shadow-sky-200/40 transition hover:-translate-y-0.5 dark:border-cyan-300/35 dark:from-cyan-500/50 dark:to-sky-600/60 dark:shadow-cyan-950/30"
-                >
-                  📋 Gán các bài đã chọn ({selectedIds.size})
-                </button>
-              )}
               <button
                 onClick={loadAllAssignments}
                 className="w-full rounded-2xl border border-sky-200/80 bg-[linear-gradient(135deg,#dbeafe_0%,#8fc2ff_35%,#ffd36a_100%)] px-4 py-3 font-medium text-slate-800 shadow-[0_10px_28px_rgba(86,132,214,0.14)] transition hover:-translate-y-0.5 dark:border-cyan-300/20 dark:bg-gradient-to-r dark:from-cyan-500/70 dark:to-blue-600/80 dark:text-white dark:shadow-cyan-950/30"
               >
                 ↻ Làm mới dữ liệu
               </button>
-              {isTeacher && selectedIds.size > 0 && (
-                <button
-                  type="button"
-                  onClick={handleBulkDelete}
-                  disabled={bulkDeleting}
-                  className="w-full rounded-2xl border border-rose-200/80 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800 shadow-md shadow-rose-100 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-300/30 dark:bg-rose-500/20 dark:text-rose-50 dark:shadow-rose-950/40"
-                >
-                  {bulkDeleting
-                    ? 'Đang xóa...'
-                    : `🗑️ Xóa đã chọn (${selectedIds.size})`}
-                </button>
+              {isTeacher && (
+                <p className="rounded-2xl border border-sky-100/80 bg-sky-50/80 px-3 py-2 text-center text-xs leading-snug text-sky-900/90 dark:border-cyan-400/20 dark:bg-slate-800/80 dark:text-cyan-100/90">
+                  Chọn bài trong danh sách phía dưới, rồi dùng <strong>Gán</strong> và{' '}
+                  <strong>Xóa</strong> trên <strong>thanh cố định cuối màn hình</strong>.
+                </p>
               )}
+
             </div>
           </div>
         </section>
@@ -993,6 +979,58 @@ function AssignmentsList() {
           </>
         )}
 
+        {isTeacher && (
+          <div
+            className={`assignments-bulk-bar-spacer pointer-events-none w-full shrink-0 ${
+              selectedIds.size > 0 ? 'assignments-bulk-bar-spacer--visible' : ''
+            }`}
+            aria-hidden="true"
+          />
+        )}
+
+        {isTeacher && selectedIds.size > 0 && (
+          <div
+            role="region"
+            aria-label="Thao tác trên bài đã chọn"
+            className="assignments-bulk-bar fixed inset-x-0 bottom-0 z-[620] border-t border-sky-200/85 bg-white/93 px-3 py-3 shadow-[0_-10px_40px_rgba(86,132,214,0.16)] backdrop-blur-md dark:border-cyan-300/30 dark:bg-slate-900/96 dark:shadow-black/40"
+            style={{
+              paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))',
+            }}
+          >
+            <div className="mx-auto flex max-w-6xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+              <p className="text-center text-sm text-slate-700 dark:text-slate-200 sm:text-left">
+                <span className="font-semibold tabular-nums text-sky-800 dark:text-cyan-200">
+                  {selectedIds.size}
+                </span>{' '}
+                bài được chọn
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setSelectedIds(new Set())}
+                  className="rounded-xl border border-slate-200/90 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-500/50 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
+                >
+                  Bỏ chọn
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBulkAssignFromSelection}
+                  className="rounded-xl border border-sky-200/80 bg-[linear-gradient(135deg,#7dd3fc_0%,#38bdf8_50%,#0ea5e9_100%)] px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-sky-200/35 transition hover:-translate-y-0.5 dark:border-cyan-300/35 dark:from-cyan-500/50 dark:to-sky-600/60 dark:shadow-cyan-950/30"
+                >📋 Gán ({selectedIds.size})
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBulkDelete}
+                  disabled={bulkDeleting}
+                  className="rounded-xl border border-rose-300/80 bg-rose-50 px-4 py-2.5 text-sm font-semibold text-rose-800 shadow-sm transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-400/40 dark:bg-rose-500/15 dark:text-rose-100 dark:hover:bg-rose-500/25"
+                >
+                  {bulkDeleting ? 'Đang xóa...' : `🗑️ Xóa (${selectedIds.size})`}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {showAssignModal && assignModalAssignmentIds?.length > 0 && (
           <AssignAssignmentModal
             assignmentIds={assignModalAssignmentIds}
@@ -1007,7 +1045,11 @@ function AssignmentsList() {
             onClick={() =>
               window.scrollTo({ top: 0, left: 0, behavior: 'smooth' })
             }
-            className="fixed bottom-24 right-5 z-[600] flex h-12 w-12 items-center justify-center rounded-2xl border border-sky-200/80 bg-[linear-gradient(135deg,#7dd3fc_0%,#38bdf8_50%,#ffd36a_100%)] text-lg text-white shadow-[0_10px_28px_rgba(86,132,214,0.2)] backdrop-blur-md transition hover:-translate-y-0.5 hover:border-orange-200/60 focus:outline-none focus:ring-2 focus:ring-sky-400/50 dark:border-cyan-300/35 dark:bg-gradient-to-br dark:from-cyan-500/50 dark:to-sky-700/55 dark:shadow-cyan-950/40 dark:hover:border-cyan-200/40 dark:hover:shadow-cyan-900/50 dark:focus:ring-cyan-400/50 sm:bottom-10 sm:right-8"
+            className={`fixed right-5 z-[600] flex h-12 w-12 items-center justify-center rounded-2xl border border-sky-200/80 bg-[linear-gradient(135deg,#7dd3fc_0%,#38bdf8_50%,#ffd36a_100%)] text-lg text-white shadow-[0_10px_28px_rgba(86,132,214,0.2)] backdrop-blur-md transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-0.5 hover:border-orange-200/60 focus:outline-none focus:ring-2 focus:ring-sky-400/50 dark:border-cyan-300/35 dark:bg-gradient-to-br dark:from-cyan-500/50 dark:to-sky-700/55 dark:shadow-cyan-950/40 dark:hover:border-cyan-200/40 dark:hover:shadow-cyan-900/50 dark:focus:ring-cyan-400/50 sm:right-8 ${
+              isTeacher && selectedIds.size > 0
+                ? 'bottom-28 sm:bottom-24'
+                : 'bottom-24 sm:bottom-10'
+            }`}
             aria-label="Lên đầu trang"
             title="Lên đầu trang"
           >

@@ -790,3 +790,48 @@
     width: 100%;
   }
 }
+
+/* Bulk action bar: slide up from bottom */
+@keyframes assignments-bulk-bar-enter {
+  from {
+    transform: translate3d(0, 100%, 0);
+    opacity: 0;
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}
+
+.assignments-bulk-bar {
+  animation: assignments-bulk-bar-enter 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .assignments-bulk-bar {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.assignments-bulk-bar-spacer {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.48s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.assignments-bulk-bar-spacer--visible {
+  max-height: 6.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .assignments-bulk-bar-spacer,
+  .assignments-bulk-bar-spacer--visible {
+    transition: none;
+  }
+
+  .assignments-bulk-bar-spacer--visible {
+    max-height: 6.5rem;
+  }
+}
