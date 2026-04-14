@@ -113,7 +113,7 @@ export async function reportAssignmentProblem(id) {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
-        describeApiFailure(response, errorData, 'Khong gui duoc bao loi de.')
+        describeApiFailure(response, errorData, 'Không gửi được báo lỗi đề.')
       );
     }
 

@@ -835,3 +835,41 @@
     max-height: 6.5rem;
   }
 }
+
+/* Theme dialog (report problem modal) */
+@keyframes assignments-dialog-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.assignments-theme-dialog-backdrop {
+  animation: assignments-dialog-backdrop-in 0.28s ease-out both;
+}
+
+@keyframes assignments-theme-dialog-panel-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 20px, 0) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+.assignments-theme-dialog-panel {
+  animation: assignments-theme-dialog-panel-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .assignments-theme-dialog-backdrop,
+  .assignments-theme-dialog-panel {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}

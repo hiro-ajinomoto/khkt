@@ -12,6 +12,7 @@ import {
   deadlineReminderClient,
 } from '../../utils/assignmentRelease';
 import './AssignmentsList.css';
+import ReportProblemDialog from './ReportProblemDialog';
 
 /** Local calendar date for filtering (missing created_at → coi như hôm nay để vẫn hiện bài cũ). */
 function getAssignmentLocalDate(assignment) {
@@ -53,6 +54,8 @@ function AssignmentsList() {
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [reportingAssignmentId, setReportingAssignmentId] = useState(null);
+  /** Học sinh: modal báo lỗi đề — { mode:'confirm', assignmentId } | { mode:'result', tone, message } */
+  const [reportDialog, setReportDialog] = useState(null);
   /** Học sinh: id bài đã có bài nộp của tôi */
   const [submittedAssignmentIds, setSubmittedAssignmentIds] = useState(
     () => new Set()
@@ -166,11 +169,13 @@ function AssignmentsList() {
     }
   };
 
-  const handleReportProblem = async (assignmentId) => {
-    const ok = window.confirm(
-      'Ban muon bao cho giao vien rang de bai nay co loi (thieu noi dung, sai de, khong doc duoc)? Moi ban chi gui mot lan cho moi bai.'
-    );
-    if (!ok) return;
+  const handleReportProblem = (assignmentId) => {
+    setReportDialog({ mode: 'confirm', assignmentId });
+  };
+
+  const closeReportDialog = () => setReportDialog(null);
+
+  const confirmReportProblem = async (assignmentId) => {
     setReportingAssignmentId(assignmentId);
     try {
       const res = await reportAssignmentProblem(assignmentId);
@@ -180,12 +185,27 @@ function AssignmentsList() {
         )
       );
       if (res.already_reported) {
-        window.alert('Ban da bao loi de bai nay truoc do.');
+        setReportDialog({
+          mode: 'result',
+          tone: 'info',
+          message:
+            'Bạn đã báo lỗi đề bài này trước đó. Mỗi bài chỉ cần gửi một lần.',
+        });
       } else {
-        window.alert('Da gui bao cao. Cam on ban.');
+        setReportDialog({
+          mode: 'result',
+          tone: 'success',
+          message:
+            'Đã gửi báo cáo tới giáo viên. Cảm ơn bạn đã góp ý.',
+        });
       }
     } catch (e) {
-      window.alert(e.message || 'Khong gui duoc bao cao.');
+      setReportDialog({
+        mode: 'result',
+        tone: 'error',
+        message:
+          e.message || 'Không gửi được báo cáo. Vui lòng thử lại sau.',
+      });
     } finally {
       setReportingAssignmentId(null);
     }
@@ -1031,6 +1051,13 @@ function AssignmentsList() {
           </div>
         )}
 
+        <ReportProblemDialog
+          dialog={reportDialog}
+          onClose={closeReportDialog}
+          onConfirmReport={confirmReportProblem}
+          submittingId={reportingAssignmentId}
+        />
+
         {showAssignModal && assignModalAssignmentIds?.length > 0 && (
           <AssignAssignmentModal
             assignmentIds={assignModalAssignmentIds}
@@ -1283,10 +1310,10 @@ function AssignmentCard({
               className="flex min-h-[48px] min-w-[48px] shrink-0 items-center justify-center rounded-2xl border border-amber-300/80 bg-white/90 px-3 py-3 text-amber-600 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-45 dark:border-amber-400/45 dark:bg-slate-800 dark:text-amber-400 dark:hover:bg-slate-700"
               title={
                 assignment.student_reported_problem
-                  ? 'Ban da bao loi de bai nay'
-                  : 'Bao de bai co loi cho giao vien'
+                  ? 'Bạn đã báo lỗi đề bài này'
+                  : 'Báo đề bài có lỗi cho giáo viên'
               }
-              aria-label="Bao de bai co loi cho giao vien"
+              aria-label="Báo đề bài có lỗi cho giáo viên"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
