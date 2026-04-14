@@ -49,9 +49,9 @@ function MySubmissions() {
   };
 
   const getScoreColor = (score) => {
-    if (score >= 8) return '#34d399';
-    if (score >= 6) return '#fbbf24';
-    return '#f87171';
+    if (score >= 8) return '#10b981';
+    if (score >= 6) return '#d97706';
+    return '#dc2626';
   };
 
   if (loading) {

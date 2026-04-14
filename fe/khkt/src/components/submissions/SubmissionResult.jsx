@@ -326,21 +326,33 @@ function SubmissionResult({ submission }) {
   };
 
   const getScoreColor = (score) => {
-    if (score >= 8) return '#34d399';
-    if (score >= 6) return '#fbbf24';
-    return '#f87171';
+    if (score >= 8) return '#10b981';
+    if (score >= 6) return '#d97706';
+    return '#dc2626';
   };
+
+  const rawScore = Number(ai_result.score);
+  const displayScore = Number.isFinite(rawScore) ? rawScore : 0;
+  const scoreClamped = Math.max(0, Math.min(10, displayScore));
+  const scoreAccent = getScoreColor(scoreClamped);
+  const scorePct = (scoreClamped / 10) * 100;
 
   return (
     <div className="submission-result" ref={containerRef}>
-      {/* Score Display */}
       <div className="score-section">
-        <div
-          className="score-circle"
-          style={{ borderColor: getScoreColor(ai_result.score || 0) }}
-        >
-          <span className="score-value">{ai_result.score || 0}</span>
-          <span className="score-label">/ 10</span>
+        <div className="score-card" style={{ '--score-accent': scoreAccent }}>
+          <p className="score-eyebrow">Điểm chấm</p>
+          <div className="score-main" aria-label={`Điểm ${displayScore} trên 10`}>
+            <span className="score-value">{displayScore}</span>
+            <span className="score-den">/10</span>
+          </div>
+          <div className="score-bar-track" aria-hidden="true">
+            <div
+              className="score-bar-fill"
+              style={{ width: `${scorePct}%`, background: scoreAccent }}
+            />
+          </div>
+          <p className="score-caption">Thang điểm 10</p>
         </div>
       </div>
 
@@ -392,17 +404,20 @@ function SubmissionResult({ submission }) {
                 <div className="practice-list">
                   {ai_result.practiceSets.similar.map((item, index) => (
                     <div key={index} className="practice-item">
-                      <div className="practice-number">Bài {index + 1}</div>
+                      <div className="practice-number" aria-hidden="true">
+                        <span className="practice-number-top">Bài</span>
+                        <span className="practice-number-n">{index + 1}</span>
+                      </div>
                       <div className="practice-content">
                         <div className="practice-problem">
-                          <span className="problem-label">Đề bài:</span>
+                          <span className="problem-label">ĐỀ BÀI:</span>
                           <div className="problem-text math-content">
                             {renderTextWithMath(item.problem, renderMath)}
                           </div>
                         </div>
                         {item.solution && (
                           <div className="practice-solution">
-                            <span className="solution-label">Lời giải:</span>
+                            <span className="solution-label">LỜI GIẢI:</span>
                             <div className="solution-text math-content">
                               {renderTextWithMath(item.solution, renderMath)}
                             </div>
@@ -426,10 +441,13 @@ function SubmissionResult({ submission }) {
                     
                     return (
                       <div key={index} className="practice-item">
-                        <div className="practice-number">Bài {index + 1}</div>
+                        <div className="practice-number" aria-hidden="true">
+                          <span className="practice-number-top">Bài</span>
+                          <span className="practice-number-n">{index + 1}</span>
+                        </div>
                         <div className="practice-content">
                           <div className="practice-problem">
-                            <span className="problem-label">Đề bài:</span>
+                            <span className="problem-label">ĐỀ BÀI:</span>
                             <div className="problem-text math-content">
                               {renderTextWithMath(item.problem, renderMath)}
                             </div>
@@ -451,7 +469,7 @@ function SubmissionResult({ submission }) {
                               )}
                               {isSolutionVisible && (
                                 <div className="practice-solution">
-                                  <span className="solution-label">Lời giải:</span>
+                                  <span className="solution-label">LỜI GIẢI:</span>
                                   <div className="solution-text math-content">
                                     {renderTextWithMath(item.solution, renderMath)}
                                   </div>
