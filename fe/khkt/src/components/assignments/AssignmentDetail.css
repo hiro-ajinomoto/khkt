@@ -466,3 +466,155 @@
     width: 100%;
   }
 }
+
+/* Giao diện sáng: chữ đậm, badge pastel có màu chữ tối — đọc được trên nền trắng/ivory */
+html:not(.dark) .assignment-detail .back-button {
+  border-color: rgba(14, 116, 200, 0.4);
+  background: linear-gradient(135deg, #ffffff 0%, #e0f2fe 100%);
+  color: #0c4a6e;
+  box-shadow: 0 4px 14px rgba(86, 132, 214, 0.14);
+}
+
+html:not(.dark) .assignment-detail .back-button:hover {
+  border-color: rgba(2, 132, 199, 0.55);
+  color: #075985;
+  box-shadow: 0 8px 22px rgba(86, 132, 214, 0.2);
+}
+
+html:not(.dark) .assignment-detail .detail-header .ocean-page-eyebrow {
+  color: #0369a1;
+}
+
+html:not(.dark) .assignment-detail .detail-header h1 {
+  color: #0f172a;
+}
+
+html:not(.dark) .assignment-detail .assignment-description {
+  color: #334155;
+}
+
+html:not(.dark) .assignment-detail .meta-badge.date {
+  border-color: rgba(139, 92, 246, 0.4);
+  background: #f3e8ff;
+  color: #5b21b6;
+  box-shadow: none;
+}
+
+html:not(.dark) .assignment-detail .meta-badge.grade {
+  border-color: rgba(217, 119, 6, 0.45);
+  background: #fffbeb;
+  color: #92400e;
+}
+
+html:not(.dark) .assignment-detail .meta-badge.due {
+  border-color: rgba(14, 165, 233, 0.45);
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+html:not(.dark) .assignment-detail .meta-badge.quota {
+  border-color: rgba(124, 58, 237, 0.4);
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+html:not(.dark) .assignment-detail .meta-badge.deadline-reminder--upcoming {
+  border-color: rgba(16, 185, 129, 0.5);
+  background: #ecfdf5;
+  color: #047857;
+}
+
+html:not(.dark) .assignment-detail .meta-badge.deadline-reminder--today {
+  border-color: rgba(234, 88, 12, 0.5);
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+html:not(.dark) .assignment-detail .meta-badge.deadline-reminder--overdue {
+  border-color: rgba(225, 29, 72, 0.5);
+  background: #fff1f2;
+  color: #be123c;
+}
+
+html:not(.dark) .assignment-detail .image-container label {
+  color: #475569;
+}
+
+html:not(.dark) .assignment-detail .model-solution-text {
+  border-color: rgba(14, 165, 233, 0.35);
+  background: #ffffff;
+  border-left-color: #0284c7;
+}
+
+html:not(.dark) .assignment-detail .model-solution-text label {
+  color: #0369a1;
+}
+
+html:not(.dark) .assignment-detail .model-solution-text p {
+  color: #1e293b;
+}
+
+html:not(.dark) .assignment-detail .submission-section {
+  border-color: rgba(125, 180, 255, 0.4);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+html:not(.dark) .assignment-detail .submission-section h2 {
+  color: #0f172a;
+}
+
+html:not(.dark) .assignment-detail .deadline-passed-banner {
+  border-color: rgba(251, 113, 133, 0.55);
+  background: #fff1f2;
+  color: #9f1239;
+}
+
+html:not(.dark) .assignment-detail .submission-limit-banner {
+  border-color: rgba(245, 158, 11, 0.55);
+  background: #fffbeb;
+  color: #b45309;
+}
+
+html:not(.dark) .assignment-detail .file-label {
+  border-color: rgba(14, 165, 233, 0.45);
+  background: #f8fafc;
+}
+
+html:not(.dark) .assignment-detail .file-label:hover {
+  border-color: rgba(2, 132, 199, 0.55);
+  background: #f0f9ff;
+}
+
+html:not(.dark) .assignment-detail .file-label-text {
+  color: #334155;
+}
+
+html:not(.dark) .assignment-detail .preview-title {
+  color: #0f172a;
+}
+
+html:not(.dark) .assignment-detail .error-message {
+  background: #fef2f2;
+  color: #991b1b;
+  border-color: rgba(248, 113, 113, 0.55);
+}
+
+html:not(.dark) .assignment-detail .submission-result-section {
+  border-color: rgba(125, 180, 255, 0.35);
+  background: rgba(255, 255, 255, 0.94);
+}
+
+html:not(.dark) .assignment-detail .result-header h2 {
+  color: #0f172a;
+}
+
+html:not(.dark) .assignment-detail .toggle-result-button {
+  border-color: rgba(16, 185, 129, 0.5);
+  background: linear-gradient(135deg, rgba(209, 250, 229, 0.95), rgba(204, 251, 241, 0.9));
+  color: #047857;
+}
+
+html:not(.dark) .assignment-detail .toggle-result-button:hover {
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.2);
+}
