@@ -14,6 +14,9 @@ import {
 import './AssignmentsList.css';
 import ReportProblemDialog from './ReportProblemDialog';
 
+/** Max assignment cards per day on the list grid. */
+const ASSIGNMENTS_LIST_MAX_CARDS_PER_DAY = 3;
+
 /** Local calendar date for filtering (missing created_at → coi như hôm nay để vẫn hiện bài cũ). */
 function getAssignmentLocalDate(assignment) {
   if (assignment?.created_at) return new Date(assignment.created_at);
@@ -27,19 +30,6 @@ function formatGradeLevelDisplay(gradeLevel) {
   return `Lớp ${s}`;
 }
 
-/** Hiển thị môn dạng #hashtag, màu gradient nổi bật */
-function SubjectHashtag({ subject }) {
-  const raw =
-    String(subject || 'math')
-      .replace(/^#/, '')
-      .trim()
-      .toLowerCase() || 'math';
-  return (
-    <span className="inline-flex items-center rounded-full border border-sky-200/70 bg-[linear-gradient(135deg,#e0f2fe_0%,#fff7ed_45%,#ffe4d5_100%)] px-3 py-1.5 text-xs font-semibold tracking-wide text-slate-800 shadow-md shadow-sky-900/10 ring-1 ring-white/90 dark:border-violet-300/45 dark:bg-gradient-to-r dark:from-violet-600 dark:via-fuchsia-600 dark:to-indigo-600 dark:text-white dark:shadow-violet-950/45 dark:ring-white/15">
-      #{raw}
-    </span>
-  );
-}
 
 function AssignmentsList() {
   const navigate = useNavigate();
@@ -420,18 +410,6 @@ function AssignmentsList() {
     setAssignModalAssignmentIds(null);
     setSelectedIds(new Set());
     loadAllAssignments();
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleString('vi-VN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
   };
 
   const formatDateHeader = (dateString) => {
@@ -936,8 +914,10 @@ function AssignmentsList() {
                     <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">
                       {formatDateHeader(date)}
                     </h2>
-                    <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6 xl:grid-cols-4 [&>*]:h-full [&>*]:min-h-0">
-                      {assignments.map((assignment, idx) => (
+                    <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6 [&>*]:h-full [&>*]:min-h-0">
+                      {assignments
+                        .slice(0, ASSIGNMENTS_LIST_MAX_CARDS_PER_DAY)
+                        .map((assignment, idx) => (
                         <AssignmentCard
                           key={assignment.id}
                           assignment={assignment}
@@ -952,7 +932,6 @@ function AssignmentsList() {
                           onAssign={handleAssign}
                           onReportProblem={handleReportProblem}
                           reportingAssignmentId={reportingAssignmentId}
-                          formatDate={formatDate}
                         />
                       ))}
                     </section>
@@ -971,8 +950,10 @@ function AssignmentsList() {
                         <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">
                           {formatDateHeader(date)}
                         </h2>
-                        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6 xl:grid-cols-4 [&>*]:h-full [&>*]:min-h-0">
-                          {assignments.map((assignment, idx) => (
+                        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6 [&>*]:h-full [&>*]:min-h-0">
+                          {assignments
+                            .slice(0, ASSIGNMENTS_LIST_MAX_CARDS_PER_DAY)
+                            .map((assignment, idx) => (
                             <AssignmentCard
                               key={assignment.id}
                               assignment={assignment}
@@ -987,7 +968,6 @@ function AssignmentsList() {
                               onAssign={handleAssign}
                               onReportProblem={handleReportProblem}
                               reportingAssignmentId={reportingAssignmentId}
-                              formatDate={formatDate}
                             />
                           ))}
                         </section>
@@ -1116,9 +1096,15 @@ function AssignmentCard({
   onAssign,
   onReportProblem,
   reportingAssignmentId,
-  formatDate,
 }) {
   const problemFlagged = Boolean(assignment.problem_flagged);
+  const strTrim = (v) => (typeof v === 'string' ? v.trim() : '');
+  const requirementPreview =
+    strTrim(assignment.description) ||
+    strTrim(assignment.subtitle) ||
+    strTrim(assignment.model_solution) ||
+    assignment.title ||
+    'Mở bài tập để xem nội dung chi tiết';
   return (
     <article
       className={`group relative flex h-full min-h-0 cursor-pointer flex-col overflow-hidden rounded-[30px] border border-sky-200/70 bg-white/85 p-5 shadow-[0_10px_28px_rgba(86,132,214,0.08)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-orange-200 hover:shadow-[0_18px_38px_rgba(255,140,61,0.12)] dark:border-slate-600/70 dark:bg-slate-900 dark:shadow-2xl dark:shadow-black/50 dark:hover:border-cyan-400/55 dark:hover:shadow-cyan-950/55 ${
@@ -1134,80 +1120,90 @@ function AssignmentCard({
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,211,106,0.12),transparent_32%),radial-gradient(circle_at_bottom_left,rgba(143,194,255,0.14),transparent_28%)] opacity-0 transition group-hover:opacity-100 dark:bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.16),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(96,165,250,0.16),transparent_28%)]" />
       <div className="relative flex min-h-0 flex-1 flex-col">
-        <div className="mb-4 flex items-start justify-between gap-4">
-          <div>
-            <h3 className="line-clamp-1 text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+        <div
+          className={`flex items-start justify-between gap-3 ${isTeacher ? 'mb-2' : 'mb-4'}`}
+        >
+          <div className="min-w-0 flex-1">
+            <h3 className="line-clamp-1 text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100 sm:text-xl">
               {assignment.title || `Bài ${index + 1}`}
             </h3>
-            <p className="mt-2 line-clamp-2 text-base text-slate-600 dark:text-slate-300">
-              {assignment.description || assignment.subtitle || 'Bài tập tự luận'}
-            </p>
-            {isTeacher && (
-              <p className="mt-2 text-xs text-slate-500 dark:text-slate-300">
-                Người tạo:{' '}
-                <span className="font-medium text-slate-700 dark:text-slate-100">
-                  {assignment.created_by_name || '—'}
-                </span>
-              </p>
-            )}
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <div className="rounded-2xl border border-sky-200/70 bg-sky-50 px-3 py-2 text-sm font-bold text-sky-800 dark:border-cyan-400/50 dark:bg-slate-800 dark:text-cyan-200">
-              {String(index + 1).padStart(2, '0')}
-            </div>
-            {isTeacher && (
-              <div className="flex gap-1 text-xs">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onAssign(assignment.id);
-                  }}
-                  className="rounded-xl border border-sky-200/80 bg-sky-50 px-2 py-1 text-sky-800 hover:bg-sky-100 dark:border-cyan-400/45 dark:bg-slate-800 dark:text-cyan-200 dark:hover:bg-slate-700"
-                  title="Gán bài tập cho lớp"
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            {isTeacher ? (
+              <div className="flex items-center gap-2">
+                <span
+                  className="shrink-0 rounded-xl border border-sky-200/70 bg-sky-50 px-2 py-0.5 text-xs font-bold tabular-nums text-sky-800 dark:border-cyan-400/50 dark:bg-slate-800 dark:text-cyan-200"
+                  aria-hidden
                 >
-                  📋
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(assignment.id);
-                  }}
-                  className="rounded-xl border border-amber-200/80 bg-amber-50 px-2 py-1 text-amber-900 hover:bg-amber-100 dark:border-amber-400/45 dark:bg-slate-800 dark:text-amber-200 dark:hover:bg-slate-700"
-                  title="Sửa bài tập"
+                  {String(index + 1).padStart(2, '0')}
+                </span>
+                <div
+                  className="inline-flex items-center justify-center rounded-2xl border border-sky-200/70 bg-sky-50 px-3 py-2 dark:border-cyan-400/50 dark:bg-slate-800"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  ✏️
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(assignment.id);
-                  }}
-                  className="rounded-xl border border-rose-200/80 bg-rose-50 px-2 py-1 text-rose-800 hover:bg-rose-100 dark:border-rose-400/45 dark:bg-slate-800 dark:text-rose-200 dark:hover:bg-slate-700"
-                  title="Xóa bài tập"
-                >
-                  🗑️
-                </button>
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(assignment.id)}
+                    onChange={() => onSelect(assignment.id)}
+                    aria-label="Chọn bài này"
+                    title="Chọn bài này"
+                    className="h-4 w-4 cursor-pointer rounded border border-sky-400 bg-white text-sky-700 accent-sky-600 transition hover:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-400/50 focus:ring-offset-1 focus:ring-offset-sky-50 dark:border-cyan-400 dark:bg-slate-900 dark:text-cyan-300 dark:accent-cyan-400 dark:focus:ring-cyan-400/45 dark:focus:ring-offset-slate-800"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-sky-200/70 bg-sky-50 px-3 py-2 text-sm font-bold text-sky-800 dark:border-cyan-400/50 dark:bg-slate-800 dark:text-cyan-200">
+                {String(index + 1).padStart(2, '0')}
               </div>
             )}
           </div>
         </div>
 
+        {isTeacher && (
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              {assignment.grade_level && (
+                <span className="rounded-xl border border-fuchsia-300/10 bg-fuchsia-300/10 px-3 py-2 text-fuchsia-800 dark:border-fuchsia-400/45 dark:bg-fuchsia-950/85 dark:text-fuchsia-100">
+                  {formatGradeLevelDisplay(assignment.grade_level)}
+                </span>
+              )}
+            </div>
+            <div className="flex shrink-0 gap-1 text-xs">
+              <button
+              onClick={(e) => {
+              e.stopPropagation();
+              onAssign(assignment.id);
+              }}
+              className="rounded-xl border border-sky-200/80 bg-sky-50 px-2 py-1 text-sky-800 hover:bg-sky-100 dark:border-cyan-400/45 dark:bg-slate-800 dark:text-cyan-200 dark:hover:bg-slate-700"
+              title="Gán bài tập cho lớp"
+              >
+              📋
+              </button>
+              <button
+              onClick={(e) => {
+              e.stopPropagation();
+              onEdit(assignment.id);
+              }}
+              className="rounded-xl border border-amber-200/80 bg-amber-50 px-2 py-1 text-amber-900 hover:bg-amber-100 dark:border-amber-400/45 dark:bg-slate-800 dark:text-amber-200 dark:hover:bg-slate-700"
+              title="Sửa bài tập"
+              >
+              ✏️
+              </button>
+              <button
+              onClick={(e) => {
+              e.stopPropagation();
+              onDelete(assignment.id);
+              }}
+              className="rounded-xl border border-rose-200/80 bg-rose-50 px-2 py-1 text-rose-800 hover:bg-rose-100 dark:border-rose-400/45 dark:bg-slate-800 dark:text-rose-200 dark:hover:bg-slate-700"
+              title="Xóa bài tập"
+              >
+              🗑️
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="mb-5 flex flex-wrap gap-2 text-sm">
-          {isTeacher && (
-            <label
-              className="flex items-center gap-2 rounded-xl border border-sky-200/70 bg-white/90 px-3 py-2 text-xs text-slate-700 dark:border-slate-600/60 dark:bg-slate-800 dark:text-slate-200"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <input
-                type="checkbox"
-                checked={selectedIds.has(assignment.id)}
-                onChange={() => onSelect(assignment.id)}
-                className="h-4 w-4 rounded border-sky-300 bg-white text-sky-600 dark:border-cyan-300/40 dark:bg-slate-900 dark:text-cyan-400"
-              />
-              Chọn bài này
-            </label>
-          )}
-          <SubjectHashtag subject={assignment.subject} />
           {isTeacher && problemFlagged && (
             <span className="rounded-xl border border-rose-400/55 bg-rose-600/20 px-3 py-2 text-xs font-semibold text-rose-900 dark:border-rose-400/50 dark:bg-rose-950/75 dark:text-rose-100">
               Đề bị báo lỗi (≥ 5 HS)
@@ -1243,27 +1239,24 @@ function AssignmentCard({
               </span>
             );
           })()}
-          {assignment.grade_level && (
+          {!isTeacher && assignment.grade_level && (
             <span className="rounded-xl border border-fuchsia-300/10 bg-fuchsia-300/10 px-3 py-2 text-fuchsia-800 dark:border-fuchsia-400/45 dark:bg-fuchsia-950/85 dark:text-fuchsia-100">
               {formatGradeLevelDisplay(assignment.grade_level)}
             </span>
           )}
-          <span className="rounded-xl border border-sky-300/15 bg-sky-300/10 px-3 py-2 text-sky-800 dark:border-sky-500/45 dark:bg-slate-950 dark:text-sky-200">
-            {formatDate(assignment.created_at)}
-          </span>
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col">
-          <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-[24px] border border-white/10 bg-gradient-to-br from-white/95 to-cyan-50 p-6 text-slate-900 shadow-inner dark:border-slate-600/50 dark:from-slate-900 dark:to-slate-800 dark:text-slate-100">
+          <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-[24px] border border-white/10 bg-gradient-to-br from-white/95 to-cyan-50 p-4 text-slate-900 shadow-inner dark:border-slate-600/50 dark:from-slate-900 dark:to-slate-800 dark:text-slate-100 sm:p-5">
           <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full border-[18px] border-cyan-300/40 dark:border-cyan-500/25" />
           <div className="absolute -left-10 bottom-0 h-16 w-28 rounded-t-full border-t-[10px] border-cyan-400/30 dark:border-cyan-500/20" />
 
           {assignment.question_image_url ? (
-            <div className="flex flex-col items-center gap-3">
+            <div className="flex min-h-0 flex-1 flex-col items-center gap-2">
               <img
                 src={assignment.question_image_url}
-                alt="Câu hỏi"
-                className="max-h-40 w-auto rounded-2xl object-contain shadow-md"
+                alt="Đề bài"
+                className="max-h-32 w-auto rounded-2xl object-contain shadow-md sm:max-h-36"
                 onClick={(e) => {
                   e.stopPropagation();
                   onView(assignment.id);
@@ -1272,15 +1265,15 @@ function AssignmentCard({
                   e.currentTarget.style.display = 'none';
                 }}
               />
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Bấm để xem chi tiết bài và nộp bài.
+              <p className="line-clamp-4 w-full max-w-full break-words text-center text-xs leading-snug text-slate-600 dark:text-slate-300 sm:text-sm">
+                {requirementPreview}
               </p>
             </div>
           ) : (
-            <div className="text-center text-xl md:text-2xl font-serif tracking-tight">
-              {assignment.model_solution ||
-                assignment.title ||
-                'Mở bài tập để xem nội dung chi tiết'}
+            <div className="flex min-h-[5.25rem] flex-1 items-start justify-center">
+              <p className="line-clamp-4 w-full max-w-full break-words text-center font-serif text-sm leading-snug tracking-tight text-slate-700 dark:text-slate-200 sm:text-[0.95rem] sm:leading-snug">
+                {requirementPreview}
+              </p>
             </div>
           )}
           </div>
