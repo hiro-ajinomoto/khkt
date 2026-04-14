@@ -88,6 +88,43 @@ export async function fetchAssignmentById(id) {
 }
 
 /**
+ * Student flags a broken / unclear problem (once per assignment per student).
+ * @param {string} id - Assignment ID
+ * @returns {Promise<{ ok: boolean, already_reported?: boolean }>}
+ */
+export async function reportAssignmentProblem(id) {
+  try {
+    const authHeader = getAuthHeader();
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    if (authHeader) {
+      headers['Authorization'] = authHeader;
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/assignments/${id}/report-problem`,
+      {
+        method: 'POST',
+        headers,
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        describeApiFailure(response, errorData, 'Khong gui duoc bao loi de.')
+      );
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error('Error reporting assignment problem:', error);
+    rethrowNetwork(error);
+  }
+}
+
+/**
  * Delete assignment by ID
  * @param {string} id - Assignment ID
  * @returns {Promise<Object>} Delete result

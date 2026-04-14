@@ -178,10 +178,74 @@ async function loadCreatorMapForAssignments(db, assignments) {
   return map;
 }
 
-async function mapAssignmentDocToApi(item, creatorMap) {
+const ASSIGNMENT_PROBLEM_REPORTS = "assignment_problem_reports";
+const PROBLEM_REPORT_FLAG_THRESHOLD = 5;
+
+let problemReportIndexesEnsured = false;
+
+async function ensureProblemReportIndexes(db) {
+  if (problemReportIndexesEnsured) return;
+  const c = db.collection(ASSIGNMENT_PROBLEM_REPORTS);
+  await c.createIndex(
+    { assignment_id: 1, student_id: 1 },
+    { unique: true },
+  );
+  await c.createIndex({ assignment_id: 1 });
+  problemReportIndexesEnsured = true;
+}
+
+async function loadProblemReportAggregates(db, assignmentOids, viewer) {
+  if (!assignmentOids.length) {
+    return { countById: new Map(), studentReportedIds: new Set() };
+  }
+  await ensureProblemReportIndexes(db);
+  const countById = new Map();
+  const agg = await db
+    .collection(ASSIGNMENT_PROBLEM_REPORTS)
+    .aggregate([
+      { $match: { assignment_id: { $in: assignmentOids } } },
+      { $group: { _id: "$assignment_id", count: { $sum: 1 } } },
+    ])
+    .toArray();
+  for (const row of agg) {
+    countById.set(row._id.toString(), row.count);
+  }
+  const studentReportedIds = new Set();
+  if (viewer?.role === "student") {
+    const sid = ObjectId.createFromHexString(viewer.id);
+    const docs = await db
+      .collection(ASSIGNMENT_PROBLEM_REPORTS)
+      .find({
+        assignment_id: { $in: assignmentOids },
+        student_id: sid,
+      })
+      .project({ assignment_id: 1 })
+      .toArray();
+    for (const d of docs) {
+      studentReportedIds.add(d.assignment_id.toString());
+    }
+  }
+  return { countById, studentReportedIds };
+}
+
+function buildListReportContextObject(viewer, { countById, studentReportedIds }) {
+  if (
+    !viewer ||
+    !["teacher", "admin", "student"].includes(viewer.role)
+  ) {
+    return null;
+  }
+  return {
+    viewerRole: viewer.role,
+    countById,
+    studentReportedIds,
+  };
+}
+
+async function mapAssignmentDocToApi(item, creatorMap, listCtx = null) {
   const cid = assignmentCreatedByString(item.created_by);
   const cr = cid ? creatorMap.get(cid) : null;
-  return {
+  const base = {
     id: item._id.toString(),
     title: item.title,
     description: item.description || null,
@@ -200,6 +264,19 @@ async function mapAssignmentDocToApi(item, creatorMap) {
     created_by_name: cr ? cr.name : null,
     created_by_username: cr ? cr.username : null,
   };
+  if (listCtx) {
+    if (listCtx.viewerRole === "teacher" || listCtx.viewerRole === "admin") {
+      const n = listCtx.countById.get(base.id) ?? 0;
+      base.problem_report_count = n;
+      base.problem_flagged = n >= PROBLEM_REPORT_FLAG_THRESHOLD;
+    }
+    if (listCtx.viewerRole === "student") {
+      base.student_reported_problem = listCtx.studentReportedIds.has(
+        base.id,
+      );
+    }
+  }
+  return base;
 }
 
 /**
@@ -312,8 +389,19 @@ router.get("/", optionalAuthenticate, async (req, res) => {
     console.log(`Found ${assignments.length} assignments`);
 
     const creatorMap = await loadCreatorMapForAssignments(db, assignments);
+    const oids = assignments.map((a) => a._id);
+    let listCtx = null;
+    if (
+      req.user &&
+      (req.user.role === "teacher" ||
+        req.user.role === "admin" ||
+        req.user.role === "student")
+    ) {
+      const agg = await loadProblemReportAggregates(db, oids, req.user);
+      listCtx = buildListReportContextObject(req.user, agg);
+    }
     const result = await Promise.all(
-      assignments.map((item) => mapAssignmentDocToApi(item, creatorMap)),
+      assignments.map((item) => mapAssignmentDocToApi(item, creatorMap, listCtx)),
     );
 
     res.json(result);
@@ -478,7 +566,17 @@ router.get("/:id", optionalAuthenticate, async (req, res) => {
     }
 
     const creatorMap = await loadCreatorMapForAssignments(db, [assignment]);
-    const result = await mapAssignmentDocToApi(assignment, creatorMap);
+    let listCtx = null;
+    if (
+      req.user &&
+      (req.user.role === "teacher" ||
+        req.user.role === "admin" ||
+        req.user.role === "student")
+    ) {
+      const agg = await loadProblemReportAggregates(db, [objectId], req.user);
+      listCtx = buildListReportContextObject(req.user, agg);
+    }
+    const result = await mapAssignmentDocToApi(assignment, creatorMap, listCtx);
 
     if (req.user && req.user.role === "student") {
       result.my_submission_count = await db
@@ -493,6 +591,76 @@ router.get("/:id", optionalAuthenticate, async (req, res) => {
   } catch (error) {
     console.error("Error fetching assignment:", error);
     res.status(500).json({ detail: "Failed to fetch assignment" });
+  }
+});
+
+/**
+ * POST /assignments/:id/report-problem — hoc sinh bao de co loi (toi da 1 lan / hoc sinh / bai).
+ */
+router.post("/:id/report-problem", authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== "student") {
+      return res.status(403).json({
+        detail: "Chi hoc sinh moi co the bao loi de bai.",
+      });
+    }
+
+    const { id } = req.params;
+    let objectId;
+    try {
+      objectId = ObjectId.createFromHexString(id);
+    } catch {
+      return res.status(400).json({ detail: "Invalid assignment id" });
+    }
+
+    const db = getDB();
+    const assignment = await db.collection("assignments").findOne({
+      _id: objectId,
+    });
+    if (!assignment) {
+      return res.status(404).json({ detail: "Assignment not found" });
+    }
+
+    if (!isAssignmentReleased(assignment)) {
+      return res.status(403).json({
+        detail: "Bai tap chua den ngay mo. Khong the bao loi de.",
+      });
+    }
+
+    const studentId = ObjectId.createFromHexString(req.user.id);
+    const student = await db.collection("users").findOne({ _id: studentId });
+    if (!student?.class_name) {
+      return res.status(403).json({ detail: "Học sinh chưa được gán lớp." });
+    }
+
+    const assigned = await db.collection("assignment_classes").findOne({
+      assignment_id: objectId,
+      class_name: student.class_name,
+    });
+    if (!assigned) {
+      return res.status(403).json({
+        detail: "Bài tập không được gán cho lớp của bạn.",
+      });
+    }
+
+    await ensureProblemReportIndexes(db);
+    const coll = db.collection(ASSIGNMENT_PROBLEM_REPORTS);
+    try {
+      await coll.insertOne({
+        assignment_id: objectId,
+        student_id: studentId,
+        created_at: new Date(),
+      });
+      return res.json({ ok: true, already_reported: false });
+    } catch (err) {
+      if (err.code === 11000) {
+        return res.json({ ok: true, already_reported: true });
+      }
+      throw err;
+    }
+  } catch (error) {
+    console.error("Error reporting assignment problem:", error);
+    res.status(500).json({ detail: "Khong ghi nhan duoc bao loi de." });
   }
 });
 

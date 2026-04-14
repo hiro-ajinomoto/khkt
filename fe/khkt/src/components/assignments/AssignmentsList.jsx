@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchAssignments, fetchAssignmentsByDate, fetchAssignmentsByMonth, deleteAssignment, deleteAssignments, assignAssignmentsToClasses, getAssignmentClasses } from '../../api/assignments';
+import { fetchAssignments, fetchAssignmentsByDate, fetchAssignmentsByMonth, deleteAssignment, deleteAssignments, assignAssignmentsToClasses, getAssignmentClasses, reportAssignmentProblem } from '../../api/assignments';
 import { fetchSchoolClasses, groupClassesByGrade } from '../../api/classes';
 import { fetchMySubmissions } from '../../api/submissions';
 import { useAuth } from '../../contexts/AuthContext';
@@ -17,6 +17,13 @@ import './AssignmentsList.css';
 function getAssignmentLocalDate(assignment) {
   if (assignment?.created_at) return new Date(assignment.created_at);
   return new Date();
+}
+
+function formatGradeLevelDisplay(gradeLevel) {
+  const s = String(gradeLevel || '').trim();
+  if (!s) return '';
+  if (/^lớp\b/i.test(s)) return s;
+  return `Lớp ${s}`;
 }
 
 /** Hiển thị môn dạng #hashtag, màu gradient nổi bật */
@@ -45,6 +52,7 @@ function AssignmentsList() {
   const [assignModalAssignmentIds, setAssignModalAssignmentIds] = useState(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [reportingAssignmentId, setReportingAssignmentId] = useState(null);
   /** Học sinh: id bài đã có bài nộp của tôi */
   const [submittedAssignmentIds, setSubmittedAssignmentIds] = useState(
     () => new Set()
@@ -155,6 +163,31 @@ function AssignmentsList() {
       console.error('Error loading assignments:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleReportProblem = async (assignmentId) => {
+    const ok = window.confirm(
+      'Ban muon bao cho giao vien rang de bai nay co loi (thieu noi dung, sai de, khong doc duoc)? Moi ban chi gui mot lan cho moi bai.'
+    );
+    if (!ok) return;
+    setReportingAssignmentId(assignmentId);
+    try {
+      const res = await reportAssignmentProblem(assignmentId);
+      setAllAssignments((prev) =>
+        prev.map((a) =>
+          a.id === assignmentId ? { ...a, student_reported_problem: true } : a
+        )
+      );
+      if (res.already_reported) {
+        window.alert('Ban da bao loi de bai nay truoc do.');
+      } else {
+        window.alert('Da gui bao cao. Cam on ban.');
+      }
+    } catch (e) {
+      window.alert(e.message || 'Khong gui duoc bao cao.');
+    } finally {
+      setReportingAssignmentId(null);
     }
   };
 
@@ -491,9 +524,11 @@ function AssignmentsList() {
           <div className="relative flex flex-col items-start gap-3 lg:items-end">
             {isAuthenticated ? (
               <>
-                <div className="rounded-2xl border border-sky-100 bg-white/90 px-4 py-3 text-sm text-slate-700 shadow-sm backdrop-blur dark:border-slate-500/30 dark:bg-slate-900/72 dark:text-slate-100">
-                  {user?.name || user?.username}{' '}
-                  <span className="text-sky-600 dark:text-cyan-200">
+                <div className="rounded-2xl border border-sky-100 bg-white/90 px-4 py-3 text-sm shadow-sm backdrop-blur dark:border-slate-500/60 dark:bg-slate-900">
+                  <span className="font-medium text-slate-900 dark:text-slate-50">
+                    {user?.name || user?.username}
+                  </span>{' '}
+                  <span className="text-sky-700 dark:text-cyan-300">
                     (
                     {user?.role === 'admin'
                       ? 'Quản trị viên'
@@ -515,7 +550,7 @@ function AssignmentsList() {
                   )}
                   <button
                     onClick={logout}
-                    className="group relative overflow-hidden rounded-2xl border border-orange-200/80 bg-white/90 px-5 py-3 text-sm font-medium text-orange-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-[linear-gradient(135deg,#ffd36a_0%,#ff9b3d_55%,#ff7a59_100%)] hover:text-white dark:border-cyan-300/30 dark:bg-gradient-to-r dark:from-sky-500/20 dark:via-cyan-400/20 dark:to-blue-500/20 dark:text-white dark:shadow-lg dark:shadow-cyan-950/30 dark:hover:border-cyan-200/40 dark:hover:bg-gradient-to-r dark:hover:from-sky-500/20 dark:hover:shadow-cyan-900/50 dark:hover:text-white"
+                    className="group relative overflow-hidden rounded-2xl border border-orange-200/80 bg-white/90 px-5 py-3 text-sm font-medium text-orange-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-[linear-gradient(135deg,#ffd36a_0%,#ff9b3d_55%,#ff7a59_100%)] hover:text-white dark:border-cyan-400/45 dark:bg-slate-800 dark:text-slate-100 dark:shadow-lg dark:shadow-black/30 dark:hover:border-cyan-300/55 dark:hover:bg-slate-700 dark:hover:text-white"
                   >
                     <span className="relative z-10">Đăng xuất</span>
                     <span className="absolute inset-0 hidden translate-x-[-120%] bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.18),transparent)] transition duration-1000 group-hover:translate-x-[120%] dark:block" />
@@ -902,12 +937,15 @@ function AssignmentsList() {
                           assignment={assignment}
                           index={idx}
                           isTeacher={true}
+                          isStudent={false}
                           selectedIds={selectedIds}
                           onSelect={handleSelect}
                           onDelete={handleDelete}
                           onEdit={(id) => navigate(`/assignments/${id}/edit`)}
                           onView={(id) => navigate(`/assignments/${id}`)}
                           onAssign={handleAssign}
+                          onReportProblem={handleReportProblem}
+                          reportingAssignmentId={reportingAssignmentId}
                           formatDate={formatDate}
                         />
                       ))}
@@ -934,12 +972,15 @@ function AssignmentsList() {
                               assignment={assignment}
                               index={idx}
                               isTeacher={false}
+                              isStudent={isStudent}
                               selectedIds={selectedIds}
                               onSelect={handleSelect}
                               onDelete={handleDelete}
                               onEdit={(id) => navigate(`/assignments/${id}/edit`)}
                               onView={(id) => navigate(`/assignments/${id}`)}
                               onAssign={handleAssign}
+                              onReportProblem={handleReportProblem}
+                              reportingAssignmentId={reportingAssignmentId}
                               formatDate={formatDate}
                             />
                           ))}
@@ -996,6 +1037,7 @@ function AssignmentsList() {
 function AssignmentCard({
   assignment,
   isTeacher,
+  isStudent,
   index,
   selectedIds,
   onSelect,
@@ -1003,13 +1045,20 @@ function AssignmentCard({
   onEdit,
   onView,
   onAssign,
+  onReportProblem,
+  reportingAssignmentId,
   formatDate,
 }) {
+  const problemFlagged = Boolean(assignment.problem_flagged);
   return (
     <article
       className={`group relative flex h-full min-h-0 cursor-pointer flex-col overflow-hidden rounded-[30px] border border-sky-200/70 bg-white/85 p-5 shadow-[0_10px_28px_rgba(86,132,214,0.08)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-orange-200 hover:shadow-[0_18px_38px_rgba(255,140,61,0.12)] dark:border-slate-600/70 dark:bg-slate-900 dark:shadow-2xl dark:shadow-black/50 dark:hover:border-cyan-400/55 dark:hover:shadow-cyan-950/55 ${
         selectedIds.has(assignment.id)
           ? 'ring-2 ring-orange-300/80 ring-offset-2 ring-offset-amber-50 dark:ring-cyan-300/70 dark:ring-offset-slate-900'
+          : ''
+      } ${
+        isTeacher && problemFlagged
+          ? 'ring-2 ring-rose-400/70 ring-offset-2 ring-offset-rose-50 dark:ring-rose-400/55 dark:ring-offset-slate-900'
           : ''
       }`}
       onClick={() => onView(assignment.id)}
@@ -1090,6 +1139,11 @@ function AssignmentCard({
             </label>
           )}
           <SubjectHashtag subject={assignment.subject} />
+          {isTeacher && problemFlagged && (
+            <span className="rounded-xl border border-rose-400/55 bg-rose-600/20 px-3 py-2 text-xs font-semibold text-rose-900 dark:border-rose-400/50 dark:bg-rose-950/75 dark:text-rose-100">
+              Đề bị báo lỗi (≥ 5 HS)
+            </span>
+          )}
           {isTeacher &&
             assignment.available_from_date &&
             !isAssignmentReleasedClient(assignment.available_from_date) && (
@@ -1122,7 +1176,7 @@ function AssignmentCard({
           })()}
           {assignment.grade_level && (
             <span className="rounded-xl border border-fuchsia-300/10 bg-fuchsia-300/10 px-3 py-2 text-fuchsia-800 dark:border-fuchsia-400/45 dark:bg-fuchsia-950/85 dark:text-fuchsia-100">
-              Lớp {assignment.grade_level}
+              {formatGradeLevelDisplay(assignment.grade_level)}
             </span>
           )}
           <span className="rounded-xl border border-sky-300/15 bg-sky-300/10 px-3 py-2 text-sky-800 dark:border-sky-500/45 dark:bg-slate-950 dark:text-sky-200">
@@ -1173,15 +1227,40 @@ function AssignmentCard({
           >
             Xem chi tiết
           </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onView(assignment.id);
-            }}
-            className="rounded-2xl border border-sky-200/80 bg-white/90 px-4 py-3 text-slate-600 transition hover:bg-sky-50 dark:border-white/10 dark:bg-white/8 dark:text-slate-200 dark:hover:bg-white/12"
-          >
-            ⋯
-          </button>
+          {isStudent ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onReportProblem(assignment.id);
+              }}
+              disabled={
+                Boolean(assignment.student_reported_problem) ||
+                reportingAssignmentId === assignment.id
+              }
+              className="flex min-h-[48px] min-w-[48px] shrink-0 items-center justify-center rounded-2xl border border-amber-300/80 bg-white/90 px-3 py-3 text-amber-600 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-45 dark:border-amber-400/45 dark:bg-slate-800 dark:text-amber-400 dark:hover:bg-slate-700"
+              title={
+                assignment.student_reported_problem
+                  ? 'Ban da bao loi de bai nay'
+                  : 'Bao de bai co loi cho giao vien'
+              }
+              aria-label="Bao de bai co loi cho giao vien"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                className="h-6 w-6"
+                aria-hidden
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </button>
+          ) : null}
         </div>
       </div>
     </article>
