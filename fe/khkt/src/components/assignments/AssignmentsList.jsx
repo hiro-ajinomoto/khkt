@@ -604,8 +604,8 @@ function AssignmentsList() {
 
             {isTeacher || isAdmin ? (
               <div className="grid gap-4 md:grid-cols-3">
-                <div className="group rounded-2xl border border-slate-200/80 bg-[linear-gradient(180deg,rgba(245,249,255,0.95),rgba(255,248,242,0.98))] p-4 dark:border-white/10 dark:bg-slate-950/40">
-                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-500 dark:text-slate-300">
+                <div className="group rounded-2xl border border-slate-200/80 bg-[linear-gradient(180deg,rgba(245,249,255,0.95),rgba(255,248,242,0.98))] p-4 dark:border-slate-600/50 dark:bg-none dark:bg-slate-900">
+                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-600 dark:text-slate-200">
                     Ngày
                   </label>
                   <input
@@ -616,8 +616,8 @@ function AssignmentsList() {
                   />
                 </div>
 
-                <div className="group rounded-2xl border border-slate-200/80 bg-[linear-gradient(180deg,rgba(245,249,255,0.95),rgba(255,248,242,0.98))] p-4 dark:border-white/10 dark:bg-slate-950/40">
-                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-500 dark:text-slate-300">
+                <div className="group rounded-2xl border border-slate-200/80 bg-[linear-gradient(180deg,rgba(245,249,255,0.95),rgba(255,248,242,0.98))] p-4 dark:border-slate-600/50 dark:bg-none dark:bg-slate-900">
+                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-600 dark:text-slate-200">
                     Ngày có bài tập
                   </label>
                   <select
@@ -637,8 +637,8 @@ function AssignmentsList() {
                   </select>
                 </div>
 
-                <div className="group rounded-2xl border border-slate-200/80 bg-[linear-gradient(180deg,rgba(245,249,255,0.95),rgba(255,248,242,0.98))] p-4 dark:border-white/10 dark:bg-slate-950/40">
-                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-500 dark:text-slate-300">
+                <div className="group rounded-2xl border border-slate-200/80 bg-[linear-gradient(180deg,rgba(245,249,255,0.95),rgba(255,248,242,0.98))] p-4 dark:border-slate-600/50 dark:bg-none dark:bg-slate-900">
+                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-600 dark:text-slate-200">
                     Thống kê
                   </label>
                   <div className="rounded-xl border border-sky-100 bg-white px-4 py-3 text-sm text-slate-700 dark:border-cyan-400/10 dark:bg-gradient-to-r dark:from-slate-900 dark:to-sky-950/60 dark:text-slate-100">
@@ -649,8 +649,8 @@ function AssignmentsList() {
               </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-3">
-                <div className="group rounded-2xl border border-slate-200/80 bg-[linear-gradient(180deg,rgba(245,249,255,0.95),rgba(255,248,242,0.98))] p-4 dark:border-white/10 dark:bg-slate-950/40">
-                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-500 dark:text-slate-300">
+                <div className="group rounded-2xl border border-slate-200/80 bg-[linear-gradient(180deg,rgba(245,249,255,0.95),rgba(255,248,242,0.98))] p-4 dark:border-slate-600/50 dark:bg-none dark:bg-slate-900">
+                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-600 dark:text-slate-200">
                     Năm
                   </label>
                   <input
@@ -664,8 +664,8 @@ function AssignmentsList() {
                     className="w-full rounded-xl border border-sky-200/80 bg-white px-4 py-3 text-slate-800 outline-none ring-0 dark:border-cyan-400/20 dark:bg-gradient-to-r dark:from-slate-900 dark:to-sky-950/60 dark:text-slate-100"
                   />
                 </div>
-                <div className="group rounded-2xl border border-slate-200/80 bg-[linear-gradient(180deg,rgba(245,249,255,0.95),rgba(255,248,242,0.98))] p-4 dark:border-white/10 dark:bg-slate-950/40">
-                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-500 dark:text-slate-300">
+                <div className="group rounded-2xl border border-slate-200/80 bg-[linear-gradient(180deg,rgba(245,249,255,0.95),rgba(255,248,242,0.98))] p-4 dark:border-slate-600/50 dark:bg-none dark:bg-slate-900">
+                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-600 dark:text-slate-200">
                     Tháng
                   </label>
                   <select
@@ -680,8 +680,8 @@ function AssignmentsList() {
                     ))}
                   </select>
                 </div>
-                <div className="group rounded-2xl border border-slate-200/80 bg-[linear-gradient(180deg,rgba(245,249,255,0.95),rgba(255,248,242,0.98))] p-4 dark:border-white/10 dark:bg-slate-950/40">
-                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-500 dark:text-slate-300">
+                <div className="group rounded-2xl border border-slate-200/80 bg-[linear-gradient(180deg,rgba(245,249,255,0.95),rgba(255,248,242,0.98))] p-4 dark:border-slate-600/50 dark:bg-none dark:bg-slate-900">
+                  <label className="mb-2 block text-xs uppercase tracking-[0.25em] text-slate-600 dark:text-slate-200">
                     Tháng có bài tập
                   </label>
                   <select
