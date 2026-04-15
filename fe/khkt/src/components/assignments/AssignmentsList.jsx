@@ -23,6 +23,17 @@ function getAssignmentLocalDate(assignment) {
   return new Date();
 }
 
+/** Ngày tạo bài dạng chip #d/m (thêm năm nếu khác năm hiện tại). */
+function formatAssignmentDateHashtag(assignment) {
+  const d = getAssignmentLocalDate(assignment);
+  const day = d.getDate();
+  const month = d.getMonth() + 1;
+  const y = d.getFullYear();
+  const cy = new Date().getFullYear();
+  if (y !== cy) return `${day}/${month}/${y}`;
+  return `${day}/${month}`;
+}
+
 function formatGradeLevelDisplay(gradeLevel) {
   const s = String(gradeLevel || '').trim();
   if (!s) return '';
@@ -867,10 +878,7 @@ function AssignmentsList() {
             <div className="relative overflow-hidden rounded-[calc(1rem-1px)] bg-[linear-gradient(135deg,rgba(255,255,255,0.55),rgba(255,255,255,0.35))] px-4 py-3 text-slate-900 shadow-inner backdrop-blur-xl dark:rounded-[calc(1rem-1px)] dark:border dark:border-cyan-300/20 dark:bg-gradient-to-r dark:from-blue-500/70 dark:via-sky-500/65 dark:to-violet-600/60 dark:text-white dark:shadow-none md:rounded-[31px] md:px-6 md:py-5 md:dark:rounded-[28px]">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.5),transparent_22%),radial-gradient(circle_at_80%_0%,rgba(255,211,106,0.2),transparent_20%)] dark:bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.18),transparent_20%),radial-gradient(circle_at_80%_0%,rgba(255,255,255,0.14),transparent_18%)]" />
               <div className="relative">
-                <p className="text-[10px] uppercase tracking-[0.2em] text-sky-800/80 dark:text-cyan-50/75 md:text-xs md:tracking-[0.3em]">
-                  Mốc thời gian
-                </p>
-                <h2 className="mt-0.5 break-words text-base font-semibold leading-snug text-slate-900 dark:text-white sm:text-lg md:mt-1 md:text-2xl">
+                <h2 className="break-words text-base font-semibold leading-snug text-slate-900 dark:text-white sm:text-lg md:text-2xl">
                   {isTeacher || isAdmin
                     ? formatDateHeader(selectedDate)
                     : `Tháng ${selectedMonth}, ${selectedYear}`}
@@ -1203,6 +1211,12 @@ function AssignmentCard({
                   {formatGradeLevelDisplay(assignment.grade_level)}
                 </span>
               )}
+              <span
+                className="md:hidden rounded-xl border border-sky-300/50 bg-sky-100/80 px-3 py-2 text-xs font-semibold tabular-nums text-sky-900 dark:border-sky-400/40 dark:bg-sky-950/50 dark:text-sky-100"
+                title="Ngày tạo bài"
+              >
+                #{formatAssignmentDateHashtag(assignment)}
+              </span>
             </div>
             <div className="flex shrink-0 gap-1 text-xs">
               <button
@@ -1278,6 +1292,14 @@ function AssignmentCard({
           {!isTeacher && assignment.grade_level && (
             <span className="rounded-xl border border-fuchsia-300/10 bg-fuchsia-300/10 px-3 py-2 text-fuchsia-800 dark:border-fuchsia-400/45 dark:bg-fuchsia-950/85 dark:text-fuchsia-100">
               {formatGradeLevelDisplay(assignment.grade_level)}
+            </span>
+          )}
+          {!isTeacher && (
+            <span
+              className="md:hidden rounded-xl border border-sky-300/50 bg-sky-100/80 px-3 py-2 text-xs font-semibold tabular-nums text-sky-900 dark:border-sky-400/40 dark:bg-sky-950/50 dark:text-sky-100"
+              title="Ngày tạo bài"
+            >
+              #{formatAssignmentDateHashtag(assignment)}
             </span>
           )}
         </div>
