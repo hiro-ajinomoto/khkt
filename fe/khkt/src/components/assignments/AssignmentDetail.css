@@ -1,5 +1,82 @@
 /* Chi tiết bài tập — Ocean UI (cùng ngôn ngữ với AssignmentsList) */
 
+.submission-sticker-earned {
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.15rem;
+  border-radius: 1.25rem;
+  border: 1px solid rgba(244, 114, 182, 0.35);
+  background: linear-gradient(
+    135deg,
+    rgba(253, 242, 248, 0.14),
+    rgba(224, 231, 255, 0.1)
+  );
+}
+
+.submission-sticker-earned-title {
+  margin: 0 0 0.65rem 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #f9a8d4;
+  font-weight: 600;
+}
+
+.submission-sticker-earned-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.submission-sticker-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  border: 1px solid rgba(103, 232, 249, 0.25);
+  background: rgba(15, 23, 42, 0.45);
+  color: #e0f2fe;
+}
+
+.submission-sticker-chip--done {
+  border-color: rgba(244, 114, 182, 0.4);
+  background: rgba(131, 24, 67, 0.25);
+}
+
+.submission-sticker-attempt {
+  font-size: 0.82rem;
+  color: #94a3b8;
+  margin-left: 0.25rem;
+}
+
+.submission-sticker-note {
+  margin: 0.65rem 0 0 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: #94a3b8;
+}
+
+html:not(.dark) .submission-sticker-earned-title {
+  color: #be185d;
+}
+
+html:not(.dark) .submission-sticker-chip {
+  background: rgba(255, 255, 255, 0.85);
+  color: #0f172a;
+  border-color: rgba(79, 143, 232, 0.28);
+}
+
+html:not(.dark) .submission-sticker-chip--done {
+  background: rgba(253, 242, 248, 0.95);
+}
+
+html:not(.dark) .submission-sticker-note {
+  color: #64748b;
+}
+
 .assignment-detail {
   width: 100%;
   max-width: 56rem;

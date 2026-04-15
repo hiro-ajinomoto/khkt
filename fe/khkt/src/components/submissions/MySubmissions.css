@@ -249,6 +249,149 @@
   border-top: 1px solid rgba(148, 163, 184, 0.12);
 }
 
+.sticker-summary-card {
+  margin-bottom: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  border-radius: 1.5rem;
+  border: 1px solid rgba(244, 114, 182, 0.25);
+  background: linear-gradient(
+    135deg,
+    rgba(253, 242, 248, 0.12),
+    rgba(224, 231, 255, 0.1),
+    rgba(254, 243, 199, 0.08)
+  );
+  box-shadow: 0 12px 32px rgba(8, 47, 73, 0.18);
+}
+
+.sticker-summary-head {
+  margin-bottom: 1rem;
+}
+
+.sticker-summary-title {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #fce7f3;
+}
+
+.sticker-summary-total {
+  margin: 0;
+  color: #e2e8f0;
+  font-size: 0.95rem;
+}
+
+.sticker-summary-total strong {
+  color: #fda4af;
+  font-size: 1.15rem;
+}
+
+.sticker-summary-sub {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.82rem;
+  color: #94a3b8;
+}
+
+.sticker-summary-empty {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.sticker-tier-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sticker-tier-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(103, 232, 249, 0.15);
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.sticker-tier-item--completion {
+  border-color: rgba(244, 114, 182, 0.35);
+  background: rgba(131, 24, 67, 0.2);
+}
+
+.sticker-tier-emoji {
+  font-size: 1.35rem;
+  line-height: 1;
+  width: 2rem;
+  text-align: center;
+}
+
+.sticker-tier-label {
+  flex: 1;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.sticker-tier-count {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #7dd3fc;
+  min-width: 2rem;
+  text-align: right;
+}
+
+.sticker-summary-hint {
+  margin: 1rem 0 0 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: #94a3b8;
+}
+
+.sticker-load-hint {
+  margin: 0 0 1rem 0;
+  font-size: 0.85rem;
+  color: #fbbf24;
+}
+
+html:not(.dark) .my-submissions-container .sticker-summary-title {
+  color: #9d174d;
+}
+
+html:not(.dark) .my-submissions-container .sticker-summary-total {
+  color: #334155;
+}
+
+html:not(.dark) .my-submissions-container .sticker-summary-total strong {
+  color: #be185d;
+}
+
+html:not(.dark) .my-submissions-container .sticker-summary-sub {
+  color: #64748b;
+}
+
+html:not(.dark) .my-submissions-container .sticker-summary-empty {
+  color: #475569;
+}
+
+html:not(.dark) .my-submissions-container .sticker-tier-label {
+  color: #0f172a;
+}
+
+html:not(.dark) .my-submissions-container .sticker-tier-item {
+  background: rgba(255, 255, 255, 0.65);
+  border-color: rgba(79, 143, 232, 0.22);
+}
+
+html:not(.dark) .my-submissions-container .sticker-tier-item--completion {
+  background: rgba(253, 242, 248, 0.85);
+  border-color: rgba(236, 72, 153, 0.35);
+}
+
 @media (max-width: 768px) {
   .my-submissions-header h1 {
     font-size: 1.45rem;

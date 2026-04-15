@@ -126,3 +126,38 @@ export async function fetchMySubmissions() {
     rethrowNetwork(error);
   }
 }
+
+/**
+ * Sticker totals for the authenticated student (latest grade per assignment).
+ * @returns {Promise<Object>}
+ */
+export async function fetchMyStickers() {
+  try {
+    const authHeader = getAuthHeader();
+
+    if (!authHeader) {
+      throw new Error('Authentication required');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/submissions/my-stickers`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: authHeader,
+      },
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        describeApiFailure(response, errorData, 'Không tải được huy hiệu.')
+      );
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error('Error fetching my stickers:', error);
+    rethrowNetwork(error);
+  }
+}

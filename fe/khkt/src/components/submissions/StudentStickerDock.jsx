@@ -1,0 +1,104 @@
+import { useEffect, useRef, useState } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import { fetchMyStickers } from '../../api/submissions';
+import './StudentStickerDock.css';
+
+const PHONE_IDLE_MS = 2200;
+const MQ_PHONE = '(max-width: 767px)';
+
+const BEAR_SRC = `${import.meta.env.BASE_URL}sticker-bear-mascot.jpg`;
+
+/**
+ * Student: bear mascot holding a sign; sticker count is drawn on the white board.
+ * On narrow screens, show when idle (hide while touching/scrolling).
+ */
+export default function StudentStickerDock() {
+  const { isAuthenticated, isStudent, loading } = useAuth();
+  const [stats, setStats] = useState(null);
+  const [isPhone, setIsPhone] = useState(false);
+  const [phoneVisible, setPhoneVisible] = useState(true);
+  const idleTimerRef = useRef(null);
+
+  useEffect(() => {
+    if (!isAuthenticated || !isStudent || loading) return;
+    let cancelled = false;
+    fetchMyStickers()
+      .then((data) => {
+        if (!cancelled) setStats(data);
+      })
+      .catch(() => {
+        if (!cancelled) setStats(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, isStudent, loading]);
+
+  useEffect(() => {
+    const mq = window.matchMedia(MQ_PHONE);
+    const apply = () => setIsPhone(mq.matches);
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated || !isStudent || loading || !isPhone) return;
+
+    const scheduleShow = () => {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      idleTimerRef.current = window.setTimeout(() => {
+        setPhoneVisible(true);
+        idleTimerRef.current = null;
+      }, PHONE_IDLE_MS);
+    };
+
+    const onBusy = () => {
+      setPhoneVisible(false);
+      scheduleShow();
+    };
+
+    const opts = { passive: true };
+    window.addEventListener('touchstart', onBusy, opts);
+    window.addEventListener('touchmove', onBusy, opts);
+    window.addEventListener('scroll', onBusy, opts);
+
+    scheduleShow();
+
+    return () => {
+      window.removeEventListener('touchstart', onBusy);
+      window.removeEventListener('touchmove', onBusy);
+      window.removeEventListener('scroll', onBusy);
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    };
+  }, [isAuthenticated, isStudent, loading, isPhone]);
+
+  if (!isAuthenticated || !isStudent || loading) {
+    return null;
+  }
+
+  const total = stats?.total_sticker_count ?? 0;
+  const showBloom = !isPhone || phoneVisible;
+
+  return (
+    <div
+      className={`student-sticker-bloom ${showBloom ? 'student-sticker-bloom--visible' : 'student-sticker-bloom--hidden-touch'}`}
+      aria-live="polite"
+      aria-label={`Sticker: ${total}`}
+    >
+      <div className="student-sticker-bloom__inner">
+        <div className="student-sticker-bloom__figure">
+          <img
+            className="student-sticker-bloom__img"
+            src={BEAR_SRC}
+            alt=""
+            width={682}
+            height={1024}
+            decoding="async"
+          />
+          <span className="student-sticker-bloom__count-on-sign">{total}</span>
+        </div>
+      </div>
+    </div>
+  );
+}

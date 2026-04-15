@@ -1,0 +1,136 @@
+/* Bear mascot + sticker count on the sign — left side */
+
+.student-sticker-bloom {
+  position: fixed;
+  left: max(0.35rem, env(safe-area-inset-left, 0px));
+  top: 50%;
+  z-index: 850;
+  transform: translateY(-50%);
+  pointer-events: none;
+  transition:
+    opacity 0.35s ease,
+    transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.student-sticker-bloom--visible {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0) scale(1);
+}
+
+.student-sticker-bloom--hidden-touch {
+  opacity: 0;
+  transform: translateY(-50%) translateX(-0.75rem) scale(0.92);
+}
+
+.student-sticker-bloom__inner {
+  filter: drop-shadow(0 10px 24px rgba(15, 23, 42, 0.2));
+}
+
+/* Compact landscape card (wider than tall) */
+.student-sticker-bloom__figure {
+  position: relative;
+  width: clamp(4.75rem, 26vw, 7.25rem);
+  aspect-ratio: 4 / 3;
+  max-height: min(28vh, 9rem);
+  overflow: hidden;
+  margin: 0;
+  border-radius: 0.95rem;
+  border: 3px solid #7c2d12;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 0 0 3px #fef3c7,
+    0 5px 0 rgba(67, 20, 7, 0.18),
+    0 14px 32px rgba(15, 23, 42, 0.28);
+}
+
+html.dark .student-sticker-bloom__figure {
+  border-color: #ea580c;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 0 3px rgba(251, 191, 36, 0.45),
+    0 6px 0 rgba(0, 0, 0, 0.35),
+    0 16px 36px rgba(0, 0, 0, 0.55);
+}
+
+.student-sticker-bloom__img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 22%;
+}
+
+/* Count on sign — tuned for cropped frame, bolder type */
+.student-sticker-bloom__count-on-sign {
+  position: absolute;
+  left: 50%;
+  top: 18%;
+  transform: translate(-50%, -50%);
+  width: 40%;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(0.72rem, 5vw, 1.05rem);
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  color: #020617;
+  text-shadow:
+    0 0 1px rgba(255, 255, 255, 1),
+    0 2px 4px rgba(255, 255, 255, 0.85);
+  pointer-events: none;
+}
+
+@media (min-width: 768px) {
+  .student-sticker-bloom__figure {
+    width: clamp(5.25rem, 11vw, 8rem);
+    aspect-ratio: 4 / 3;
+    max-height: min(32vh, 10rem);
+    border-radius: 1.05rem;
+    border-width: 4px;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      0 0 0 4px #fef3c7,
+      0 6px 0 rgba(67, 20, 7, 0.15),
+      0 18px 40px rgba(15, 23, 42, 0.24);
+  }
+
+  html.dark .student-sticker-bloom__figure {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 0 0 4px rgba(251, 191, 36, 0.4),
+      0 7px 0 rgba(0, 0, 0, 0.35),
+      0 20px 44px rgba(0, 0, 0, 0.5);
+  }
+
+  .student-sticker-bloom__img {
+    object-position: 50% 20%;
+  }
+
+  .student-sticker-bloom__count-on-sign {
+    font-size: clamp(0.85rem, 1.35vw, 1.2rem);
+    top: 17%;
+    width: 38%;
+  }
+}
+
+/* Desktop: always visible */
+@media (min-width: 768px) {
+  .student-sticker-bloom--hidden-touch {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .student-sticker-bloom {
+    transition: opacity 0.2s ease;
+  }
+
+  .student-sticker-bloom--hidden-touch {
+    transform: translateY(-50%);
+  }
+}

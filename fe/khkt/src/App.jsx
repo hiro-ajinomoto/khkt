@@ -11,6 +11,7 @@ import AdminApp from './components/admin/AdminApp'
 import MySubmissions from './components/submissions/MySubmissions'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import { OceanPageLoading } from './components/layout/OceanShell'
+import StudentStickerDock from './components/submissions/StudentStickerDock'
 import AppErrorBoundary from './components/errors/AppErrorBoundary'
 import NotFoundPage from './components/errors/NotFoundPage'
 import ServerErrorPage from './components/errors/ServerErrorPage'
@@ -88,8 +89,15 @@ function AppShell() {
     location.pathname === '/register' ||
     location.pathname === '/500';
 
+  const hideStudentStickerDock =
+    location.pathname === '/login' ||
+    location.pathname === '/register' ||
+    location.pathname === '/500' ||
+    location.pathname.startsWith('/admin');
+
   return (
     <div className="app">
+      {!hideStudentStickerDock ? <StudentStickerDock /> : null}
       <AppRoutes />
       {!hideFooter ? (
         <footer className="app-footer">

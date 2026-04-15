@@ -353,6 +353,31 @@ function AssignmentDetail() {
             </button>
           </div>
 
+          {submission.stickers && (
+            <div className="submission-sticker-earned" role="status">
+              <p className="submission-sticker-earned-title">
+                Huy hiệu (theo lần nộp đầu đã chấm)
+              </p>
+              <div className="submission-sticker-earned-row">
+                <span className="submission-sticker-chip submission-sticker-chip--done">
+                  <span aria-hidden>{'\uD83C\uDF38'}</span> Hoàn thành
+                </span>
+                <span className="submission-sticker-chip">
+                  <span aria-hidden>{submission.stickers.tier?.emoji}</span>{' '}
+                  {submission.stickers.tier?.label}
+                </span>
+                {submission.stickers.attempt_number > 1 && (
+                  <span className="submission-sticker-attempt">
+                    Lần nộp thứ {submission.stickers.attempt_number}
+                  </span>
+                )}
+              </div>
+              {submission.stickers.note && (
+                <p className="submission-sticker-note">{submission.stickers.note}</p>
+              )}
+            </div>
+          )}
+
           {showResult && (
             <SubmissionResult submission={submission} />
           )}

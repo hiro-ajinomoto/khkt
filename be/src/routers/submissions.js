@@ -15,6 +15,12 @@ import {
 import { resolveMaxSubmissionsLimit } from "../utils/submissionLimits.js";
 import { uploadFileToS3 } from "../services/s3Service.js";
 import { authenticate } from "../middleware/auth.js";
+import {
+  STICKER_TIER_ORDER,
+  computeStickerStatsFromSubmissionRows,
+  scoreToStickerTier,
+  stickerTierPublicMeta,
+} from "../utils/stickers.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -196,6 +202,51 @@ router.get("/my-submissions", authenticate, async (req, res) => {
   } catch (error) {
     console.error("Error fetching student submissions:", error);
     res.status(500).json({ detail: "Failed to fetch submissions" });
+  }
+});
+
+/**
+ * GET /submissions/my-stickers
+ * Aggregated sticker counts (first graded attempt per assignment).
+ */
+router.get("/my-stickers", authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== "student") {
+      return res.status(403).json({
+        detail: "Only students can view sticker stats",
+      });
+    }
+
+    const db = getDB();
+    const studentId = ObjectId.createFromHexString(req.user.id);
+
+    const submissions = await db
+      .collection("submissions")
+      .find({ student_id: studentId })
+      .project({ assignment_id: 1, created_at: 1, ai_result: 1 })
+      .toArray();
+
+    const summary = computeStickerStatsFromSubmissionRows(submissions);
+
+    /** @type {Record<string, { code: string, label: string, emoji: string, count: number }>} */
+    const by_tier_detail = {};
+    for (const code of STICKER_TIER_ORDER) {
+      const n = summary.by_tier[code] || 0;
+      if (n > 0) {
+        by_tier_detail[code] = { ...stickerTierPublicMeta(code), count: n };
+      }
+    }
+
+    res.json({
+      ...summary,
+      by_tier_detail,
+      completion_emoji: "\uD83C\uDF38",
+      explanation:
+        "M\u1ED7i b\u00E0i \u0111\u00E3 ch\u1EA5m \u0111\u01B0\u1EE3c 1 huy hi\u1EC7u ho\u00E0n th\u00E0nh v\u00E0 1 huy hi\u1EC7u m\u1EE9c \u0111i\u1EC3m ngay t\u1EEB l\u1EA7n n\u1ED9p \u0111\u1EA7u ti\u00EAn \u0111\u01B0\u1EE3c ch\u1EA5m. N\u1ED9p b\u00E0i l\u1EA1i kh\u00F4ng \u0111\u1ED5i huy hi\u1EC7u.",
+    });
+  } catch (error) {
+    console.error("Error fetching sticker stats:", error);
+    res.status(500).json({ detail: "Failed to fetch sticker stats" });
   }
 });
 
@@ -483,6 +534,36 @@ router.post("/", authenticate, upload.array("files"), async (req, res) => {
       _id: submissionId,
     });
 
+    let stickers = null;
+    if (req.user.role === "student" && created?.ai_result != null) {
+      const attemptCount = await db.collection("submissions").countDocuments({
+        assignment_id: assignmentObjectId,
+        student_id: studentId,
+      });
+      const firstGraded = await db
+        .collection("submissions")
+        .find({
+          assignment_id: assignmentObjectId,
+          student_id: studentId,
+          ai_result: { $ne: null },
+        })
+        .sort({ created_at: 1 })
+        .limit(1)
+        .toArray();
+      const basis = firstGraded[0] || created;
+      const tierCode = scoreToStickerTier(basis.ai_result.score);
+      stickers = {
+        completion: true,
+        tier: stickerTierPublicMeta(tierCode),
+        attempt_number: attemptCount,
+        locked_to_first_graded_attempt: true,
+        note:
+          attemptCount > 1
+            ? "Huy hi\u1EC7u ho\u00E0n th\u00E0nh v\u00E0 m\u1EE9c \u0111i\u1EC3m gi\u1EEF theo l\u1EA7n n\u1ED9p \u0111\u1EA7u ti\u00EAn \u0111\u01B0\u1EE3c ch\u1EA5m. L\u1EA7n n\u1ED9p n\u00E0y kh\u00F4ng \u0111\u1ED5i huy hi\u1EC7u."
+            : null,
+      };
+    }
+
     res.status(201).json({
       id: created._id.toString(),
       assignment_id: created.assignment_id.toString(),
@@ -492,6 +573,7 @@ router.post("/", authenticate, upload.array("files"), async (req, res) => {
         : [],
       created_at: created.created_at,
       ai_result: created.ai_result,
+      stickers,
     });
   } catch (error) {
     console.error("Error creating submission:", error);
