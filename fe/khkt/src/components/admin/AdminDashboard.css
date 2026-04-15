@@ -391,6 +391,32 @@
   width: 100%;
   border-collapse: collapse;
   min-width: 720px;
+  table-layout: fixed;
+}
+
+/* Same column widths on every table (e.g. students grouped by class). */
+.users-table .admin-users-col--username {
+  width: 14%;
+}
+
+.users-table .admin-users-col--name {
+  width: 24%;
+}
+
+.users-table .admin-users-col--role {
+  width: 15%;
+}
+
+.users-table .admin-users-col--class {
+  width: 13%;
+}
+
+.users-table .admin-users-col--created {
+  width: 12%;
+}
+
+.users-table .admin-users-col--actions {
+  width: 22%;
 }
 
 .users-table th {
@@ -405,11 +431,37 @@
   border-bottom: 1px solid rgba(148, 163, 184, 0.15);
 }
 
+.users-table th.admin-users-col--actions {
+  text-align: right;
+}
+
 .users-table td {
   padding: 0.85rem 1rem;
   border-bottom: 1px solid rgba(148, 163, 184, 0.08);
   color: #e2e8f0;
   font-size: 0.9rem;
+  vertical-align: middle;
+}
+
+.users-table td.admin-users-col--username,
+.users-table td.admin-users-col--name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.users-table td.admin-users-col--role,
+.users-table td.admin-users-col--class {
+  word-break: break-word;
+}
+
+.users-table td.admin-users-col--actions {
+  text-align: right;
+}
+
+.users-table .admin-users-col--actions .action-buttons {
+  justify-content: flex-end;
+  flex-wrap: nowrap;
 }
 
 .users-table tr:hover {

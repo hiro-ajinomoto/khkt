@@ -5,12 +5,20 @@ export function AdminUserTableHead() {
   return (
     <thead>
       <tr>
-        <th className="admin-users-col--mobile-hidden">Tên đăng nhập</th>
-        <th>Họ và tên</th>
-        <th className={!editingUserId ? 'admin-users-col--mobile-hidden' : undefined}>Quyền</th>
-        <th className={!editingUserId ? 'admin-users-col--mobile-hidden' : undefined}>Lớp</th>
-        <th className="admin-users-col--mobile-hidden">Ngày tạo</th>
-        <th>Thao tác</th>
+        <th className="admin-users-col--username admin-users-col--mobile-hidden">Tên đăng nhập</th>
+        <th className="admin-users-col--name">Họ và tên</th>
+        <th
+          className={`admin-users-col--role ${!editingUserId ? 'admin-users-col--mobile-hidden' : ''}`.trim()}
+        >
+          Quyền
+        </th>
+        <th
+          className={`admin-users-col--class ${!editingUserId ? 'admin-users-col--mobile-hidden' : ''}`.trim()}
+        >
+          Lớp
+        </th>
+        <th className="admin-users-col--created admin-users-col--mobile-hidden">Ngày tạo</th>
+        <th className="admin-users-col--actions">Thao tác</th>
       </tr>
     </thead>
   );
@@ -37,9 +45,11 @@ export function AdminUserTableRow({ rowUser }) {
 
   return (
     <tr>
-      <td className="admin-users-col--mobile-hidden">{u.username}</td>
-      <td>{u.name || u.username}</td>
-      <td className={!editingUserId ? 'admin-users-col--mobile-hidden' : undefined}>
+      <td className="admin-users-col--username admin-users-col--mobile-hidden">{u.username}</td>
+      <td className="admin-users-col--name">{u.name || u.username}</td>
+      <td
+        className={`admin-users-col--role ${!editingUserId ? 'admin-users-col--mobile-hidden' : ''}`.trim()}
+      >
         {editingUserId === u.id ? (
           <div className="role-edit">
             <select
@@ -62,7 +72,9 @@ export function AdminUserTableRow({ rowUser }) {
           </span>
         )}
       </td>
-      <td className={!editingUserId ? 'admin-users-col--mobile-hidden' : undefined}>
+      <td
+        className={`admin-users-col--class ${!editingUserId ? 'admin-users-col--mobile-hidden' : ''}`.trim()}
+      >
         {editingUserId === u.id ? (
           newRole === 'student' ? (
             <div className="class-edit">
@@ -93,10 +105,10 @@ export function AdminUserTableRow({ rowUser }) {
           <span className="class-na">-</span>
         )}
       </td>
-      <td className="admin-users-col--mobile-hidden">
+      <td className="admin-users-col--created admin-users-col--mobile-hidden">
         {u.created_at ? new Date(u.created_at).toLocaleDateString('vi-VN') : 'N/A'}
       </td>
-      <td>
+      <td className="admin-users-col--actions">
         <div className="action-buttons">
           {editingUserId === u.id ? (
             <>
