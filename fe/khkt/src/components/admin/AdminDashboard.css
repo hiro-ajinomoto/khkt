@@ -595,3 +595,175 @@
     grid-template-columns: 1fr;
   }
 }
+
+/*
+ * Light theme: contrast fixes (base rules target dark UI; header sits on light glass).
+ */
+html:not(.dark) .admin-dashboard .ocean-page-eyebrow {
+  color: #0369a1;
+  letter-spacing: 0.28em;
+}
+
+html:not(.dark) .admin-dashboard .admin-header h1 {
+  color: #0f172a;
+}
+
+html:not(.dark) .admin-dashboard .admin-header p {
+  color: #475569;
+}
+
+html:not(.dark) .admin-dashboard .nav-button {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.38), rgba(37, 99, 235, 0.32));
+  border-color: rgba(14, 116, 200, 0.5);
+  color: #0c4a6e;
+  box-shadow: 0 2px 8px rgba(14, 116, 200, 0.12);
+}
+
+html:not(.dark) .admin-dashboard .nav-button:hover {
+  color: #082f49;
+  box-shadow: 0 6px 16px rgba(14, 116, 200, 0.2);
+}
+
+html:not(.dark) .admin-dashboard .logout-button {
+  background: linear-gradient(135deg, #fecaca, #fca5a5);
+  border-color: rgba(220, 38, 38, 0.45);
+  color: #7f1d1d;
+}
+
+html:not(.dark) .admin-dashboard .logout-button:hover {
+  background: linear-gradient(135deg, #fca5a5, #f87171);
+  color: #450a0a;
+}
+
+html:not(.dark) .admin-dashboard .error-message {
+  background: rgba(254, 226, 226, 0.95);
+  border-color: rgba(248, 113, 113, 0.45);
+  color: #7f1d1d;
+}
+
+html:not(.dark) .admin-dashboard .stat-card h3 {
+  color: #e2e8f0;
+}
+
+html:not(.dark) .admin-dashboard .users-section {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: var(--ocean-border);
+}
+
+html:not(.dark) .admin-dashboard .section-header h2 {
+  color: #0f172a;
+}
+
+html:not(.dark) .admin-dashboard .user-filter-label {
+  color: #475569;
+}
+
+html:not(.dark) .admin-dashboard .user-filter-input {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: rgba(79, 143, 232, 0.28);
+}
+
+html:not(.dark) .admin-dashboard .user-filter-input::placeholder {
+  color: #64748b;
+}
+
+html:not(.dark) .admin-dashboard .user-group-title {
+  color: #0f172a;
+}
+
+html:not(.dark) .admin-dashboard .user-group-count {
+  color: #64748b;
+}
+
+html:not(.dark) .admin-dashboard .user-subgroup-title {
+  color: #0369a1;
+}
+
+html:not(.dark) .admin-dashboard .user-group-empty,
+html:not(.dark) .admin-dashboard .user-group-empty.muted {
+  color: #64748b;
+}
+
+html:not(.dark) .admin-dashboard .users-table td {
+  color: #334155;
+}
+
+html:not(.dark) .admin-dashboard .users-table tr:hover {
+  background: rgba(14, 165, 233, 0.07);
+}
+
+html:not(.dark) .admin-dashboard .empty-state {
+  color: #64748b;
+}
+
+html:not(.dark) .admin-dashboard .role-edit-hint {
+  color: #64748b;
+}
+
+html:not(.dark) .admin-dashboard .role-select,
+html:not(.dark) .admin-dashboard .class-select {
+  background: #ffffff;
+  color: #0f172a;
+  border-color: rgba(79, 143, 232, 0.35);
+}
+
+html:not(.dark) .admin-dashboard .class-badge {
+  border-color: rgba(37, 99, 235, 0.45);
+  background: rgba(59, 130, 246, 0.14);
+  color: #1e3a8a;
+}
+
+html:not(.dark) .admin-dashboard .class-na {
+  color: #64748b;
+}
+
+html:not(.dark) .admin-dashboard .loading {
+  color: #0369a1;
+}
+
+html:not(.dark) .admin-dashboard .admin-class-empty {
+  color: #64748b;
+}
+
+html:not(.dark) .admin-dashboard .admin-class-grade-block {
+  background: #f1f5f9;
+  border-color: rgba(79, 143, 232, 0.22);
+}
+
+html:not(.dark) .admin-dashboard .admin-class-grade-title {
+  color: #0e7490;
+}
+
+html:not(.dark) .admin-dashboard .admin-class-hint {
+  color: #475569;
+}
+
+html:not(.dark) .admin-dashboard .admin-class-input {
+  background: #ffffff;
+  color: #0f172a;
+  border-color: rgba(71, 85, 105, 0.35);
+}
+
+html:not(.dark) .admin-dashboard .admin-class-item {
+  background: #e2e8f0;
+  border-color: rgba(71, 85, 105, 0.25);
+}
+
+html:not(.dark) .admin-dashboard .refresh-button {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.35), rgba(6, 182, 212, 0.28));
+  border-color: rgba(5, 150, 105, 0.45);
+  color: #065f46;
+}
+
+html:not(.dark) .admin-dashboard .save-button {
+  color: #065f46;
+  background: rgba(16, 185, 129, 0.22);
+  border-color: rgba(5, 150, 105, 0.4);
+}
+
+html:not(.dark) .admin-dashboard .cancel-button {
+  color: #7f1d1d;
+  background: rgba(254, 202, 202, 0.6);
+  border-color: rgba(220, 38, 38, 0.35);
+}
