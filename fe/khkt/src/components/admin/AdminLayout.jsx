@@ -2,6 +2,9 @@ import { NavLink, Outlet, useMatch, useNavigate } from 'react-router-dom';
 import OceanShell, { OceanPageLoading } from '../layout/OceanShell';
 import BackToTopButton from '../layout/BackToTopButton';
 import OceanListPageHeader from '../layout/OceanListPageHeader';
+import ThemeToggle from '../layout/ThemeToggle';
+import { useTheme } from '../../contexts/ThemeContext';
+import { getAssignmentsNavIcon } from '../layout/assignmentsNavIcon';
 import { useAdminWorkspace } from './AdminWorkspaceContext';
 import './AdminDashboard.css';
 
@@ -14,6 +17,8 @@ export default function AdminLayout() {
   const adminHomeMatch = useMatch({ path: '/admin', end: true });
   const { loading, error, loadData, logout, user } = useAdminWorkspace();
   const isAdmin = user?.role === 'admin';
+  const { theme } = useTheme();
+  const assignmentsIcon = getAssignmentsNavIcon(theme);
 
   if (loading) {
     return <OceanPageLoading message="Đang tải bảng quản trị..." />;
@@ -42,6 +47,11 @@ export default function AdminLayout() {
         </div>
         {isAdminSubRoute && (
           <div className="admin-header admin-header--compact admin-layout-compact-header--subroute-mobile">
+            <div className="admin-header-compact-avatar" aria-hidden>
+              <span className="admin-header-compact-avatar-letter">
+                {user?.name?.[0] || user?.username?.[0] || 'ST'}
+              </span>
+            </div>
             <div className="header-actions">
               <button
                 type="button"
@@ -50,8 +60,9 @@ export default function AdminLayout() {
                 aria-label="Bài tập"
                 title="Bài tập"
               >
-                {'\uD83D\uDCDA'}
+                {assignmentsIcon}
               </button>
+              <ThemeToggle className="admin-header-compact-theme-toggle" />
               <button
                 type="button"
                 onClick={logout}

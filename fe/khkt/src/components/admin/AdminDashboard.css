@@ -1,17 +1,12 @@
-/* Trang quản trị — Ocean UI */
-
-.admin-dashboard {
-  width: 100%;
-  max-width: 90rem;
-  margin: 0 auto;
-}
-
-/* Giáo viên / Học sinh: banner Ocean trên màn lớn; bar gọn trên mobile. */
+/*
+ * Sub-route admin: compact bar only at phone widths (about iPhone portrait, max ~430px).
+ * From 431px and up: hide compact bar, show full Ocean header.
+ */
 .admin-layout-ocean-header--subroute-desktop {
   display: none;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 431px) {
   .admin-layout-ocean-header--subroute-desktop {
     display: block;
   }
@@ -19,12 +14,6 @@
 
 .admin-layout-compact-header--subroute-mobile {
   display: block;
-}
-
-@media (min-width: 768px) {
-  .admin-layout-compact-header--subroute-mobile {
-    display: none;
-  }
 }
 
 .admin-header {
@@ -43,22 +32,70 @@
 }
 
 .admin-header--compact {
-  justify-content: stretch;
+  justify-content: space-between;
   align-items: center;
   flex-wrap: nowrap;
   padding: 0.85rem 1.25rem;
+  gap: 0.65rem;
+}
+
+.admin-header-compact-avatar {
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(125, 211, 252, 0.55);
+  background: linear-gradient(135deg, #dbeafe 0%, #fff7ed 50%, #ffedd5 100%);
+  box-shadow: 0 4px 14px rgba(251, 146, 60, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem;
+}
+
+html.dark .admin-dashboard .admin-header-compact-avatar {
+  border-color: rgba(103, 232, 249, 0.35);
+  background: linear-gradient(
+    135deg,
+    rgba(103, 232, 249, 0.22),
+    rgba(56, 189, 248, 0.12),
+    rgba(59, 130, 246, 0.18)
+  );
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
+
+.admin-header-compact-avatar-letter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.95);
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0369a1;
+  text-transform: uppercase;
+}
+
+html.dark .admin-dashboard .admin-header-compact-avatar-letter {
+  background: rgba(15, 23, 42, 0.85);
+  color: #a5f3fc;
 }
 
 .admin-header--compact .header-actions {
   flex: 1;
   flex-direction: row;
   flex-wrap: nowrap;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
-  width: 100%;
-  max-width: 100%;
+  min-width: 0;
   margin: 0;
-  gap: 0;
+  gap: 0.5rem;
+}
+
+.admin-header-compact-theme-toggle {
+  flex-shrink: 0;
 }
 
 .admin-subnav {
@@ -738,7 +775,7 @@
   }
 
   .admin-header--compact .header-actions {
-    gap: 0;
+    gap: 0.35rem;
   }
 
   .admin-header--compact .nav-button--icon-only,
@@ -950,4 +987,11 @@ html:not(.dark) .admin-dashboard .cancel-button {
   color: #7f1d1d;
   background: rgba(254, 202, 202, 0.6);
   border-color: rgba(220, 38, 38, 0.35);
+}
+
+/* Hide sub-route compact bar from ~431px up. Placed last so it wins over .admin-header { display: flex }. */
+@media (min-width: 431px) {
+  .admin-dashboard .admin-header.admin-header--compact.admin-layout-compact-header--subroute-mobile {
+    display: none;
+  }
 }
