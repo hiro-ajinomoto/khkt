@@ -491,85 +491,128 @@ function AssignmentsList() {
   return (
     <OceanShell>
         {/* Header */}
-        <header className="relative mb-10 flex flex-col gap-6 overflow-hidden rounded-[28px] border border-sky-200/60 bg-white/70 p-6 shadow-[0_12px_40px_rgba(86,132,214,0.12)] backdrop-blur-xl dark:border-cyan-300/15 dark:bg-white/5 dark:shadow-2xl dark:shadow-cyan-950/30 lg:flex-row lg:items-center lg:justify-between">
+        <header className="relative mb-8 flex flex-col gap-4 overflow-hidden rounded-[28px] border border-sky-200/60 bg-white/70 p-4 shadow-[0_12px_40px_rgba(86,132,214,0.12)] backdrop-blur-xl dark:border-cyan-300/15 dark:bg-white/5 dark:shadow-2xl dark:shadow-cyan-950/30 md:mb-10 md:gap-6 md:p-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(191,217,255,0.18),rgba(255,211,106,0.08),rgba(255,122,89,0.05))] dark:bg-transparent" />
-          <div className="relative flex items-center gap-4">
-            <div className="relative h-16 w-16 overflow-hidden rounded-2xl border border-sky-200/70 bg-[linear-gradient(135deg,#dbeafe_0%,#fff7ed_50%,#ffedd5_100%)] p-1 shadow-lg shadow-orange-200/30 dark:border-cyan-300/30 dark:bg-gradient-to-br dark:from-cyan-300/20 dark:via-sky-400/10 dark:to-blue-500/20 dark:shadow-cyan-950/40">
-              <div className="flex h-full w-full items-center justify-center rounded-[14px] bg-white/95 text-xl font-bold text-sky-700 dark:bg-slate-900/80 dark:text-cyan-200">
-                {user?.name?.[0] || user?.username?.[0] || 'ST'}
+          <div className="relative flex min-w-0 flex-1 items-center justify-between gap-3 lg:justify-start">
+            <div className="flex min-w-0 items-center gap-3 md:gap-4">
+              <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl border border-sky-200/70 bg-[linear-gradient(135deg,#dbeafe_0%,#fff7ed_50%,#ffedd5_100%)] p-1 shadow-lg shadow-orange-200/30 dark:border-cyan-300/30 dark:bg-gradient-to-br dark:from-cyan-300/20 dark:via-sky-400/10 dark:to-blue-500/20 dark:shadow-cyan-950/40 md:h-16 md:w-16">
+                <div className="flex h-full w-full items-center justify-center rounded-[14px] bg-white/95 text-lg font-bold text-sky-700 dark:bg-slate-900/80 dark:text-cyan-200 md:text-xl">
+                  {user?.name?.[0] || user?.username?.[0] || 'ST'}
+                </div>
+                <div className="absolute inset-x-1 top-1 h-4 rounded-full bg-orange-200/50 blur-md dark:bg-cyan-300/20" />
               </div>
-              <div className="absolute inset-x-1 top-1 h-4 rounded-full bg-orange-200/50 blur-md dark:bg-cyan-300/20" />
-            </div>
-            <div>
-              <p className="mb-2 text-xs uppercase tracking-[0.35em] text-sky-600/90 dark:text-cyan-200/80">
-                Cuộc thi khoa học kỹ thuật
-              </p>
-              <h1 className="text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl dark:text-white">
-                Danh sách{' '}
-                <span className="bg-[linear-gradient(135deg,#2563eb,#ea580c,#c2410c)] bg-clip-text text-transparent">
-                  bài tập
-                </span>{' '}
-                &amp; thử thách
-              </h1>
-            </div>
-          </div>
-
-          <div className="relative flex flex-col items-start gap-3 lg:items-end">
-            {isAuthenticated ? (
-              <>
-                <div className="rounded-2xl border border-sky-100 bg-white/90 px-4 py-3 text-sm shadow-sm backdrop-blur dark:border-slate-500/60 dark:bg-slate-900">
-                  <span className="font-medium text-slate-900 dark:text-slate-50">
-                    {user?.name || user?.username}
+              <div className="hidden min-w-0 md:block">
+                <p className="mb-2 text-xs uppercase tracking-[0.35em] text-sky-600/90 dark:text-cyan-200/80">
+                  Cuộc thi khoa học kỹ thuật
+                </p>
+                <h1 className="text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl dark:text-white">
+                  Danh sách{' '}
+                  <span className="bg-[linear-gradient(135deg,#2563eb,#ea580c,#c2410c)] bg-clip-text text-transparent">
+                    bài tập
                   </span>{' '}
-                  <span className="text-sky-700 dark:text-cyan-300">
-                    (
-                    {user?.role === 'admin'
-                      ? 'Quản trị viên'
-                      : user?.role === 'teacher'
-                      ? 'Giáo viên'
-                      : 'Học sinh'}
-                    )
-                  </span>
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <ThemeToggle />
-                  {isAdmin && (
-                    <button
-                      onClick={() => navigate('/admin')}
-                      className="group relative overflow-hidden rounded-2xl border border-amber-200/80 bg-[linear-gradient(135deg,#fff7ed_0%,#ffedd5_100%)] px-5 py-3 text-sm font-medium text-amber-900 shadow-md shadow-amber-200/40 transition hover:-translate-y-0.5 dark:border-amber-300/40 dark:bg-gradient-to-r dark:from-amber-500/40 dark:via-amber-400/30 dark:to-amber-500/40 dark:text-amber-50 dark:shadow-amber-950/40"
-                    >
-                      <span className="relative z-10">⚙️ Trang quản trị</span>
-                    </button>
-                  )}
+                  &amp; thử thách
+                </h1>
+              </div>
+            </div>
+            {isAuthenticated ? (
+              <div className="flex shrink-0 items-center gap-2 md:hidden">
+                {isAdmin && (
                   <button
-                    onClick={logout}
-                    className="group relative overflow-hidden rounded-2xl border border-orange-200/80 bg-white/90 px-5 py-3 text-sm font-medium text-orange-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-[linear-gradient(135deg,#ffd36a_0%,#ff9b3d_55%,#ff7a59_100%)] hover:text-white dark:border-cyan-400/45 dark:bg-slate-800 dark:text-slate-100 dark:shadow-lg dark:shadow-black/30 dark:hover:border-cyan-300/55 dark:hover:bg-slate-700 dark:hover:text-white"
+                    type="button"
+                    onClick={() => navigate('/admin')}
+                    className="flex h-11 w-11 items-center justify-center rounded-2xl border border-amber-200/80 bg-[linear-gradient(135deg,#fff7ed_0%,#ffedd5_100%)] text-lg shadow-md shadow-amber-200/40 transition hover:-translate-y-0.5 dark:border-amber-300/40 dark:bg-gradient-to-r dark:from-amber-500/40 dark:via-amber-400/30 dark:to-amber-500/40 dark:text-amber-50 dark:shadow-amber-950/40"
+                    aria-label="Trang quản trị"
                   >
-                    <span className="relative z-10">Đăng xuất</span>
-                    <span className="absolute inset-0 hidden translate-x-[-120%] bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.18),transparent)] transition duration-1000 group-hover:translate-x-[120%] dark:block" />
+                    <span aria-hidden>⚙️</span>
                   </button>
-                </div>
-              </>
-            ) : (
-              <div className="flex flex-wrap items-center gap-3">
+                )}
                 <ThemeToggle />
                 <button
+                  type="button"
+                  onClick={logout}
+                  className="group relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl border border-orange-200/80 bg-white/90 text-orange-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-[linear-gradient(135deg,#ffd36a_0%,#ff9b3d_55%,#ff7a59_100%)] hover:text-white dark:border-cyan-400/45 dark:bg-slate-800 dark:text-slate-100 dark:shadow-lg dark:shadow-black/30 dark:hover:border-cyan-300/55 dark:hover:bg-slate-700 dark:hover:text-white"
+                  aria-label="Đăng xuất"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="relative z-10 h-5 w-5"
+                    aria-hidden
+                  >
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                    <polyline points="16 17 21 12 16 7" />
+                    <line x1="21" y1="12" x2="9" y2="12" />
+                  </svg>
+                  <span className="absolute inset-0 hidden translate-x-[-120%] bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.18),transparent)] transition duration-1000 group-hover:translate-x-[120%] dark:block" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex shrink-0 items-center gap-2 md:hidden">
+                <ThemeToggle />
+                <button
+                  type="button"
                   onClick={() => navigate('/login')}
-                  className="rounded-2xl border border-sky-200/80 bg-white px-5 py-3 text-sm font-medium text-sky-800 shadow-sm transition hover:-translate-y-0.5 dark:border-cyan-300/40 dark:bg-slate-900/70 dark:text-cyan-100 dark:shadow-lg dark:shadow-cyan-950/40"
+                  className="rounded-2xl border border-sky-200/80 bg-white px-3 py-2 text-xs font-medium text-sky-800 shadow-sm transition hover:-translate-y-0.5 dark:border-cyan-300/40 dark:bg-slate-900/70 dark:text-cyan-100"
                 >
                   Đăng nhập
                 </button>
                 <button
+                  type="button"
                   onClick={() => navigate('/register')}
-                  className="rounded-2xl border border-orange-200/80 bg-[linear-gradient(135deg,#ffd36a_0%,#fb923c_100%)] px-5 py-3 text-sm font-medium text-white shadow-md shadow-orange-200/40 transition hover:-translate-y-0.5 dark:border-fuchsia-300/40 dark:bg-gradient-to-r dark:from-fuchsia-500/70 dark:to-violet-600/80 dark:shadow-fuchsia-950/40"
+                  className="rounded-2xl border border-orange-200/80 bg-[linear-gradient(135deg,#ffd36a_0%,#fb923c_100%)] px-3 py-2 text-xs font-medium text-white shadow-md transition hover:-translate-y-0.5 dark:border-fuchsia-300/40 dark:bg-gradient-to-r dark:from-fuchsia-500/70 dark:to-violet-600/80 dark:shadow-fuchsia-950/40"
                 >
                   Đăng ký
                 </button>
               </div>
             )}
           </div>
-        </header>
 
+          {isAuthenticated ? (
+            <div className="relative hidden shrink-0 flex-wrap items-center gap-3 md:flex md:w-auto md:justify-end">
+              <ThemeToggle />
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => navigate('/admin')}
+                  className="group relative overflow-hidden rounded-2xl border border-amber-200/80 bg-[linear-gradient(135deg,#fff7ed_0%,#ffedd5_100%)] px-5 py-3 text-sm font-medium text-amber-900 shadow-md shadow-amber-200/40 transition hover:-translate-y-0.5 dark:border-amber-300/40 dark:bg-gradient-to-r dark:from-amber-500/40 dark:via-amber-400/30 dark:to-amber-500/40 dark:text-amber-50 dark:shadow-amber-950/40"
+                >
+                  <span className="relative z-10">⚙️ Trang quản trị</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={logout}
+                className="group relative overflow-hidden rounded-2xl border border-orange-200/80 bg-white/90 px-5 py-3 text-sm font-medium text-orange-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-[linear-gradient(135deg,#ffd36a_0%,#ff9b3d_55%,#ff7a59_100%)] hover:text-white dark:border-cyan-400/45 dark:bg-slate-800 dark:text-slate-100 dark:shadow-lg dark:shadow-black/30 dark:hover:border-cyan-300/55 dark:hover:bg-slate-700 dark:hover:text-white"
+              >
+                <span className="relative z-10">Đăng xuất</span>
+                <span className="absolute inset-0 hidden translate-x-[-120%] bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.18),transparent)] transition duration-1000 group-hover:translate-x-[120%] dark:block" />
+              </button>
+            </div>
+          ) : (
+            <div className="relative hidden shrink-0 flex-wrap items-center gap-3 md:flex md:w-auto md:justify-end">
+              <ThemeToggle />
+              <button
+                type="button"
+                onClick={() => navigate('/login')}
+                className="rounded-2xl border border-sky-200/80 bg-white px-5 py-3 text-sm font-medium text-sky-800 shadow-sm transition hover:-translate-y-0.5 dark:border-cyan-300/40 dark:bg-slate-900/70 dark:text-cyan-100 dark:shadow-lg dark:shadow-cyan-950/40"
+              >
+                Đăng nhập
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/register')}
+                className="rounded-2xl border border-orange-200/80 bg-[linear-gradient(135deg,#ffd36a_0%,#fb923c_100%)] px-5 py-3 text-sm font-medium text-white shadow-md shadow-orange-200/40 transition hover:-translate-y-0.5 dark:border-fuchsia-300/40 dark:bg-gradient-to-r dark:from-fuchsia-500/70 dark:to-violet-600/80 dark:shadow-fuchsia-950/40"
+              >
+                Đăng ký
+              </button>
+            </div>
+          )}
+        </header>
         {isAdmin && allAssignments.length > 0 && (
           <section
             className="mb-6 rounded-[28px] border border-amber-200/60 bg-[linear-gradient(135deg,#fffbeb_0%,#fff7ed_100%)] p-5 shadow-md shadow-amber-100/50 dark:border-amber-300/25 dark:bg-gradient-to-br dark:from-amber-950/50 dark:to-slate-950/60 dark:shadow-lg dark:shadow-amber-950/20"
@@ -621,7 +664,7 @@ function AssignmentsList() {
 
         {/* Filters + quick actions */}
         <section className="mb-8 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="rounded-[28px] border border-sky-200/70 bg-white/72 p-5 shadow-[0_12px_32px_rgba(86,132,214,0.08)] backdrop-blur-xl dark:border-cyan-300/15 dark:bg-white/5 dark:shadow-none">
+          <div className="hidden rounded-[28px] border border-sky-200/70 bg-white/72 p-5 shadow-[0_12px_32px_rgba(86,132,214,0.08)] backdrop-blur-xl dark:border-cyan-300/15 dark:bg-white/5 dark:shadow-none md:block">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-slate-800 dark:text-white">Bộ lọc thời gian</h2>
               <div className="mx-4 h-px flex-1 bg-[linear-gradient(90deg,#7fb7ff,#ffd36a,#ff8d4d)] opacity-80 dark:bg-gradient-to-r dark:from-cyan-300/30 dark:to-transparent" />
@@ -739,20 +782,6 @@ function AssignmentsList() {
           </div>
 
           <div className="rounded-[28px] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,255,255,0.85),rgba(255,251,245,0.92))] p-5 shadow-[0_12px_32px_rgba(86,132,214,0.09)] backdrop-blur-xl dark:border-cyan-300/15 dark:bg-gradient-to-br dark:from-cyan-400/10 dark:via-sky-400/5 dark:to-blue-500/10 dark:shadow-none">
-            <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#dcebff,#fff1b8)] text-lg text-sky-700 dark:bg-cyan-300/10 dark:text-cyan-200">
-                ✦
-              </div>
-              <div>
-                <h3 className="font-semibold text-slate-800 dark:text-white">Thống kê nhanh</h3>
-                <p className="text-sm text-slate-600 dark:text-slate-200">
-                  {filteredAssignments.length} bài tập trong{' '}
-                  {isTeacher || isAdmin
-                    ? formatDateHeader(selectedDate)
-                    : formatMonthYear(selectedYear, selectedMonth)}
-                </p>
-              </div>
-            </div>
             <div className="space-y-3">
               {isStudent && (
                 <button
@@ -828,27 +857,20 @@ function AssignmentsList() {
               >
                 ↻ Làm mới dữ liệu
               </button>
-              {isTeacher && (
-                <p className="rounded-2xl border border-sky-100/80 bg-sky-50/80 px-3 py-2 text-center text-xs leading-snug text-sky-900/90 dark:border-cyan-400/20 dark:bg-slate-800/80 dark:text-cyan-100/90">
-                  Chọn bài trong danh sách phía dưới, rồi dùng <strong>Gán</strong> và{' '}
-                  <strong>Xóa</strong> trên <strong>thanh cố định cuối màn hình</strong>.
-                </p>
-              )}
-
             </div>
           </div>
         </section>
 
         {/* Timeline banner */}
-        <section className="mb-6">
-          <div className="rounded-[32px] bg-[linear-gradient(135deg,#8fc2ff_0%,#5aa3ff_22%,#ffd36a_58%,#ff8d4d_100%)] p-[1px] shadow-[0_18px_42px_rgba(86,132,214,0.14)] dark:rounded-[28px] dark:bg-none dark:p-0 dark:shadow-2xl dark:shadow-sky-950/30">
-            <div className="relative overflow-hidden rounded-[31px] bg-[linear-gradient(135deg,rgba(255,255,255,0.55),rgba(255,255,255,0.35))] px-6 py-5 text-slate-900 shadow-inner backdrop-blur-xl dark:rounded-[28px] dark:border dark:border-cyan-300/20 dark:bg-gradient-to-r dark:from-blue-500/70 dark:via-sky-500/65 dark:to-violet-600/60 dark:text-white dark:shadow-none">
+        <section className="mb-4 md:mb-6">
+          <div className="rounded-2xl bg-[linear-gradient(135deg,#8fc2ff_0%,#5aa3ff_22%,#ffd36a_58%,#ff8d4d_100%)] p-px shadow-[0_12px_28px_rgba(86,132,214,0.12)] dark:rounded-2xl dark:bg-none dark:p-0 dark:shadow-2xl dark:shadow-sky-950/30 md:rounded-[32px] md:shadow-[0_18px_42px_rgba(86,132,214,0.14)] md:dark:rounded-[28px]">
+            <div className="relative overflow-hidden rounded-[calc(1rem-1px)] bg-[linear-gradient(135deg,rgba(255,255,255,0.55),rgba(255,255,255,0.35))] px-4 py-3 text-slate-900 shadow-inner backdrop-blur-xl dark:rounded-[calc(1rem-1px)] dark:border dark:border-cyan-300/20 dark:bg-gradient-to-r dark:from-blue-500/70 dark:via-sky-500/65 dark:to-violet-600/60 dark:text-white dark:shadow-none md:rounded-[31px] md:px-6 md:py-5 md:dark:rounded-[28px]">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.5),transparent_22%),radial-gradient(circle_at_80%_0%,rgba(255,211,106,0.2),transparent_20%)] dark:bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.18),transparent_20%),radial-gradient(circle_at_80%_0%,rgba(255,255,255,0.14),transparent_18%)]" />
               <div className="relative">
-                <p className="text-xs uppercase tracking-[0.3em] text-sky-800/80 dark:text-cyan-50/75">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-sky-800/80 dark:text-cyan-50/75 md:text-xs md:tracking-[0.3em]">
                   Mốc thời gian
                 </p>
-                <h2 className="mt-1 text-2xl font-semibold text-slate-900 dark:text-white">
+                <h2 className="mt-0.5 break-words text-base font-semibold leading-snug text-slate-900 dark:text-white sm:text-lg md:mt-1 md:text-2xl">
                   {isTeacher || isAdmin
                     ? formatDateHeader(selectedDate)
                     : `Tháng ${selectedMonth}, ${selectedYear}`}
@@ -883,8 +905,8 @@ function AssignmentsList() {
           </div>
         ) : (
           <>
-            {/* Stats line */}
-            <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sky-300/60 bg-[linear-gradient(135deg,rgba(224,242,254,0.95),rgba(255,247,237,0.92))] px-4 py-3.5 shadow-[0_8px_24px_rgba(56,130,246,0.12)] dark:border-cyan-400/35 dark:bg-gradient-to-r dark:from-slate-900 dark:via-sky-950/80 dark:to-blue-950/70 dark:shadow-cyan-950/20">
+            {/* Stats line (md+) */}
+            <div className="mb-6 hidden flex-wrap items-center justify-between gap-3 rounded-2xl border border-sky-300/60 bg-[linear-gradient(135deg,rgba(224,242,254,0.95),rgba(255,247,237,0.92))] px-4 py-3.5 shadow-[0_8px_24px_rgba(56,130,246,0.12)] dark:border-cyan-400/35 dark:bg-gradient-to-r dark:from-slate-900 dark:via-sky-950/80 dark:to-blue-950/70 dark:shadow-cyan-950/20 md:flex">
               <span className="text-base font-bold leading-snug text-sky-950 sm:text-lg dark:text-cyan-50">
                 Tổng số:{' '}
                 <span className="tabular-nums text-orange-600 dark:text-amber-300">
