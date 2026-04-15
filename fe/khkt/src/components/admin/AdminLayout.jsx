@@ -19,10 +19,18 @@ export default function AdminLayout() {
     return <OceanPageLoading message="Đang tải bảng quản trị..." />;
   }
 
+  const isAdminSubRoute = !adminHomeMatch;
+
   return (
     <OceanShell>
       <div className="admin-dashboard">
-        {adminHomeMatch ? (
+        <div
+          className={
+            isAdminSubRoute
+              ? 'admin-layout-ocean-header admin-layout-ocean-header--subroute-desktop'
+              : 'admin-layout-ocean-header'
+          }
+        >
           <OceanListPageHeader
             user={user}
             isAuthenticated
@@ -31,8 +39,9 @@ export default function AdminLayout() {
             navigate={navigate}
             logout={logout}
           />
-        ) : (
-          <div className="admin-header admin-header--compact">
+        </div>
+        {isAdminSubRoute && (
+          <div className="admin-header admin-header--compact admin-layout-compact-header--subroute-mobile">
             <div className="header-actions">
               <button
                 type="button"

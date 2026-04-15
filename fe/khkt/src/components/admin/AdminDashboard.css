@@ -6,6 +6,27 @@
   margin: 0 auto;
 }
 
+/* Giáo viên / Học sinh: banner Ocean trên màn lớn; bar gọn trên mobile. */
+.admin-layout-ocean-header--subroute-desktop {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .admin-layout-ocean-header--subroute-desktop {
+    display: block;
+  }
+}
+
+.admin-layout-compact-header--subroute-mobile {
+  display: block;
+}
+
+@media (min-width: 768px) {
+  .admin-layout-compact-header--subroute-mobile {
+    display: none;
+  }
+}
+
 .admin-header {
   display: flex;
   justify-content: space-between;
