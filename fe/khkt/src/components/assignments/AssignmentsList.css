@@ -97,14 +97,6 @@
   border-color: #da190b;
 }
 
-.header-actions {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
-}
-
 .filter-section {
   margin-bottom: 2rem;
   padding: 1.5rem;
@@ -758,11 +750,6 @@
 
   .assignments-grid {
     grid-template-columns: 1fr;
-  }
-
-  .header-actions {
-    width: 100%;
-    flex-direction: column;
   }
 
   .create-text,

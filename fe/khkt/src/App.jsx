@@ -7,7 +7,7 @@ import AssignmentDetail from './components/assignments/AssignmentDetail'
 import AuthPage from './components/auth/AuthPage'
 import Login from './components/auth/Login'
 import Register from './components/auth/Register'
-import AdminDashboard from './components/admin/AdminDashboard'
+import AdminApp from './components/admin/AdminApp'
 import MySubmissions from './components/submissions/MySubmissions'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import { OceanPageLoading } from './components/layout/OceanShell'
@@ -41,13 +41,13 @@ function AppRoutes() {
       />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-      <Route 
-        path="/admin" 
+      <Route
+        path="/admin/*"
         element={
           <ProtectedRoute requiredRole="admin">
-            <AdminDashboard />
+            <AdminApp />
           </ProtectedRoute>
-        } 
+        }
       />
       <Route path="/assignments" element={<AssignmentsList />} />
       <Route 
