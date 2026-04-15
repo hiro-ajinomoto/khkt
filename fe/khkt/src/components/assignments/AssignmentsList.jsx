@@ -423,13 +423,8 @@ function AssignmentsList() {
     });
   };
 
-  const formatMonthYear = (year, month) => {
-    const date = new Date(year, month - 1, 1);
-    return date.toLocaleDateString('vi-VN', {
-      year: 'numeric',
-      month: 'long',
-    });
-  };
+  const formatMonthYear = (year, month) =>
+    `tháng ${month} năm ${year}`;
 
   // Get available dates for teacher date selector (from all assignments)
   const availableDates = useMemo(() => {
@@ -889,18 +884,37 @@ function AssignmentsList() {
         ) : (
           <>
             {/* Stats line */}
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600 dark:text-slate-200">
-              <span>
-                Tổng số: {filteredAssignments.length} bài tập
-                {isTeacher || isAdmin
-                  ? ` vào ngày ${formatDateHeader(selectedDate)}`
-                  : ` trong tháng ${formatMonthYear(selectedYear, selectedMonth)}`}
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sky-300/60 bg-[linear-gradient(135deg,rgba(224,242,254,0.95),rgba(255,247,237,0.92))] px-4 py-3.5 shadow-[0_8px_24px_rgba(56,130,246,0.12)] dark:border-cyan-400/35 dark:bg-gradient-to-r dark:from-slate-900 dark:via-sky-950/80 dark:to-blue-950/70 dark:shadow-cyan-950/20">
+              <span className="text-base font-bold leading-snug text-sky-950 sm:text-lg dark:text-cyan-50">
+                Tổng số:{' '}
+                <span className="tabular-nums text-orange-600 dark:text-amber-300">
+                  {filteredAssignments.length}
+                </span>{' '}
+                bài tập
+                {isTeacher || isAdmin ? (
+                  <>
+                    {' '}
+                    <span className="font-semibold text-sky-800 dark:text-cyan-100">
+                      vào ngày {formatDateHeader(selectedDate)}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    {' '}
+                    <span className="font-semibold text-sky-800 dark:text-cyan-100">
+                      trong {formatMonthYear(selectedYear, selectedMonth)}
+                    </span>
+                  </>
+                )}
                 {isStudent && studentOnlyUnsubmitted && (
-                  <span className="text-sky-700 dark:text-cyan-200/90"> · lọc: tôi chưa nộp</span>
+                  <span className="font-semibold text-orange-700 dark:text-amber-200">
+                    {' '}
+                    · lọc: tôi chưa nộp
+                  </span>
                 )}
               </span>
               {isTeacher && selectedIds.size > 0 && (
-                <span className="rounded-full border border-sky-200/80 bg-sky-50 px-3 py-1 text-xs text-sky-800 dark:border-cyan-300/30 dark:bg-cyan-500/10 dark:text-cyan-100">
+                <span className="rounded-full border border-sky-200/80 bg-sky-50 px-3 py-1.5 text-sm font-semibold text-sky-900 dark:border-cyan-300/30 dark:bg-cyan-500/15 dark:text-cyan-100">
                   Đã chọn: {selectedIds.size}
                 </span>
               )}
@@ -911,7 +925,7 @@ function AssignmentsList() {
               <div className="space-y-6">
                 {Object.entries(filteredAndGroupedByDate).map(([date, assignments]) => (
                   <div key={date} className="space-y-4">
-                    <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">
+                    <h2 className="border-b-2 border-sky-300/70 pb-2 text-lg font-bold tracking-tight text-slate-900 dark:border-cyan-500/40 dark:text-white sm:text-xl md:text-2xl">
                       {formatDateHeader(date)}
                     </h2>
                     <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6 [&>*]:h-full [&>*]:min-h-0">
@@ -947,7 +961,7 @@ function AssignmentsList() {
                   {Object.entries(filteredAndGroupedByDateInMonth).map(
                     ([date, assignments]) => (
                       <div key={date} className="space-y-4">
-                        <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">
+                        <h2 className="border-b-2 border-sky-300/70 pb-2 text-lg font-bold tracking-tight text-slate-900 dark:border-cyan-500/40 dark:text-white sm:text-xl md:text-2xl">
                           {formatDateHeader(date)}
                         </h2>
                         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6 [&>*]:h-full [&>*]:min-h-0">
