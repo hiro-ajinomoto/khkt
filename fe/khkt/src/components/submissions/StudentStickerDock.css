@@ -1,5 +1,21 @@
 /* Bear mascot + sticker count on the sign — left side */
 
+.student-sticker-bloom__hit {
+  pointer-events: auto;
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  border-radius: 0.95rem;
+  outline: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.student-sticker-bloom__hit:focus-visible {
+  outline: 3px solid rgba(14, 165, 233, 0.85);
+  outline-offset: 3px;
+}
+
 .student-sticker-bloom {
   position: fixed;
   left: max(0.35rem, env(safe-area-inset-left, 0px));

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchMyStickers } from '../../api/submissions';
 import './StudentStickerDock.css';
@@ -87,17 +88,23 @@ export default function StudentStickerDock() {
       aria-label={`Sticker: ${total}`}
     >
       <div className="student-sticker-bloom__inner">
-        <div className="student-sticker-bloom__figure">
-          <img
-            className="student-sticker-bloom__img"
-            src={BEAR_SRC}
-            alt=""
-            width={682}
-            height={1024}
-            decoding="async"
-          />
-          <span className="student-sticker-bloom__count-on-sign">{total}</span>
-        </div>
+        <Link
+          to="/sticker-rewards"
+          className="student-sticker-bloom__hit"
+          aria-label={'\u0110\u1ebfn trang \u0111\u1ed5i qu\u00e0 sticker'}
+        >
+          <div className="student-sticker-bloom__figure">
+            <img
+              className="student-sticker-bloom__img"
+              src={BEAR_SRC}
+              alt=""
+              width={682}
+              height={1024}
+              decoding="async"
+            />
+            <span className="student-sticker-bloom__count-on-sign">{total}</span>
+          </div>
+        </Link>
       </div>
     </div>
   );

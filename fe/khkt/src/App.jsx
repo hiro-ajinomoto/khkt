@@ -9,6 +9,7 @@ import Login from './components/auth/Login'
 import Register from './components/auth/Register'
 import AdminApp from './components/admin/AdminApp'
 import MySubmissions from './components/submissions/MySubmissions'
+import StickerRedeem from './components/submissions/StickerRedeem'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import { OceanPageLoading } from './components/layout/OceanShell'
 import StudentStickerDock from './components/submissions/StudentStickerDock'
@@ -75,6 +76,14 @@ function AppRoutes() {
             <MySubmissions />
           </ProtectedRoute>
         } 
+      />
+      <Route
+        path="/sticker-rewards"
+        element={
+          <ProtectedRoute requiredRole="student">
+            <StickerRedeem />
+          </ProtectedRoute>
+        }
       />
       <Route path="/500" element={<ServerErrorPage />} />
       <Route path="*" element={<NotFoundPage />} />
