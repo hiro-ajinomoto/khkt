@@ -283,7 +283,8 @@ async function mapAssignmentDocToApi(item, creatorMap, listCtx = null) {
  * GET /assignments
  * List assignments
  * - Students: only see assignments assigned to their class
- * - Teachers/Admins: see all assignments (their own assignments)
+ * - Teachers/Admins: see all assignments
+ * - Unauthenticated: always []
  */
 router.get("/", optionalAuthenticate, async (req, res) => {
   try {
@@ -375,7 +376,6 @@ router.get("/", optionalAuthenticate, async (req, res) => {
       query = {};
       console.log("Teacher/Admin query: {} (all assignments)");
     } else {
-      // Unauthenticated users see nothing
       console.log("Unauthenticated user, returning empty array");
       return res.json([]);
     }
@@ -539,10 +539,16 @@ router.get("/:id", optionalAuthenticate, async (req, res) => {
       return res.status(404).json({ detail: "Assignment not found" });
     }
 
-    const isTeacherOrAdmin =
-      req.user && (req.user.role === "teacher" || req.user.role === "admin");
+    if (!req.user) {
+      return res.status(401).json({
+        detail: "Vui lòng đăng nhập để xem bài tập.",
+      });
+    }
 
-    if (req.user?.role === "student") {
+    const isTeacherOrAdmin =
+      req.user.role === "teacher" || req.user.role === "admin";
+
+    if (req.user.role === "student") {
       const student = await db.collection("users").findOne({
         _id: ObjectId.createFromHexString(req.user.id),
       });

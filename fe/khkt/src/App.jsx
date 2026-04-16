@@ -27,8 +27,8 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route 
-        path="/" 
+      <Route
+        path="/"
         element={
           isAuthenticated ? (
             isAdmin ? (
@@ -39,7 +39,7 @@ function AppRoutes() {
           ) : (
             <AuthPage />
           )
-        } 
+        }
       />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
@@ -51,7 +51,14 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      <Route path="/assignments" element={<AssignmentsList />} />
+      <Route
+        path="/assignments"
+        element={
+          <ProtectedRoute>
+            <AssignmentsList />
+          </ProtectedRoute>
+        }
+      />
       <Route 
         path="/assignments/create" 
         element={
@@ -68,7 +75,14 @@ function AppRoutes() {
           </ProtectedRoute>
         } 
       />
-      <Route path="/assignments/:id" element={<AssignmentDetail />} />
+      <Route
+        path="/assignments/:id"
+        element={
+          <ProtectedRoute>
+            <AssignmentDetail />
+          </ProtectedRoute>
+        }
+      />
       <Route 
         path="/my-submissions" 
         element={
