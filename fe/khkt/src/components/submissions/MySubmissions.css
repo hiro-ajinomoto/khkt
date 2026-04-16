@@ -49,10 +49,11 @@
   font-weight: 600;
 }
 
-.my-submissions-header p {
+.my-submissions-header .my-submissions-lede {
   margin: 0;
-  color: #94a3b8;
+  color: var(--ocean-text-muted);
   font-size: 1rem;
+  line-height: 1.5;
 }
 
 .loading,
@@ -199,6 +200,18 @@
 .submission-score {
   font-size: 1.45rem;
   font-weight: 800;
+}
+
+.submission-score--high {
+  color: #34d399;
+}
+
+.submission-score--mid {
+  color: #fbbf24;
+}
+
+.submission-score--low {
+  color: #f87171;
 }
 
 .submission-card-actions {
@@ -390,6 +403,131 @@ html:not(.dark) .my-submissions-container .sticker-tier-item {
 html:not(.dark) .my-submissions-container .sticker-tier-item--completion {
   background: rgba(253, 242, 248, 0.85);
   border-color: rgba(236, 72, 153, 0.35);
+}
+
+/* Light theme: high contrast like AssignmentDetail (light surfaces, dark text) */
+html:not(.dark) .my-submissions-header .ocean-page-eyebrow {
+  color: #0369a1;
+}
+
+html:not(.dark) .my-submissions-header h1 {
+  color: #0f172a;
+}
+
+html:not(.dark) .my-submissions-header .my-submissions-lede {
+  color: #334155;
+}
+
+html:not(.dark) .my-submissions-container .back-button {
+  border-color: rgba(14, 116, 200, 0.4);
+  background: linear-gradient(135deg, #ffffff 0%, #e0f2fe 100%);
+  color: #0c4a6e;
+  box-shadow: 0 4px 14px rgba(86, 132, 214, 0.14);
+}
+
+html:not(.dark) .my-submissions-container .back-button:hover {
+  border-color: rgba(2, 132, 199, 0.55);
+  color: #075985;
+  box-shadow: 0 8px 22px rgba(86, 132, 214, 0.2);
+}
+
+html:not(.dark) .my-submissions-container .submissions-stats {
+  border-color: rgba(79, 143, 232, 0.18);
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: var(--ocean-shadow-panel);
+}
+
+html:not(.dark) .my-submissions-container .stat-label {
+  color: #64748b;
+}
+
+html:not(.dark) .my-submissions-container .stat-value {
+  color: #0f172a;
+}
+
+html:not(.dark) .my-submissions-container .submission-card {
+  border-color: rgba(79, 143, 232, 0.2);
+  background: var(--ocean-surface-raised);
+  box-shadow: var(--ocean-shadow-panel);
+}
+
+html:not(.dark) .my-submissions-container .submission-card:hover {
+  border-color: rgba(14, 116, 200, 0.35);
+  box-shadow: 0 20px 48px rgba(86, 132, 214, 0.14);
+}
+
+html:not(.dark) .my-submissions-container .submission-info h3 {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+html:not(.dark) .my-submissions-container .submission-date {
+  color: #475569;
+}
+
+html:not(.dark) .my-submissions-container .submission-details {
+  border-top-color: rgba(15, 23, 42, 0.1);
+}
+
+html:not(.dark) .my-submissions-container .view-details-button {
+  border-color: rgba(2, 132, 199, 0.45);
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  color: #ffffff;
+}
+
+html:not(.dark) .my-submissions-container .view-details-button:hover {
+  box-shadow: 0 8px 20px rgba(2, 132, 199, 0.28);
+}
+
+html:not(.dark) .my-submissions-container .view-assignment-button {
+  border-color: rgba(5, 150, 105, 0.45);
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  color: #ffffff;
+}
+
+html:not(.dark) .my-submissions-container .view-assignment-button:hover {
+  box-shadow: 0 8px 20px rgba(5, 150, 105, 0.25);
+}
+
+html:not(.dark) .my-submissions-container .empty-state {
+  border-color: rgba(79, 143, 232, 0.16);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--ocean-shadow-panel);
+}
+
+html:not(.dark) .my-submissions-container .empty-state p {
+  color: #334155;
+}
+
+html:not(.dark) .my-submissions-container .sticker-summary-card {
+  border-color: rgba(236, 72, 153, 0.22);
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(240, 249, 255, 0.92) 45%,
+    rgba(255, 251, 235, 0.9) 100%
+  );
+  box-shadow: var(--ocean-shadow-panel);
+}
+
+html:not(.dark) .my-submissions-container .sticker-summary-hint {
+  color: #64748b;
+}
+
+html:not(.dark) .my-submissions-container .sticker-load-hint {
+  color: #b45309;
+}
+
+html:not(.dark) .my-submissions-container .submission-score--high {
+  color: #047857;
+}
+
+html:not(.dark) .my-submissions-container .submission-score--mid {
+  color: #b45309;
+}
+
+html:not(.dark) .my-submissions-container .submission-score--low {
+  color: #b91c1c;
 }
 
 @media (max-width: 768px) {

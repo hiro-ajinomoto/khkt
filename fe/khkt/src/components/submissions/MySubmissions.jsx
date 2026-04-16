@@ -58,10 +58,10 @@ function MySubmissions() {
     });
   };
 
-  const getScoreColor = (score) => {
-    if (score >= 8) return '#10b981';
-    if (score >= 6) return '#d97706';
-    return '#dc2626';
+  const scoreTierClass = (score) => {
+    if (score >= 8) return 'submission-score--high';
+    if (score >= 6) return 'submission-score--mid';
+    return 'submission-score--low';
   };
 
   if (loading) {
@@ -85,7 +85,9 @@ function MySubmissions() {
         </div>
         <p className="ocean-page-eyebrow">Cuộc thi khoa học kỹ thuật</p>
         <h1>Bài tập đã nộp</h1>
-        <p>Xem lại các bài tập bạn đã nộp và kết quả chấm điểm</p>
+        <p className="my-submissions-lede">
+          Xem lại các bài tập bạn đã nộp và kết quả chấm điểm
+        </p>
       </div>
 
       {stickerStats && (
@@ -181,8 +183,7 @@ function MySubmissions() {
                   </div>
                   {submission.ai_result?.score !== undefined && (
                     <div
-                      className="submission-score"
-                      style={{ color: getScoreColor(submission.ai_result.score) }}
+                      className={`submission-score ${scoreTierClass(submission.ai_result.score)}`}
                     >
                       {submission.ai_result.score}/10
                     </div>
