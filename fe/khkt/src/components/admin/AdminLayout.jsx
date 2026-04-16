@@ -100,6 +100,9 @@ export default function AdminLayout() {
           <NavLink to="/admin/users/students" className={subnavClass}>
             Học sinh
           </NavLink>
+          <NavLink to="/admin/sticker-redeem" className={subnavClass}>
+            Đổi quà sticker
+          </NavLink>
         </nav>
 
         {error && (

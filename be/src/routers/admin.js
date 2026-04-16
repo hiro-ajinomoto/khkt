@@ -9,6 +9,12 @@ import {
   removeClassDocument,
   renameClassDocument,
 } from '../schoolClasses.js';
+import {
+  getStickerRedeemOverviewForAllStudents,
+  getStudentRedeemedTotal,
+  getStudentStickerEarnedTotal,
+  isValidRedemptionCost,
+} from '../utils/stickerRedemptions.js';
 
 const router = express.Router();
 
@@ -308,6 +314,179 @@ router.delete('/users/:id', async (req, res) => {
   } catch (error) {
     console.error('Error deleting user:', error);
     res.status(500).json({ detail: 'Failed to delete user' });
+  }
+});
+
+/**
+ * GET /admin/sticker-redeem/overview
+ * All students with earned / redeemed / available sticker counts.
+ */
+router.get('/sticker-redeem/overview', async (req, res) => {
+  try {
+    const db = getDB();
+    const rows = await getStickerRedeemOverviewForAllStudents(db);
+    res.json({ students: rows });
+  } catch (error) {
+    console.error('Error sticker-redeem overview:', error);
+    res.status(500).json({ detail: 'Failed to load sticker redeem overview' });
+  }
+});
+
+/**
+ * GET /admin/sticker-redeem/history/:studentId
+ */
+router.get('/sticker-redeem/history/:studentId', async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    let studentOid;
+    try {
+      studentOid = ObjectId.createFromHexString(studentId);
+    } catch {
+      return res.status(400).json({ detail: 'Invalid student id' });
+    }
+
+    const db = getDB();
+    const student = await db.collection('users').findOne({
+      _id: studentOid,
+      role: 'student',
+    });
+    if (!student) {
+      return res.status(404).json({ detail: 'Student not found' });
+    }
+
+    const list = await db
+      .collection('sticker_redemptions')
+      .find({ student_id: studentOid })
+      .sort({ created_at: -1 })
+      .limit(100)
+      .toArray();
+
+    const adminIds = [...new Set(list.map((r) => r.created_by.toString()))];
+    const adminOids = adminIds.map((id) => ObjectId.createFromHexString(id));
+    const admins = await db
+      .collection('users')
+      .find({ _id: { $in: adminOids } })
+      .project({ username: 1, name: 1 })
+      .toArray();
+    const adminMap = new Map(
+      admins.map((a) => [
+        a._id.toString(),
+        a.name || a.username,
+      ])
+    );
+
+    res.json({
+      student: {
+        id: student._id.toString(),
+        username: student.username,
+        name: student.name || student.username,
+        class_name: student.class_name || null,
+      },
+      redemptions: list.map((r) => ({
+        id: r._id.toString(),
+        sticker_cost: r.sticker_cost,
+        gift_summary: r.gift_summary,
+        created_at: r.created_at,
+        created_by_name: adminMap.get(r.created_by.toString()) || '—',
+      })),
+    });
+  } catch (error) {
+    console.error('Error sticker-redeem history:', error);
+    res.status(500).json({ detail: 'Failed to load redemption history' });
+  }
+});
+
+/**
+ * POST /admin/sticker-redeem
+ * Body: { student_id, sticker_cost: 30|180|220, gift_summary: string }
+ */
+router.post('/sticker-redeem', async (req, res) => {
+  try {
+    const { student_id, sticker_cost, gift_summary } = req.body;
+
+    if (!student_id || typeof student_id !== 'string') {
+      return res.status(400).json({ detail: 'student_id is required' });
+    }
+
+    if (!isValidRedemptionCost(sticker_cost)) {
+      return res.status(400).json({
+        detail: 'sticker_cost must be 30, 180, or 220',
+      });
+    }
+
+    const cost = Number(sticker_cost);
+    const summary =
+      typeof gift_summary === 'string' ? gift_summary.trim() : '';
+    if (summary.length < 1 || summary.length > 500) {
+      return res.status(400).json({
+        detail: 'gift_summary must be 1–500 characters',
+      });
+    }
+
+    let studentOid;
+    try {
+      studentOid = ObjectId.createFromHexString(student_id);
+    } catch {
+      return res.status(400).json({ detail: 'Invalid student id' });
+    }
+
+    const db = getDB();
+    const student = await db.collection('users').findOne({
+      _id: studentOid,
+      role: 'student',
+    });
+    if (!student) {
+      return res.status(404).json({ detail: 'Student not found' });
+    }
+
+    const earned = await getStudentStickerEarnedTotal(db, studentOid);
+    const redeemed = await getStudentRedeemedTotal(db, studentOid);
+    const available = Math.max(0, earned - redeemed);
+
+    if (available < cost) {
+      return res.status(400).json({
+        detail: `Kh\u00f4ng \u0111\u1ee7 sticker: c\u00f2n ${available}, c\u1ea7n ${cost}.`,
+      });
+    }
+
+    let adminOid;
+    try {
+      adminOid = ObjectId.createFromHexString(req.user.id);
+    } catch {
+      return res.status(500).json({ detail: 'Invalid admin session' });
+    }
+
+    const doc = {
+      student_id: studentOid,
+      sticker_cost: cost,
+      gift_summary: summary,
+      created_by: adminOid,
+      created_at: new Date(),
+    };
+
+    const ins = await db.collection('sticker_redemptions').insertOne(doc);
+
+    const newRedeemed = redeemed + cost;
+    const newAvailable = Math.max(0, earned - newRedeemed);
+
+    res.status(201).json({
+      redemption: {
+        id: ins.insertedId.toString(),
+        sticker_cost: cost,
+        gift_summary: summary,
+        created_at: doc.created_at,
+      },
+      student: {
+        id: student._id.toString(),
+        username: student.username,
+        stickers_earned: earned,
+        stickers_redeemed: newRedeemed,
+        stickers_available: newAvailable,
+      },
+    });
+  } catch (error) {
+    console.error('Error creating sticker redemption:', error);
+    res.status(500).json({ detail: 'Failed to record redemption' });
   }
 });
 

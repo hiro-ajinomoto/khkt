@@ -142,9 +142,81 @@ export async function deleteUser(userId) {
 }
 
 /**
- * Get system statistics (admin only)
- * @returns {Promise<Object>} Statistics object
+ * Sticker redeem overview (admin): all students with balances.
+ * @returns {Promise<{ students: Array }>}
  */
+export async function fetchStickerRedeemOverview() {
+  const authHeader = getAuthHeader();
+  if (!authHeader) throw new Error('Authentication required');
+
+  const response = await fetch(`${API_BASE_URL}/admin/sticker-redeem/overview`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: authHeader,
+    },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Không tải được danh sách.');
+  }
+
+  return response.json();
+}
+
+/**
+ * @param {string} studentId
+ */
+export async function fetchStickerRedeemHistory(studentId) {
+  const authHeader = getAuthHeader();
+  if (!authHeader) throw new Error('Authentication required');
+
+  const response = await fetch(
+    `${API_BASE_URL}/admin/sticker-redeem/history/${encodeURIComponent(studentId)}`,
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: authHeader,
+      },
+      cache: 'no-store',
+    }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Không tải được lịch sử.');
+  }
+
+  return response.json();
+}
+
+/**
+ * @param {{ student_id: string, sticker_cost: number, gift_summary: string }} body
+ */
+export async function createStickerRedemption(body) {
+  const authHeader = getAuthHeader();
+  if (!authHeader) throw new Error('Authentication required');
+
+  const response = await fetch(`${API_BASE_URL}/admin/sticker-redeem`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: authHeader,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Không ghi nhận được.');
+  }
+
+  return response.json();
+}
+
 export async function fetchStats() {
   try {
     const authHeader = getAuthHeader();

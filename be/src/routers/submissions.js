@@ -21,6 +21,7 @@ import {
   scoreToStickerTier,
   stickerTierPublicMeta,
 } from "../utils/stickers.js";
+import { getStudentRedeemedTotal } from "../utils/stickerRedemptions.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -227,6 +228,12 @@ router.get("/my-stickers", authenticate, async (req, res) => {
       .toArray();
 
     const summary = computeStickerStatsFromSubmissionRows(submissions);
+    const stickersEarnedTotal = summary.total_sticker_count;
+    const stickersRedeemedTotal = await getStudentRedeemedTotal(db, studentId);
+    const total_sticker_count = Math.max(
+      0,
+      stickersEarnedTotal - stickersRedeemedTotal
+    );
 
     /** @type {Record<string, { code: string, label: string, emoji: string, count: number }>} */
     const by_tier_detail = {};
@@ -239,6 +246,9 @@ router.get("/my-stickers", authenticate, async (req, res) => {
 
     res.json({
       ...summary,
+      total_sticker_count,
+      stickers_earned_total: stickersEarnedTotal,
+      stickers_redeemed_total: stickersRedeemedTotal,
       by_tier_detail,
       completion_emoji: "\uD83C\uDF38",
       explanation:
