@@ -1,11 +1,11 @@
 /**
  * Giới hạn số lần nộp bài / học sinh / bài tập (giảm tải server).
- * 0 = không giới hạn; mặc định khi thiếu trường = 5; cho phép 3 | 5 | 10 | 0.
+ * 0 = không giới hạn; mặc định khi thiếu trường = 2; cho phép 2 | 3 | 5 | 10 | 0.
  */
 
-export const DEFAULT_MAX_SUBMISSIONS_PER_STUDENT = 5;
+export const DEFAULT_MAX_SUBMISSIONS_PER_STUDENT = 2;
 
-export const ALLOWED_MAX_SUBMISSIONS = Object.freeze([0, 3, 5, 10]);
+export const ALLOWED_MAX_SUBMISSIONS = Object.freeze([0, 2, 3, 5, 10]);
 
 /**
  * @param {unknown} raw — từ multipart body (string)
@@ -19,7 +19,7 @@ export function parseMaxSubmissionsRaw(raw) {
   if (Number.isNaN(n) || !ALLOWED_MAX_SUBMISSIONS.includes(n)) {
     return {
       error:
-        "Số lần nộp tối đa phải là 3, 5, 10 hoặc 0 (không giới hạn).",
+        "Số lần nộp tối đa phải là 2, 3, 5, 10 hoặc 0 (không giới hạn).",
     };
   }
   return { value: n };
@@ -36,12 +36,12 @@ export function resolveMaxSubmissionsLimit(assignment) {
   }
   const n = Number(v);
   if (n === 0) return Infinity;
-  if ([3, 5, 10].includes(n)) return n;
+  if (ALLOWED_MAX_SUBMISSIONS.includes(n) && n > 0) return n;
   return DEFAULT_MAX_SUBMISSIONS_PER_STUDENT;
 }
 
 /**
- * Giá trị lưu trong DB / trả về API (0 = không giới hạn; thiếu → 5)
+ * Giá trị lưu trong DB / trả về API (0 = không giới hạn; thiếu → 2)
  */
 export function storedMaxSubmissionsForApi(assignment) {
   const v = assignment?.max_submissions_per_student;

@@ -23,7 +23,7 @@ function EditAssignmentForm() {
     grade_level: '',
     available_from_date: '',
     due_date: '',
-    max_submissions_per_student: '5',
+    max_submissions_per_student: '2',
     question_image: null,
     model_solution_image: null,
     question_image_url: '',
@@ -54,7 +54,7 @@ function EditAssignmentForm() {
           available_from_date: assignment.available_from_date || '',
           due_date: assignment.due_date || '',
           max_submissions_per_student: String(
-            assignment.max_submissions_per_student ?? 5
+            assignment.max_submissions_per_student ?? 2
           ),
           question_image: null,
           model_solution_image: null,
@@ -179,7 +179,7 @@ function EditAssignmentForm() {
       formDataToSend.append('due_date', formData.due_date || '');
       formDataToSend.append(
         'max_submissions_per_student',
-        formData.max_submissions_per_student ?? '5'
+        formData.max_submissions_per_student ?? '2'
       );
 
       if (formData.question_image) {
@@ -346,8 +346,9 @@ function EditAssignmentForm() {
             onChange={handleInputChange}
             disabled={isSubmitting}
           >
+            <option value="2">2 lần (mặc định)</option>
             <option value="3">3 lần</option>
-            <option value="5">5 lần (mặc định)</option>
+            <option value="5">5 lần</option>
             <option value="10">10 lần</option>
             <option value="0">Không giới hạn</option>
           </select>

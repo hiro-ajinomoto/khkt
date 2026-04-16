@@ -1,13 +1,15 @@
-/** Đồng bộ logic với be/src/utils/submissionLimits.js — 0 = không giới hạn; mặc định 5 */
+/** Đồng bộ logic với be/src/utils/submissionLimits.js — 0 = không giới hạn; mặc định 2 */
+
+const CLIENT_ALLOWED_FINITE = [2, 3, 5, 10];
 
 export function resolveMaxSubmissionsClient(assignment) {
   const v = assignment?.max_submissions_per_student;
   if (v === 0 || v === '0') return Infinity;
-  if (v === undefined || v === null || v === '') return 5;
+  if (v === undefined || v === null || v === '') return 2;
   const n = Number(v);
   if (n === 0) return Infinity;
-  if ([3, 5, 10].includes(n)) return n;
-  return 5;
+  if (CLIENT_ALLOWED_FINITE.includes(n)) return n;
+  return 2;
 }
 
 export function isAtSubmissionLimit(assignment) {

@@ -23,8 +23,8 @@ const emptyFormData = () => ({
   available_from_date: '',
   /** YYYY-MM-DD — để trống = không giới hạn hạn nộp */
   due_date: '',
-  /** 3 | 5 | 10 | 0 (không giới hạn); mặc định 5 */
-  max_submissions_per_student: '5',
+  /** 2 | 3 | 5 | 10 | 0 (không giới hạn); mặc định 2 */
+  max_submissions_per_student: '2',
   question_image: null,
   model_solution_image: null,
   question_image_url: '',
@@ -189,7 +189,7 @@ function CreateAssignmentForm() {
       }
       formDataToSend.append(
         'max_submissions_per_student',
-        formData.max_submissions_per_student ?? '5'
+        formData.max_submissions_per_student ?? '2'
       );
 
       if (selectedClasses.length > 0) {
@@ -434,8 +434,9 @@ function CreateAssignmentForm() {
             onChange={handleInputChange}
             disabled={isSubmitting}
           >
+            <option value="2">2 lần (mặc định, giảm tải server)</option>
             <option value="3">3 lần</option>
-            <option value="5">5 lần (mặc định, giảm tải server)</option>
+            <option value="5">5 lần</option>
             <option value="10">10 lần</option>
             <option value="0">Không giới hạn</option>
           </select>
