@@ -1,4 +1,4 @@
-/* Bear mascot + sticker count on the sign — left side */
+/* Bear mascot + sticker count on the sign — bottom-left corner */
 
 @keyframes student-sticker-bloom-nudge {
   0%,
@@ -41,10 +41,9 @@
 
 .student-sticker-bloom {
   position: fixed;
-  left: max(0.35rem, env(safe-area-inset-left, 0px));
-  top: 50%;
+  left: max(0.5rem, env(safe-area-inset-left, 0px));
+  bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
   z-index: 850;
-  transform: translateY(-50%);
   pointer-events: none;
   transition:
     opacity 0.35s ease,
@@ -53,12 +52,12 @@
 
 .student-sticker-bloom--visible {
   opacity: 1;
-  transform: translateY(-50%) translateX(0) scale(1);
+  transform: translateX(0) scale(1);
 }
 
 .student-sticker-bloom--hidden-touch {
   opacity: 0;
-  transform: translateY(-50%) translateX(-0.75rem) scale(0.92);
+  transform: translateX(-0.75rem) scale(0.92);
 }
 
 .student-sticker-bloom__inner {
@@ -162,7 +161,7 @@ html.dark .student-sticker-bloom__figure {
 @media (min-width: 768px) {
   .student-sticker-bloom--hidden-touch {
     opacity: 1;
-    transform: translateY(-50%) translateX(0) scale(1);
+    transform: translateX(0) scale(1);
   }
 }
 
@@ -172,7 +171,7 @@ html.dark .student-sticker-bloom__figure {
   }
 
   .student-sticker-bloom--hidden-touch {
-    transform: translateY(-50%);
+    transform: none;
   }
 
   .student-sticker-bloom__inner {
