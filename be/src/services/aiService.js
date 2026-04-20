@@ -233,6 +233,58 @@ CRITICAL FORMATTING RULES FOR PRACTICE PROBLEMS:
 - "problem" field MUST contain ONLY the mathematical expression/equation itself. NO instruction text like "Giải phương trình:", "Tìm giá trị của", "Phân tích đa thức thành nhân tử:", etc.
 - "problem" field should be SHORT and CONCISE - just the math expression, nothing else.
 - "solution" field MUST contain ONLY the step-by-step solution, starting with the problem expression and showing each step.
+
+YÊU CẦU ĐA DẠNG DẠNG BÀI (BẮT BUỘC - KHÔNG ĐƯỢC VI PHẠM):
+Đây là quy tắc QUAN TRỌNG NHẤT cho "practiceSets". Mục tiêu: học sinh phải gặp NHIỀU DẠNG KHÁC NHAU, không bị lặp cùng một khuôn mẫu.
+
+1. Đa dạng TRONG CÙNG một nhóm ("similar" 4 bài, "remedial" 4 bài):
+   - 4 bài trong "similar" PHẢI thuộc 4 DẠNG CON KHÁC NHAU của cùng chủ đề với bài gốc.
+     Ví dụ nếu bài gốc là "phân tích đa thức thành nhân tử":
+       * Bài 1: Hằng đẳng thức bình phương ($a^2 \\pm 2ab + b^2$)
+       * Bài 2: Hiệu hai bình phương ($a^2 - b^2$)
+       * Bài 3: Tam thức bậc hai tách hạng tử ($x^2 + bx + c$ với $b, c$ khác hằng đẳng thức)
+       * Bài 4: Nhóm hạng tử hoặc đặt nhân tử chung ($ax + ay + bx + by$, $ax^3 + bx^2 + cx$...)
+     TUYỆT ĐỐI KHÔNG được sinh 4 bài cùng một khuôn (ví dụ cả 4 bài đều là "bình phương một tổng/hiệu").
+   - 4 bài trong "remedial" PHẢI thuộc 4 KỸ NĂNG NỀN TẢNG KHÁC NHAU mà bài gốc cần đến, không trùng nhau.
+     Ví dụ nếu bài gốc là "phân tích đa thức thành nhân tử":
+       * Bài 1: Nhận dạng hằng đẳng thức cơ bản ($a^2 + 2ab + b^2$)
+       * Bài 2: Đặt nhân tử chung đơn giản ($6x + 12$, $5x^2 - 10x$)
+       * Bài 3: Khai triển hằng đẳng thức để nhận dạng ngược ($(x+3)^2$)
+       * Bài 4: Phép tính với dấu âm / mở ngoặc ($-(2x - 5)$, $3x - (x + 2)$)
+
+2. Đa dạng về SỐ LIỆU và KÝ HIỆU giữa các bài:
+   - PHẢI dùng ít nhất 2-3 biến khác nhau trong 8 bài (ví dụ: $x$, $y$, $a$, $t$, $m$). Không dùng chỉ một biến duy nhất.
+   - PHẢI xen kẽ dấu: có bài hệ số dương, có bài hệ số âm, có bài hỗn hợp.
+   - Hệ số phải khác nhau rõ rệt giữa các bài (không sinh $x^2 - 2x + 1$, $x^2 - 4x + 4$, $x^2 + 6x + 9$, $x^2 + 4x + 4$ liền nhau — đều là bình phương hoàn chỉnh).
+   - Có thể thay đổi bậc (bậc 1, bậc 2, bậc 3 đơn giản) nếu chủ đề cho phép.
+
+3. Độ khó TĂNG DẦN bên trong mỗi nhóm:
+   - "remedial" sắp theo thứ tự từ dễ → khó để làm cầu nối về bài gốc.
+   - "similar" sắp theo thứ tự từ cùng độ khó → hơi khó hơn bài gốc một chút.
+
+4. Tự kiểm tra trước khi trả kết quả:
+   - Nếu nhận ra 2 bài trong cùng nhóm có CÙNG khuôn mẫu (ví dụ cả hai đều là $x^2 \\pm 2\\alpha x + \\alpha^2$), PHẢI viết lại bài thứ hai sang một dạng con khác.
+   - Nếu cả 4 bài trong "similar" đều cùng dạng con, PHẢI sinh lại toàn bộ nhóm.
+   - Nếu cả 4 bài "remedial" đều luyện cùng một kỹ năng, PHẢI sinh lại toàn bộ nhóm.
+
+VÍ DỤ SAI (TUYỆT ĐỐI KHÔNG ĐƯỢC LÀM):
+"similar" cho bài "phân tích $P = x^2 - 4x + 4$":
+[
+  { "problem": "$P = x^2 - 2x + 1$" },
+  { "problem": "$P = x^2 + 4x + 4$" },
+  { "problem": "$P = x^2 + 6x + 9$" },
+  { "problem": "$P = x^2 - 2x + 3$" }
+]
+LỖI: Cả 4 đều cùng khuôn $x^2 + bx + c$ dạng bình phương → thiếu đa dạng → BẮT BUỘC VIẾT LẠI.
+
+VÍ DỤ ĐÚNG:
+"similar" cho bài "phân tích $P = x^2 - 4x + 4$":
+[
+  { "problem": "$A = y^2 - 6y + 9$" }        // Bình phương hiệu (đổi biến)
+  { "problem": "$B = 4a^2 - 9$" }             // Hiệu hai bình phương
+  { "problem": "$C = t^2 + 5t + 6$" }         // Tam thức bậc hai tách hạng tử
+  { "problem": "$D = x^3 + 2x^2 - x - 2$" }  // Nhóm hạng tử, bậc 3
+]
 - FORMAT CHÍNH XÁC: 
   * Mỗi dòng là một bước toán học, ngay sau đó (cách một khoảng trắng) là giải thích trong dấu ngoặc đơn.
   * KHÔNG có dòng tiêu đề như "Phân tích đa thức thành nhân tử:", "Giải phương trình:", "Lời giải:", "Vậy", etc.
@@ -547,8 +599,10 @@ export async function gradeSubmissionWithAI(
     model: config.openai.model,
     messages: [{ role: "system", content: systemMessage }, userMessage],
     response_format: { type: "json_object" },
-    // Reasoning models don't support temperature parameter
-    ...(isReasoningModel ? {} : { temperature: 0.7 }),
+    // Reasoning models don't support temperature parameter.
+    // 0.85 tăng độ đa dạng cho practiceSets (sinh bài tập) mà vẫn giữ chấm ổn định
+    // nhờ prompt nghiêm ngặt + JSON schema + response_format: json_object.
+    ...(isReasoningModel ? {} : { temperature: 0.85 }),
   };
 
   // Log request payload structure (without base64 data) for debugging
