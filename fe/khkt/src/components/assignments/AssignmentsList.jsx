@@ -12,6 +12,7 @@ import {
   isAssignmentReleasedClient,
   deadlineReminderClient,
 } from '../../utils/assignmentRelease';
+import { resolveMaxSubmissionsClient } from '../../utils/submissionLimits';
 import './AssignmentsList.css';
 import ReportProblemDialog from './ReportProblemDialog';
 
@@ -61,6 +62,9 @@ function AssignmentsList() {
   const [submittedAssignmentIds, setSubmittedAssignmentIds] = useState(
     () => new Set()
   );
+  /** Học sinh: số lần đã nộp theo assignment_id (để hiển thị chip #N/M lần) */
+  const [submissionCountsByAssignment, setSubmissionCountsByAssignment] =
+    useState(() => new Map());
   /** Học sinh: chỉ hiện bài chưa nộp */
   const [studentOnlyUnsubmitted, setStudentOnlyUnsubmitted] = useState(false);
   /** Admin: null = tất cả GV; '' = bài cũ không có người tạo; string = id giáo viên */
@@ -124,14 +128,25 @@ function AssignmentsList() {
       if (isStudent) {
         try {
           const subs = await fetchMySubmissions();
-          setSubmittedAssignmentIds(
-            new Set(subs.map((s) => s.assignment_id))
-          );
+          const ids = new Set();
+          const counts = new Map();
+          subs.forEach((s) => {
+            if (!s?.assignment_id) return;
+            ids.add(s.assignment_id);
+            counts.set(
+              s.assignment_id,
+              (counts.get(s.assignment_id) || 0) + 1
+            );
+          });
+          setSubmittedAssignmentIds(ids);
+          setSubmissionCountsByAssignment(counts);
         } catch {
           setSubmittedAssignmentIds(new Set());
+          setSubmissionCountsByAssignment(new Map());
         }
       } else {
         setSubmittedAssignmentIds(new Set());
+        setSubmissionCountsByAssignment(new Map());
       }
 
       // Học sinh: nhảy tới tháng của bài mới nhất sau mỗi lần tải (tránh kẹt bộ lọc tháng cũ khi có bài mới)
@@ -968,6 +983,9 @@ function AssignmentsList() {
                               onAssign={handleAssign}
                               onReportProblem={handleReportProblem}
                               reportingAssignmentId={reportingAssignmentId}
+                              mySubmissionCount={
+                                submissionCountsByAssignment.get(assignment.id) || 0
+                              }
                             />
                           ))}
                         </section>
@@ -1071,7 +1089,17 @@ function AssignmentCard({
   onAssign,
   onReportProblem,
   reportingAssignmentId,
+  mySubmissionCount = 0,
 }) {
+  const maxSubmissions = resolveMaxSubmissionsClient(assignment);
+  const submissionQuotaHashtag = isStudent
+    ? Number.isFinite(maxSubmissions)
+      ? `#${mySubmissionCount}/${maxSubmissions} lần nộp`
+      : `#${mySubmissionCount} lần nộp`
+    : null;
+  const isAtLimit =
+    Number.isFinite(maxSubmissions) && mySubmissionCount >= maxSubmissions;
+  const hasSubmitted = mySubmissionCount > 0;
   const problemFlagged = Boolean(assignment.problem_flagged);
   const strTrim = (v) => (typeof v === 'string' ? v.trim() : '');
   const requirementPreview =
@@ -1231,6 +1259,26 @@ function AssignmentCard({
               title="Ngày tạo bài"
             >
               #{formatAssignmentDateHashtag(assignment)}
+            </span>
+          )}
+          {isStudent && submissionQuotaHashtag && (
+            <span
+              className={`rounded-xl border px-3 py-2 text-xs font-semibold tabular-nums ${
+                isAtLimit
+                  ? 'border-rose-300/60 bg-rose-100/80 text-rose-900 dark:border-rose-400/40 dark:bg-rose-950/55 dark:text-rose-100'
+                  : hasSubmitted
+                    ? 'border-emerald-300/60 bg-emerald-100/80 text-emerald-900 dark:border-emerald-400/40 dark:bg-emerald-950/55 dark:text-emerald-100'
+                    : 'border-slate-300/60 bg-slate-100/80 text-slate-700 dark:border-slate-500/40 dark:bg-slate-800/70 dark:text-slate-200'
+              }`}
+              title={
+                isAtLimit
+                  ? 'Bạn đã dùng hết số lần nộp cho bài này'
+                  : hasSubmitted
+                    ? 'Số lần bạn đã nộp / số lần tối đa'
+                    : 'Bạn chưa nộp bài này'
+              }
+            >
+              {submissionQuotaHashtag}
             </span>
           )}
         </div>
