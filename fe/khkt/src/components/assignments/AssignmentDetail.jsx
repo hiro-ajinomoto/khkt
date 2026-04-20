@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchAssignmentById } from '../../api/assignments';
 import { createSubmission } from '../../api/submissions';
+import { refreshStudentStickers } from '../submissions/studentStickersEvents';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   formatVNDateFromYMD,
@@ -97,6 +98,7 @@ function AssignmentDetail() {
       const result = await createSubmission(assignment.id, selectedFiles);
       setSubmission(result);
       setShowResult(true);
+      refreshStudentStickers();
 
       await loadAssignment();
 

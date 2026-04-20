@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchMyStickers } from '../../api/submissions';
+import { STUDENT_STICKERS_REFRESH_EVENT } from './studentStickersEvents';
 import './StudentStickerDock.css';
 
 const PHONE_IDLE_MS = 2200;
@@ -18,20 +19,46 @@ export default function StudentStickerDock() {
   const [stats, setStats] = useState(null);
   const [isPhone, setIsPhone] = useState(false);
   const [phoneVisible, setPhoneVisible] = useState(true);
+  const [justIncreased, setJustIncreased] = useState(false);
   const idleTimerRef = useRef(null);
+  const prevTotalRef = useRef(null);
+  const bumpTimerRef = useRef(null);
 
   useEffect(() => {
     if (!isAuthenticated || !isStudent || loading) return;
+
     let cancelled = false;
-    fetchMyStickers()
-      .then((data) => {
-        if (!cancelled) setStats(data);
-      })
-      .catch(() => {
-        if (!cancelled) setStats(null);
-      });
+    const reload = () => {
+      fetchMyStickers()
+        .then((data) => {
+          if (cancelled) return;
+          setStats(data);
+          const next = data?.total_sticker_count ?? 0;
+          const prev = prevTotalRef.current;
+          if (prev != null && next > prev) {
+            setJustIncreased(true);
+            if (bumpTimerRef.current) clearTimeout(bumpTimerRef.current);
+            bumpTimerRef.current = window.setTimeout(() => {
+              setJustIncreased(false);
+              bumpTimerRef.current = null;
+            }, 1500);
+          }
+          prevTotalRef.current = next;
+        })
+        .catch(() => {
+          if (!cancelled) setStats(null);
+        });
+    };
+
+    reload();
+    window.addEventListener(STUDENT_STICKERS_REFRESH_EVENT, reload);
     return () => {
       cancelled = true;
+      window.removeEventListener(STUDENT_STICKERS_REFRESH_EVENT, reload);
+      if (bumpTimerRef.current) {
+        clearTimeout(bumpTimerRef.current);
+        bumpTimerRef.current = null;
+      }
     };
   }, [isAuthenticated, isStudent, loading]);
 
@@ -93,7 +120,9 @@ export default function StudentStickerDock() {
           className="student-sticker-bloom__hit"
           aria-label={'\u0110\u1ebfn trang \u0111\u1ed5i qu\u00e0 sticker'}
         >
-          <div className="student-sticker-bloom__figure">
+          <div
+            className={`student-sticker-bloom__figure ${justIncreased ? 'student-sticker-bloom__figure--bump' : ''}`}
+          >
             <img
               className="student-sticker-bloom__img"
               src={BEAR_SRC}
@@ -102,7 +131,11 @@ export default function StudentStickerDock() {
               height={1024}
               decoding="async"
             />
-            <span className="student-sticker-bloom__count-on-sign">{total}</span>
+            <span
+              className={`student-sticker-bloom__count-on-sign ${justIncreased ? 'student-sticker-bloom__count-on-sign--pulse' : ''}`}
+            >
+              {total}
+            </span>
           </div>
         </Link>
       </div>
