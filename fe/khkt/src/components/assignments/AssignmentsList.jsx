@@ -363,6 +363,27 @@ function AssignmentsList() {
     });
   };
 
+  /**
+   * Chọn/bỏ chọn tất cả bài tập trong một nhóm ngày.
+   * - Nếu mọi bài trong ngày đã được chọn → bỏ chọn toàn bộ bài của ngày đó.
+   * - Ngược lại → thêm tất cả bài trong ngày vào danh sách đã chọn.
+   * Luôn thao tác trên danh sách đầy đủ của ngày (kể cả bài đang không hiển thị do giới hạn 3 thẻ/ngày).
+   */
+  const handleSelectAllInDay = (dayAssignments) => {
+    const ids = dayAssignments.map((a) => a.id);
+    if (ids.length === 0) return;
+    setSelectedIds((prev) => {
+      const newSet = new Set(prev);
+      const allSelected = ids.every((id) => newSet.has(id));
+      if (allSelected) {
+        ids.forEach((id) => newSet.delete(id));
+      } else {
+        ids.forEach((id) => newSet.add(id));
+      }
+      return newSet;
+    });
+  };
+
   const handleAssign = (assignmentId) => {
     setAssignModalAssignmentIds([assignmentId]);
     setShowAssignModal(true);
@@ -827,34 +848,95 @@ function AssignmentsList() {
             {/* Cards */}
             {(isTeacher || isAdmin) && Object.keys(filteredAndGroupedByDate).length > 0 && (
               <div className="space-y-6">
-                {Object.entries(filteredAndGroupedByDate).map(([date, assignments]) => (
-                  <div key={date} className="space-y-4">
-                    <h2 className="border-b-2 border-sky-300/70 pb-2 text-lg font-bold tracking-tight text-slate-900 dark:border-cyan-500/40 dark:text-white sm:text-xl md:text-2xl">
-                      {formatDateHeader(date)}
-                    </h2>
-                    <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6 [&>*]:h-full [&>*]:min-h-0">
-                      {assignments
-                        .slice(0, ASSIGNMENTS_LIST_MAX_CARDS_PER_DAY)
-                        .map((assignment, idx) => (
-                        <AssignmentCard
-                          key={assignment.id}
-                          assignment={assignment}
-                          index={idx}
-                          isTeacher={true}
-                          isStudent={false}
-                          selectedIds={selectedIds}
-                          onSelect={handleSelect}
-                          onDelete={handleDelete}
-                          onEdit={(id) => navigate(`/assignments/${id}/edit`)}
-                          onView={(id) => navigate(`/assignments/${id}`)}
-                          onAssign={handleAssign}
-                          onReportProblem={handleReportProblem}
-                          reportingAssignmentId={reportingAssignmentId}
-                        />
-                      ))}
-                    </section>
-                  </div>
-                ))}
+                {Object.entries(filteredAndGroupedByDate).map(([date, assignments]) => {
+                  const dayIds = assignments.map((a) => a.id);
+                  const selectedInDay = dayIds.filter((id) => selectedIds.has(id)).length;
+                  const allSelectedInDay =
+                    dayIds.length > 0 && selectedInDay === dayIds.length;
+                  const someSelectedInDay =
+                    selectedInDay > 0 && selectedInDay < dayIds.length;
+                  return (
+                    <div key={date} className="space-y-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-sky-200/60 pb-2 dark:border-cyan-500/25">
+                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 sm:text-base">
+                          <span className="tabular-nums text-orange-600 dark:text-amber-300">
+                            {assignments.length}
+                          </span>{' '}
+                          bài tập trong ngày
+                          {selectedInDay > 0 && (
+                            <span className="ml-2 rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-800 dark:bg-cyan-500/20 dark:text-cyan-100">
+                              {selectedInDay} đã chọn
+                            </span>
+                          )}
+                        </p>
+                        {isTeacher && dayIds.length > 0 && (
+                          <label
+                            className={`inline-flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition hover:-translate-y-0.5 ${
+                              allSelectedInDay
+                                ? 'border-emerald-300/80 bg-emerald-50 text-emerald-900 dark:border-emerald-400/40 dark:bg-emerald-500/15 dark:text-emerald-100'
+                                : someSelectedInDay
+                                  ? 'border-amber-300/80 bg-amber-50 text-amber-900 dark:border-amber-400/40 dark:bg-amber-500/15 dark:text-amber-100'
+                                  : 'border-sky-200/80 bg-white text-sky-800 hover:bg-sky-50 dark:border-cyan-400/35 dark:bg-slate-800 dark:text-cyan-100 dark:hover:bg-slate-700'
+                            }`}
+                            title={
+                              allSelectedInDay
+                                ? 'Bỏ chọn tất cả bài trong ngày này'
+                                : 'Chọn tất cả bài trong ngày này để thao tác hàng loạt'
+                            }
+                          >
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 cursor-pointer rounded border border-sky-400 bg-white text-sky-700 accent-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-400/50 dark:border-cyan-400 dark:bg-slate-900 dark:accent-cyan-400"
+                              checked={allSelectedInDay}
+                              ref={(el) => {
+                                if (el) el.indeterminate = someSelectedInDay;
+                              }}
+                              onChange={() => handleSelectAllInDay(assignments)}
+                              aria-label={
+                                allSelectedInDay
+                                  ? 'Bỏ chọn tất cả bài trong ngày'
+                                  : 'Chọn tất cả bài trong ngày'
+                              }
+                            />
+                            <span>
+                              {allSelectedInDay
+                                ? `Bỏ chọn cả ngày (${dayIds.length})`
+                                : someSelectedInDay
+                                  ? `Chọn tất cả (${dayIds.length})`
+                                  : `Chọn cả ngày (${dayIds.length})`}
+                            </span>
+                          </label>
+                        )}
+                      </div>
+                      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6 [&>*]:h-full [&>*]:min-h-0">
+                        {assignments
+                          .slice(0, ASSIGNMENTS_LIST_MAX_CARDS_PER_DAY)
+                          .map((assignment, idx) => (
+                          <AssignmentCard
+                            key={assignment.id}
+                            assignment={assignment}
+                            index={idx}
+                            isTeacher={true}
+                            isStudent={false}
+                            selectedIds={selectedIds}
+                            onSelect={handleSelect}
+                            onDelete={handleDelete}
+                            onEdit={(id) => navigate(`/assignments/${id}/edit`)}
+                            onView={(id) => navigate(`/assignments/${id}`)}
+                            onAssign={handleAssign}
+                            onReportProblem={handleReportProblem}
+                            reportingAssignmentId={reportingAssignmentId}
+                          />
+                        ))}
+                      </section>
+                      {isTeacher && assignments.length > ASSIGNMENTS_LIST_MAX_CARDS_PER_DAY && (
+                        <p className="text-xs italic text-slate-500 dark:text-slate-400">
+                          Đang hiện {ASSIGNMENTS_LIST_MAX_CARDS_PER_DAY}/{assignments.length} thẻ. Nút &quot;Chọn cả ngày&quot; vẫn chọn tất cả {assignments.length} bài của ngày.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
 
