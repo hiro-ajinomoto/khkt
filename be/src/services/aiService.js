@@ -177,6 +177,12 @@ QUY TẮC NỘI DUNG (BẮT BUỘC - KHÔNG ĐƯỢC VI PHẠM):
 5. Giải thích phải ngắn gọn, đúng thuật ngữ Toán THCS.
 6. Giải thích chỉ viết bằng chữ trong ngoặc đơn, KHÔNG chứa ký hiệu toán học trong phần giải thích.
 7. Dòng kết quả cuối cùng cũng phải có giải thích trong ngoặc đơn (kết quả cuối cùng).
+8. RANH GIỚI $ ... $ (CỰC KỲ QUAN TRỌNG):
+   - Mỗi cặp $...$ CHỈ được chứa biểu thức toán (ký tự, số, dấu phép toán, lệnh LaTeX).
+   - TUYỆT ĐỐI KHÔNG đặt chữ tiếng Việt (đặc biệt là chữ có dấu như "sử dụng", "hằng đẳng thức", "kết quả cuối cùng"...) BÊN TRONG cặp $...$. Lý do: MathJax nuốt mọi khoảng trắng trong math mode, chữ tiếng Việt sẽ bị dính lại thành một khối không đọc được.
+   - Mỗi dòng phải có SỐ CHẴN dấu $ (các cặp luôn đóng). Nếu đếm được số lẻ dấu $, BẮT BUỘC viết lại dòng đó.
+   - Phần giải thích trong ngoặc đơn ( ... ) luôn nằm NGOÀI cặp $...$, cách biểu thức toán bằng một khoảng trắng.
+   - Nếu một bước có nhiều cụm toán và nhiều cụm giải thích xen kẽ, xuống dòng mới cho cụm toán tiếp theo (mỗi dòng đúng một biểu thức + một giải thích), tuyệt đối không chen chữ vào giữa cặp $...$.
 
 QUY TẮC KÝ HIỆU (BẮT BUỘC - TUYỆT ĐỐI KHÔNG VI PHẠM):
 5. Không dùng các ký hiệu ×, *, \\t hoặc ký tự đặc biệt.
@@ -402,6 +408,19 @@ Example WRONG format - CÓ KÝ HIỆU NHÂN (DO NOT DO THIS - MUST AUTO-FIX):
   "solution": "$6x + 12 = 6 \\cdot x + 6 \\cdot 2$ (phân tích)\n$6x + 12 = 6(x + 2)$ (đặt nhân tử chung)"
 }
 LỖI: Có ký hiệu $\\cdot$ trong biểu thức. PHẢI TỰ ĐỘNG VIẾT LẠI, thay thế bằng kết quả trực tiếp, không dùng ký hiệu nhân.
+
+Example WRONG format - CHỮ TIẾNG VIỆT NẰM TRONG $...$ (DO NOT DO THIS - MUST AUTO-FIX):
+{
+  "problem": "$(2n-1)^2 - (2n+1)^2$",
+  "solution": "$(2n-1)^2 - (2n+1)^2$\n$= [(2n-1) + (2n+1)][(2n-1) - (2n+1)]$\n$(sử dụng hằng đẳng thức hiệu hai bình phương) = (4n)(-2) = -8n$ (tính toán)\n$= -8n$ (kết quả cuối cùng)"
+}
+LỖI NGHIÊM TRỌNG: Dòng 3 mở $ rồi ghi ngay "(sử dụng hằng đẳng thức hiệu hai bình phương)" bên trong cặp $...$, MathJax render dính chữ thành "sửdụnghằngđẳngthứchiệuhaibìnhphương". Ngoài ra cặp $ bị đặt lệch nên có dấu $ lạc ra ngoài.
+PHẢI TỰ ĐỘNG VIẾT LẠI thành:
+{
+  "problem": "$(2n-1)^2 - (2n+1)^2$",
+  "solution": "$A = (2n-1)^2 - (2n+1)^2$ (đặt biểu thức cần tính)\n$A = [(2n-1) + (2n+1)][(2n-1) - (2n+1)]$ (áp dụng hằng đẳng thức hiệu hai bình phương)\n$A = (4n)(-2)$ (rút gọn hai thừa số trong ngoặc)\n$A = -8n$ (thực hiện phép nhân)\n$A = -8n$ (kết quả cuối cùng)"
+}
+Điểm mấu chốt: mọi chữ tiếng Việt chỉ được nằm trong ngoặc đơn (...) và hoàn toàn NGOÀI cặp $...$, mỗi dòng đúng một biểu thức + một giải thích.
 
 Another WRONG example (DO NOT DO THIS - problem is too long):
 {

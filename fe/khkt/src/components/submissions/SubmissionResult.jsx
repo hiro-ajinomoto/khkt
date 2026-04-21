@@ -140,6 +140,59 @@ function autoDetectMath(text) {
   return result;
 }
 
+// Ký tự tiếng Việt có dấu — dùng để nhận biết "prose" lẫn trong math.
+const VI_DIACRITICS_RE =
+  /[àáảãạâầấẩẫậăằắẳẵặèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđÀÁẢÃẠÂẦẤẨẪẬĂẰẮẲẴẶÈÉẺẼẸÊỀẾỂỄỆÌÍỈĨỊÒÓỎÕỌÔỒỐỔỖỘƠỜỚỞỠỢÙÚỦŨỤƯỪỨỬỮỰỲÝỶỸỴĐ]/;
+
+/**
+ * Tách các cụm ngoặc đơn chứa tiếng Việt ra khỏi cặp $...$.
+ * Ví dụ:
+ *   "$(sử dụng hằng đẳng thức) = (4n)(-2) = -8n$ (tính toán)"
+ *   → "(sử dụng hằng đẳng thức) $= (4n)(-2) = -8n$ (tính toán)"
+ * Đồng thời đảm bảo mỗi dòng có số dấu $ chẵn — nếu lẻ, escape dấu $ dư thành \$.
+ */
+function stripVietnameseProseFromMath(input) {
+  if (!input || typeof input !== 'string') return input;
+
+  const lines = input.split('\n');
+  const fixed = lines.map((line) => {
+    // Xử lý từng cặp $...$ không lồng nhau. Dùng regex chụp cặp gần nhất.
+    let out = line.replace(/\$([^$\n]+?)\$/g, (match, inner) => {
+      const parenRe = /\s*\(([^()]+)\)\s*/g;
+      const proseChunks = [];
+      const strippedInner = inner.replace(parenRe, (pm, pInner) => {
+        if (VI_DIACRITICS_RE.test(pInner)) {
+          proseChunks.push(`(${pInner.trim()})`);
+          return ' ';
+        }
+        return pm;
+      });
+
+      if (proseChunks.length === 0) return match;
+
+      const mathRemainder = strippedInner.replace(/\s+/g, ' ').trim();
+      const prose = proseChunks.join(' ');
+      if (!mathRemainder || /^[=\s]+$/.test(mathRemainder)) {
+        // Toàn bộ nội dung math thực chất là chữ — bỏ cặp $...$ luôn.
+        return ` ${prose} `;
+      }
+      return ` ${prose} $${mathRemainder}$ `;
+    });
+
+    // Cân bằng dấu $ còn lại trên dòng: nếu lẻ, escape dấu $ cuối cùng.
+    const dollarCount = (out.match(/\$/g) || []).length;
+    if (dollarCount % 2 === 1) {
+      const lastIdx = out.lastIndexOf('$');
+      if (lastIdx >= 0) {
+        out = `${out.slice(0, lastIdx)}\\$${out.slice(lastIdx + 1)}`;
+      }
+    }
+    return out.replace(/[ \t]{2,}/g, ' ');
+  });
+
+  return fixed.join('\n');
+}
+
 /**
  * Render text with LaTeX math expressions using MathJax
  * Supports inline math: $...$ and display math: $$...$$
@@ -161,7 +214,13 @@ function renderTextWithMath(text, renderMathFn) {
   
   // Auto-detect and convert math expressions if not already in LaTeX format
   let processedText = autoDetectMath(text);
-  
+
+  // Kéo chữ tiếng Việt (có dấu) nằm lạc trong cặp $...$ ra ngoài.
+  // AI thỉnh thoảng sinh ra "$(sử dụng hằng đẳng thức) = (4n)(-2) = -8n$" khiến
+  // MathJax render dính chữ. Ta tách các cụm (...) chứa ký tự có dấu ra khỏi math,
+  // rồi cân bằng lại cặp $...$ còn lại.
+  processedText = stripVietnameseProseFromMath(processedText);
+
   // Fix common LaTeX issues that might cause "Math input error"
   // Replace double backslashes with single backslash for LaTeX commands
   processedText = processedText.replace(/\\\\+([a-zA-Z]+)/g, (match, command) => {
