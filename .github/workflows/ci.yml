@@ -1,0 +1,77 @@
+name: CI
+
+# Chạy trên pull request và push (trừ các branch deploy trực tiếp) để ngăn
+# merge code hỏng vào main. Deploy-ec2.yml tự chạy build lại phía EC2 nên CI
+# này chỉ cần là "smoke check": lint + build nhanh.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, minor]
+
+# Huỷ các run cũ cùng branch khi có commit mới, tránh tốn minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend lint + build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: fe/khkt
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: fe/khkt/package-lock.json
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+        env:
+          # Build trên CI không biết API URL production, nên dùng placeholder;
+          # artifact của CI không dùng để deploy (Vercel build lại khi deploy).
+          VITE_API_BASE_URL: "/api"
+
+  backend:
+    name: Backend syntax check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: be
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: be/package-lock.json
+
+      - name: Install deps
+        run: npm ci
+
+      # Backend không có script test hay build; chạy `node --check` cho file
+      # entry + một vài module chính để bắt syntax error sớm mà không cần env
+      # thật (MongoDB / OpenAI / S3).
+      - name: Syntax check entry + core modules
+        run: |
+          node --check src/index.js
+          node --check src/db.js
+          node --check src/config.js
+          for f in src/routers/*.js src/services/*.js src/middleware/*.js src/utils/*.js; do
+            [ -f "$f" ] && node --check "$f"
+          done

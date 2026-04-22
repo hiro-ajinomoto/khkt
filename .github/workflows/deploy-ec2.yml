@@ -1,0 +1,90 @@
+name: Deploy to EC2
+
+# Tự động deploy backend (và FE nếu EC2 cũng serve FE qua nginx) mỗi khi có
+# commit vào main. Vercel tự deploy FE độc lập qua GitHub integration;
+# workflow này chỉ lo phần EC2.
+#
+# Có thể chạy tay qua "Run workflow" ở tab Actions và chọn scope deploy.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      # Chỉ trigger khi có thay đổi thực sự ảnh hưởng đến BE hoặc script
+      # deploy, tránh tốn minutes khi sửa docs.
+      - "be/**"
+      - "fe/khkt/**"
+      - "deploy-ec2.sh"
+      - "nginx.conf.example"
+      - ".github/workflows/deploy-ec2.yml"
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: "What to deploy"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - backend
+          - frontend
+
+# Không cho 2 run deploy chạy song song trên main — pull code + pm2 reload
+# có thể đạp nhau. Hủy run cũ nếu có push mới.
+concurrency:
+  group: deploy-ec2-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: SSH deploy
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Determine deploy scope
+        id: scope
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "value=${{ github.event.inputs.scope }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=all" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_SSH_PORT || 22 }}
+          # 15 phút đủ cho backend npm ci + frontend npm run build trên t2.micro.
+          command_timeout: 15m
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd /home/ec2-user/khkt
+            # Luôn đồng bộ với main trước khi chạy deploy script (đảm bảo
+            # script dùng phiên bản mới nhất, kể cả khi chính deploy-ec2.sh
+            # vừa được vá).
+            git fetch origin main
+            git reset --hard origin/main
+            chmod +x deploy-ec2.sh
+            ./deploy-ec2.sh ${{ steps.scope.outputs.value }}
+
+      - name: Health check
+        # curl qua public nginx để xác nhận backend sống sau reload.
+        run: |
+          HOST="${{ secrets.EC2_HOST }}"
+          SCHEME="${{ secrets.HEALTHCHECK_SCHEME || 'http' }}"
+          HEALTH_URL="${SCHEME}://${HOST}/health"
+          echo "Pinging $HEALTH_URL"
+          for i in 1 2 3 4 5; do
+            if curl --fail --silent --show-error --max-time 10 "$HEALTH_URL" | tee /dev/stderr | grep -q '"ok"'; then
+              echo "✅ Backend healthy"
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying in 5s..."
+            sleep 5
+          done
+          echo "❌ Health check failed after 5 attempts"
+          exit 1

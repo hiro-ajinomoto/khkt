@@ -35,63 +35,75 @@ print_info() {
 # Deploy Backend
 deploy_backend() {
     print_info "Deploying backend..."
-    
+
     cd $BACKEND_DIR
-    
-    # Pull latest code
-    print_info "Pulling latest code..."
-    git pull origin main
-    
-    # Install dependencies
+
+    # Git pull đã được GitHub Actions gọi ở repo root trước khi chạy script
+    # này, nhưng vẫn giữ lại ở đây cho trường hợp chạy tay trên máy EC2.
+    print_info "Pulling latest code (idempotent)..."
+    git pull origin main || true
+
+    # Dùng ci thay vì install khi có package-lock để dependency lock chính xác
+    # hơn và thường nhanh hơn khi cache có sẵn.
     print_info "Installing dependencies..."
-    npm install --production
-    
-    # Check if .env exists
+    if [ -f package-lock.json ]; then
+        npm ci --omit=dev
+    else
+        npm install --production
+    fi
+
     if [ ! -f .env ]; then
         print_error ".env file not found! Please create it first."
         exit 1
     fi
-    
-    # Create logs directory
+
     mkdir -p logs
-    
-    # Restart with PM2
-    print_info "Restarting backend with PM2..."
-    pm2 restart khkt-backend || pm2 start ecosystem.config.js
+
+    # PM2 ecosystem file hiện đã chuyển sang .cjs để tương thích với backend
+    # ES module (package.json có "type": "module"). Reload để zero-downtime
+    # thay vì restart (ngắt tạm các kết nối đang xử lý).
+    print_info "Reloading backend with PM2..."
+    if pm2 describe khkt-backend > /dev/null 2>&1; then
+        pm2 reload ecosystem.config.cjs --update-env
+    else
+        pm2 start ecosystem.config.cjs
+    fi
     pm2 save
-    
+
     print_success "Backend deployed successfully!"
 }
 
 # Deploy Frontend
 deploy_frontend() {
     print_info "Deploying frontend..."
-    
+
     cd $FRONTEND_DIR
-    
-    # Pull latest code
-    print_info "Pulling latest code..."
-    git pull origin main
-    
-    # Install dependencies
+
+    print_info "Pulling latest code (idempotent)..."
+    git pull origin main || true
+
     print_info "Installing dependencies..."
-    npm install
-    
-    # Build production
+    if [ -f package-lock.json ]; then
+        npm ci
+    else
+        npm install
+    fi
+
     print_info "Building frontend..."
     npm run build
-    
-    # Copy to nginx directory
-    print_info "Copying files to nginx directory..."
-    sudo rm -rf $FRONTEND_BUILD_DIR/*
-    sudo cp -r dist/* $FRONTEND_BUILD_DIR/
-    sudo chown -R nginx:nginx $FRONTEND_BUILD_DIR
-    sudo chmod -R 755 $FRONTEND_BUILD_DIR
-    
-    # Reload nginx
+
+    # Sync ra thư mục nginx serve. Dùng rsync với --delete để xoá asset cũ
+    # (file có hash tên khác nhau giữa các build) thay vì rm -rf rồi cp —
+    # tránh gap thời gian nginx trả 404 cho người dùng đang mở trang.
+    print_info "Syncing build output to $FRONTEND_BUILD_DIR..."
+    sudo mkdir -p "$FRONTEND_BUILD_DIR"
+    sudo rsync -a --delete dist/ "$FRONTEND_BUILD_DIR/"
+    sudo chown -R nginx:nginx "$FRONTEND_BUILD_DIR" || true
+    sudo chmod -R 755 "$FRONTEND_BUILD_DIR"
+
     print_info "Reloading nginx..."
     sudo systemctl reload nginx
-    
+
     print_success "Frontend deployed successfully!"
 }
 
