@@ -169,35 +169,69 @@ router.get("/my-submissions", authenticate, async (req, res) => {
     const db = getDB();
     const studentId = ObjectId.createFromHexString(req.user.id);
 
-    // Get all submissions for this student
+    // Chỉ lấy các field màn danh sách thực sự cần. Đặc biệt CHỈ giữ
+    // ai_result.score (dùng cho badge điểm + điểm trung bình), bỏ qua
+    // summary/mistakes/nextSteps/practiceSets vốn có thể nặng vài chục KB
+    // mỗi bài. Chi tiết đầy đủ sẽ được lazy-fetch qua GET /submissions/:id
+    // khi học sinh bấm "Xem chi tiết".
     const submissions = await db
       .collection("submissions")
       .find({ student_id: studentId })
-      .sort({ created_at: -1 }) // Sort by newest first
+      .project({
+        assignment_id: 1,
+        image_paths: 1,
+        created_at: 1,
+        "ai_result.score": 1,
+      })
+      .sort({ created_at: -1 })
       .toArray();
 
-    // Get assignment details for each submission
-    const result = await Promise.all(
-      submissions.map(async (submission) => {
-        const assignment = await db.collection("assignments").findOne({
-          _id: submission.assignment_id,
-        });
-
-        return {
-          id: submission._id.toString(),
-          assignment_id: submission.assignment_id.toString(),
-          assignment_title: assignment
-            ? assignment.title
-            : "Unknown Assignment",
-          assignment_subject: assignment ? assignment.subject : null,
-          image_paths: submission.image_paths
-            ? submission.image_paths.map((path) => pathToUrl(path))
-            : [],
-          created_at: submission.created_at,
-          ai_result: submission.ai_result || null,
-        };
-      })
+    // Batch-load tất cả assignment liên quan bằng MỘT query $in, thay cho
+    // vòng Promise.all + findOne theo từng submission (N+1 round-trip).
+    const uniqueAssignmentIds = Array.from(
+      new Map(
+        submissions
+          .filter((s) => s.assignment_id)
+          .map((s) => [s.assignment_id.toString(), s.assignment_id]),
+      ).values(),
     );
+
+    /** @type {Map<string, { title?: string, subject?: string }>} */
+    const assignmentMap = new Map();
+    if (uniqueAssignmentIds.length > 0) {
+      const assignments = await db
+        .collection("assignments")
+        .find({ _id: { $in: uniqueAssignmentIds } })
+        .project({ title: 1, subject: 1 })
+        .toArray();
+      for (const a of assignments) {
+        assignmentMap.set(a._id.toString(), a);
+      }
+    }
+
+    const result = submissions.map((submission) => {
+      const aid = submission.assignment_id
+        ? submission.assignment_id.toString()
+        : null;
+      const assignment = aid ? assignmentMap.get(aid) : null;
+      const score =
+        submission.ai_result && typeof submission.ai_result.score === "number"
+          ? submission.ai_result.score
+          : null;
+      return {
+        id: submission._id.toString(),
+        assignment_id: aid,
+        assignment_title: assignment ? assignment.title : "Unknown Assignment",
+        assignment_subject: assignment ? assignment.subject : null,
+        image_paths: submission.image_paths
+          ? submission.image_paths.map((path) => pathToUrl(path))
+          : [],
+        created_at: submission.created_at,
+        // Payload rút gọn: chỉ score cho badge; FE gọi /submissions/:id để
+        // xem chi tiết đầy đủ khi người dùng mở card.
+        ai_result: score !== null ? { score } : null,
+      };
+    });
 
     res.json(result);
   } catch (error) {
@@ -260,10 +294,17 @@ router.get("/my-stickers", authenticate, async (req, res) => {
     const db = getDB();
     const studentId = ObjectId.createFromHexString(req.user.id);
 
+    // computeStickerStatsFromSubmissionRows chỉ cần ai_result.score, nên chỉ
+    // project đúng field đó thay vì kéo cả ai_result về (giảm mạnh BSON đọc
+    // khi học sinh có nhiều bài nộp lâu dài).
     const submissions = await db
       .collection("submissions")
       .find({ student_id: studentId })
-      .project({ assignment_id: 1, created_at: 1, ai_result: 1 })
+      .project({
+        assignment_id: 1,
+        created_at: 1,
+        "ai_result.score": 1,
+      })
       .toArray();
 
     const summary = computeStickerStatsFromSubmissionRows(submissions);

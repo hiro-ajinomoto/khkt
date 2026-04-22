@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { fetchMySubmissions, fetchMyStickers } from '../../api/submissions';
+import {
+  fetchMySubmissions,
+  fetchMyStickers,
+  fetchSubmissionById,
+} from '../../api/submissions';
 import SubmissionResult from './SubmissionResult';
 import OceanShell, { OceanPageLoading, OceanPageError } from '../layout/OceanShell';
 import './MySubmissions.css';
@@ -15,6 +19,12 @@ function MySubmissions() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
+  // Cache chi tiết đầy đủ theo id, lazy-load khi mở "Xem chi tiết". List API
+  // chỉ trả về ai_result rút gọn (score) để payload nhỏ; lần đầu bấm xem
+  // chi tiết mới gọi /submissions/:id để lấy full summary/mistakes/practiceSets.
+  const [detailsById, setDetailsById] = useState({});
+  const [loadingDetailId, setLoadingDetailId] = useState(null);
+  const [detailErrorById, setDetailErrorById] = useState({});
 
   useEffect(() => {
     if (!isAuthenticated || !isStudent) {
@@ -29,20 +39,58 @@ function MySubmissions() {
       setLoading(true);
       setError(null);
       setStickersError(null);
-      const data = await fetchMySubmissions();
-      setSubmissions(data);
-      try {
-        const stickers = await fetchMyStickers();
-        setStickerStats(stickers);
-      } catch (err) {
-        setStickersError(err.message || 'Không tải được huy hiệu');
+      // Hai API độc lập nhau, chạy song song để tổng thời gian ≈ max() thay
+      // vì cộng dồn hai round-trip tuần tự.
+      const [data, stickersResult] = await Promise.all([
+        fetchMySubmissions(),
+        fetchMyStickers().catch((err) => ({ __error: err })),
+      ]);
+      setSubmissions(Array.isArray(data) ? data : []);
+      if (stickersResult && stickersResult.__error) {
+        setStickersError(
+          stickersResult.__error.message || 'Không tải được huy hiệu',
+        );
         setStickerStats(null);
+      } else {
+        setStickerStats(stickersResult);
       }
     } catch (err) {
       setError(err.message || 'Không thể tải danh sách bài nộp');
       console.error('Error loading submissions:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleToggleDetails = async (submission) => {
+    const isOpen = selectedSubmission?.id === submission.id;
+    if (isOpen) {
+      setSelectedSubmission(null);
+      return;
+    }
+    setSelectedSubmission(submission);
+    // Không cần fetch lại nếu đã có full detail trong cache.
+    if (detailsById[submission.id]) return;
+    try {
+      setLoadingDetailId(submission.id);
+      setDetailErrorById((prev) => ({ ...prev, [submission.id]: null }));
+      const full = await fetchSubmissionById(submission.id);
+      setDetailsById((prev) => ({
+        ...prev,
+        [submission.id]: {
+          ...submission,
+          ...full,
+          assignment_title: submission.assignment_title,
+          assignment_subject: submission.assignment_subject,
+        },
+      }));
+    } catch (err) {
+      setDetailErrorById((prev) => ({
+        ...prev,
+        [submission.id]: err.message || 'Không tải được chi tiết bài nộp.',
+      }));
+    } finally {
+      setLoadingDetailId((prev) => (prev === submission.id ? null : prev));
     }
   };
 
@@ -192,16 +240,15 @@ function MySubmissions() {
 
                 <div className="submission-card-actions">
                   <button
-                    onClick={() =>
-                      setSelectedSubmission(
-                        selectedSubmission?.id === submission.id ? null : submission
-                      )
-                    }
+                    onClick={() => handleToggleDetails(submission)}
                     className="view-details-button"
+                    disabled={loadingDetailId === submission.id}
                   >
                     {selectedSubmission?.id === submission.id
                       ? 'Ẩn chi tiết'
-                      : 'Xem chi tiết'}
+                      : loadingDetailId === submission.id
+                        ? 'Đang tải...'
+                        : 'Xem chi tiết'}
                   </button>
                   <button
                     onClick={() => navigate(`/assignments/${submission.assignment_id}`)}
@@ -213,7 +260,26 @@ function MySubmissions() {
 
                 {selectedSubmission?.id === submission.id && (
                   <div className="submission-details">
-                    <SubmissionResult submission={submission} />
+                    {detailErrorById[submission.id] ? (
+                      <p className="submission-detail-error" role="alert">
+                        {detailErrorById[submission.id]}{' '}
+                        <button
+                          type="button"
+                          onClick={() => handleToggleDetails(submission)}
+                          className="retry-inline-button"
+                        >
+                          Thử lại
+                        </button>
+                      </p>
+                    ) : detailsById[submission.id] ? (
+                      <SubmissionResult
+                        submission={detailsById[submission.id]}
+                      />
+                    ) : (
+                      <p className="submission-detail-loading">
+                        Đang tải chi tiết bài nộp...
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
