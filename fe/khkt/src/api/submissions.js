@@ -128,6 +128,50 @@ export async function fetchMySubmissions() {
 }
 
 /**
+ * Bản rút gọn của fetchMySubmissions dùng cho màn danh sách bài tập.
+ * Chỉ trả về số lần nộp theo từng assignment, không kéo ai_result nặng về.
+ * @returns {Promise<Array<{assignment_id: string, count: number}>>}
+ */
+export async function fetchMySubmissionCounts() {
+  try {
+    const authHeader = getAuthHeader();
+
+    if (!authHeader) {
+      throw new Error('Authentication required');
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/submissions/my-submission-counts`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: authHeader,
+        },
+        cache: 'no-store',
+      },
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        describeApiFailure(
+          response,
+          errorData,
+          'Không đếm được số lần nộp của bạn.',
+        ),
+      );
+    }
+
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error('Error fetching submission counts:', error);
+    rethrowNetwork(error);
+  }
+}
+
+/**
  * Sticker totals for the authenticated student (latest grade per assignment).
  * @returns {Promise<Object>}
  */

@@ -207,6 +207,45 @@ router.get("/my-submissions", authenticate, async (req, res) => {
 });
 
 /**
+ * GET /submissions/my-submission-counts
+ * Bản rút gọn của /my-submissions phục vụ riêng cho màn danh sách bài tập.
+ * Chỉ trả về số lần học sinh đã nộp theo từng assignment, tránh tải về
+ * toàn bộ ai_result (vốn rất nặng). Dùng aggregate để một query duy nhất
+ * thay cho N+1 findOne ở /my-submissions.
+ * Response: [{ assignment_id: string, count: number }]
+ */
+router.get("/my-submission-counts", authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== "student") {
+      return res
+        .status(403)
+        .json({ detail: "Only students can view their submission counts" });
+    }
+
+    const db = getDB();
+    const studentId = ObjectId.createFromHexString(req.user.id);
+
+    const rows = await db
+      .collection("submissions")
+      .aggregate([
+        { $match: { student_id: studentId } },
+        { $group: { _id: "$assignment_id", count: { $sum: 1 } } },
+      ])
+      .toArray();
+
+    const result = rows.map((row) => ({
+      assignment_id: row._id ? row._id.toString() : null,
+      count: row.count || 0,
+    }));
+
+    res.json(result);
+  } catch (error) {
+    console.error("Error fetching student submission counts:", error);
+    res.status(500).json({ detail: "Failed to fetch submission counts" });
+  }
+});
+
+/**
  * GET /submissions/my-stickers
  * Aggregated sticker counts (first graded attempt per assignment).
  */

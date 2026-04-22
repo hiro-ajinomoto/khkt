@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchAssignments, fetchAssignmentsByDate, fetchAssignmentsByMonth, deleteAssignment, deleteAssignments, assignAssignmentsToClasses, getAssignmentClasses, reportAssignmentProblem } from '../../api/assignments';
 import { fetchSchoolClasses, groupClassesByGrade } from '../../api/classes';
-import { fetchMySubmissions } from '../../api/submissions';
+import { fetchMySubmissionCounts } from '../../api/submissions';
 import { useAuth } from '../../contexts/AuthContext';
 import OceanShell, { OceanPageLoading, OceanPageError } from '../layout/OceanShell';
 import BackToTopButton from '../layout/BackToTopButton';
@@ -120,30 +120,29 @@ function AssignmentsList() {
       setLoading(true);
       setError(null);
       console.log('Loading assignments...');
-      const data = await fetchAssignments();
+      // Chạy song song 2 request: danh sách bài tập + (với HS) bảng đếm số lần
+      // nộp theo từng bài. Gói trong Promise.all để tổng thời gian chỉ bằng
+      // round-trip chậm hơn thay vì cộng dồn.
+      const [data, counts] = await Promise.all([
+        fetchAssignments(),
+        isStudent
+          ? fetchMySubmissionCounts().catch(() => [])
+          : Promise.resolve([]),
+      ]);
       console.log('Assignments loaded:', data);
       console.log('Number of assignments:', data.length);
       setAllAssignments(data);
 
       if (isStudent) {
-        try {
-          const subs = await fetchMySubmissions();
-          const ids = new Set();
-          const counts = new Map();
-          subs.forEach((s) => {
-            if (!s?.assignment_id) return;
-            ids.add(s.assignment_id);
-            counts.set(
-              s.assignment_id,
-              (counts.get(s.assignment_id) || 0) + 1
-            );
-          });
-          setSubmittedAssignmentIds(ids);
-          setSubmissionCountsByAssignment(counts);
-        } catch {
-          setSubmittedAssignmentIds(new Set());
-          setSubmissionCountsByAssignment(new Map());
-        }
+        const ids = new Set();
+        const countsMap = new Map();
+        (Array.isArray(counts) ? counts : []).forEach((row) => {
+          if (!row?.assignment_id) return;
+          ids.add(row.assignment_id);
+          countsMap.set(row.assignment_id, Number(row.count) || 0);
+        });
+        setSubmittedAssignmentIds(ids);
+        setSubmissionCountsByAssignment(countsMap);
       } else {
         setSubmittedAssignmentIds(new Set());
         setSubmissionCountsByAssignment(new Map());

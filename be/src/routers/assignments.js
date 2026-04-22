@@ -242,9 +242,20 @@ function buildListReportContextObject(viewer, { countById, studentReportedIds })
   };
 }
 
-async function mapAssignmentDocToApi(item, creatorMap, listCtx = null) {
+async function mapAssignmentDocToApi(item, creatorMap, listCtx = null, opts = {}) {
   const cid = assignmentCreatedByString(item.created_by);
   const cr = cid ? creatorMap.get(cid) : null;
+  // Ở chế độ list, ảnh đáp án gốc KHÔNG hiển thị trên card (chỉ dùng ở trang
+  // chi tiết + so sánh AI). Bỏ presign S3 cho field này giúp giảm một nửa số
+  // request S3 khi render danh sách dài. Detail/create/update vẫn presign
+  // bình thường.
+  const listMode = Boolean(opts.listMode);
+  const [questionImageUrl, modelSolutionImageUrl] = await Promise.all([
+    convertToAccessibleUrl(item.question_image_url),
+    listMode
+      ? Promise.resolve(item.model_solution_image_url || null)
+      : convertToAccessibleUrl(item.model_solution_image_url),
+  ]);
   const base = {
     id: item._id.toString(),
     title: item.title,
@@ -252,10 +263,8 @@ async function mapAssignmentDocToApi(item, creatorMap, listCtx = null) {
     subject: item.subject,
     grade_level: item.grade_level || null,
     model_solution: item.model_solution,
-    question_image_url: await convertToAccessibleUrl(item.question_image_url),
-    model_solution_image_url: await convertToAccessibleUrl(
-      item.model_solution_image_url,
-    ),
+    question_image_url: questionImageUrl,
+    model_solution_image_url: modelSolutionImageUrl,
     created_at: item.created_at || null,
     available_from_date: item.available_from_date ?? null,
     due_date: item.due_date ?? null,
@@ -401,7 +410,9 @@ router.get("/", optionalAuthenticate, async (req, res) => {
       listCtx = buildListReportContextObject(req.user, agg);
     }
     const result = await Promise.all(
-      assignments.map((item) => mapAssignmentDocToApi(item, creatorMap, listCtx)),
+      assignments.map((item) =>
+        mapAssignmentDocToApi(item, creatorMap, listCtx, { listMode: true }),
+      ),
     );
 
     res.json(result);
@@ -449,7 +460,9 @@ router.get("/by-date", async (req, res) => {
 
     const creatorMap = await loadCreatorMapForAssignments(db, assignments);
     const result = await Promise.all(
-      assignments.map((item) => mapAssignmentDocToApi(item, creatorMap)),
+      assignments.map((item) =>
+        mapAssignmentDocToApi(item, creatorMap, null, { listMode: true }),
+      ),
     );
 
     res.json(result);
@@ -503,7 +516,9 @@ router.get("/by-month", async (req, res) => {
 
     const creatorMap = await loadCreatorMapForAssignments(db, assignments);
     const result = await Promise.all(
-      assignments.map((item) => mapAssignmentDocToApi(item, creatorMap)),
+      assignments.map((item) =>
+        mapAssignmentDocToApi(item, creatorMap, null, { listMode: true }),
+      ),
     );
 
     res.json(result);
