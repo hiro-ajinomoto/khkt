@@ -145,49 +145,95 @@ const VI_DIACRITICS_RE =
   /[àáảãạâầấẩẫậăằắẳẵặèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđÀÁẢÃẠÂẦẤẨẪẬĂẰẮẲẴẶÈÉẺẼẸÊỀẾỂỄỆÌÍỈĨỊÒÓỎÕỌÔỒỐỔỖỘƠỜỚỞỠỢÙÚỦŨỤƯỪỨỬỮỰỲÝỶỸỴĐ]/;
 
 /**
- * Tách các cụm ngoặc đơn chứa tiếng Việt ra khỏi cặp $...$.
- * Ví dụ:
+ * Chuẩn hoá một dòng lời giải do AI sinh ra trước khi đưa cho MathJax:
+ *  (a) Tách các cụm (...) chứa tiếng Việt ra khỏi cặp $...$.
+ *  (b) Cắt các cụm (...) tiếng Việt cuối dòng thành "giải thích" nằm ngoài math.
+ *  (c) Nếu phần còn lại trông như math (có =, +, -, ^, \times...) nhưng không được
+ *      bọc $...$ (hoặc bị thiếu 1 trong 2 dấu), tự động bổ sung cặp $...$ cho đúng.
+ *
+ * Ví dụ các ca AI hay sinh sai mà hàm này sửa được:
  *   "$(sử dụng hằng đẳng thức) = (4n)(-2) = -8n$ (tính toán)"
- *   → "(sử dụng hằng đẳng thức) $= (4n)(-2) = -8n$ (tính toán)"
- * Đồng thời đảm bảo mỗi dòng có số dấu $ chẵn — nếu lẻ, escape dấu $ dư thành \$.
+ *     → "(sử dụng hằng đẳng thức) $= (4n)(-2) = -8n$ (tính toán)"
+ *   "= [(2n+5)+(2n+3)] \\times [(2n+5)-(2n+3)]$ (sử dụng công thức)"
+ *     → "$= [(2n+5)+(2n+3)] \\times [(2n+5)-(2n+3)]$ (sử dụng công thức)"
+ *   "= 8(n+1)$ (rút gọn)"
+ *     → "$= 8(n+1)$ (rút gọn)"
+ *   "= (4n - 2)(4) (rút gọn)"
+ *     → "$= (4n - 2)(4)$ (rút gọn)"
  */
 function stripVietnameseProseFromMath(input) {
   if (!input || typeof input !== 'string') return input;
 
   const lines = input.split('\n');
-  const fixed = lines.map((line) => {
-    // Xử lý từng cặp $...$ không lồng nhau. Dùng regex chụp cặp gần nhất.
-    let out = line.replace(/\$([^$\n]+?)\$/g, (match, inner) => {
+  const fixed = lines.map((rawLine) => {
+    let line = rawLine;
+
+    // (1) Lột dần các cụm (...) tiếng Việt ở cuối dòng ra làm giải thích.
+    //     Dừng ngay khi gặp một cụm ngoặc KHÔNG có chữ tiếng Việt — ví dụ "(4n - 2)"
+    //     là biểu thức toán, phải giữ lại trong math.
+    let proseSuffix = '';
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const m = line.match(/\s*\(([^()]+)\)\s*$/);
+      if (!m || !VI_DIACRITICS_RE.test(m[1])) break;
+      proseSuffix = ` (${m[1].trim()})${proseSuffix}`;
+      line = line.slice(0, line.length - m[0].length);
+    }
+    line = line.trim();
+
+    // (2) Trong các cặp $...$ còn lại, kéo các (...) có tiếng Việt ra ngoài
+    //     (xử lý ca AI nhồi chữ vào giữa math khiến khoảng trắng bị nuốt).
+    line = line.replace(/\$([^$\n]+?)\$/g, (match, inner) => {
       const parenRe = /\s*\(([^()]+)\)\s*/g;
-      const proseChunks = [];
-      const strippedInner = inner.replace(parenRe, (pm, pInner) => {
+      const chunks = [];
+      const stripped = inner.replace(parenRe, (pm, pInner) => {
         if (VI_DIACRITICS_RE.test(pInner)) {
-          proseChunks.push(`(${pInner.trim()})`);
+          chunks.push(`(${pInner.trim()})`);
           return ' ';
         }
         return pm;
       });
-
-      if (proseChunks.length === 0) return match;
-
-      const mathRemainder = strippedInner.replace(/\s+/g, ' ').trim();
-      const prose = proseChunks.join(' ');
-      if (!mathRemainder || /^[=\s]+$/.test(mathRemainder)) {
-        // Toàn bộ nội dung math thực chất là chữ — bỏ cặp $...$ luôn.
-        return ` ${prose} `;
-      }
+      if (chunks.length === 0) return match;
+      const mathRemainder = stripped.replace(/\s+/g, ' ').trim();
+      const prose = chunks.join(' ');
+      if (!mathRemainder || /^[=\s]+$/.test(mathRemainder)) return ` ${prose} `;
       return ` ${prose} $${mathRemainder}$ `;
     });
 
-    // Cân bằng dấu $ còn lại trên dòng: nếu lẻ, escape dấu $ cuối cùng.
-    const dollarCount = (out.match(/\$/g) || []).length;
-    if (dollarCount % 2 === 1) {
-      const lastIdx = out.lastIndexOf('$');
-      if (lastIdx >= 0) {
-        out = `${out.slice(0, lastIdx)}\\$${out.slice(lastIdx + 1)}`;
+    // (3) Chuẩn hoá dấu $ cho phần math còn lại.
+    if (line) {
+      const dollarCount = (line.match(/\$/g) || []).length;
+      const hasLatexCmd =
+        /\\[a-zA-Z]+/.test(line) || /\^/.test(line) || /_\{/.test(line);
+      const looksLikeMath =
+        /[=+\-*/<>≤≥≠±]/.test(line) && /[a-zA-Z0-9]/.test(line);
+
+      if (dollarCount === 0 && (hasLatexCmd || looksLikeMath)) {
+        // Toàn bộ dòng là math mà quên bọc $...$.
+        line = `$${line}$`;
+      } else if (dollarCount === 1) {
+        const idx = line.indexOf('$');
+        const before = line.slice(0, idx).trim();
+        const after = line.slice(idx + 1).trim();
+        if (before === '') {
+          // "$math..." — thiếu $ đóng ở cuối.
+          line = `${line}$`;
+        } else if (after === '') {
+          // "math...$" — thiếu $ mở ở đầu.
+          line = `$${line}`;
+        } else {
+          // $ lạc giữa dòng: coi cả dòng là math, bỏ dấu $ lẻ ở giữa.
+          line = `$${line.slice(0, idx)}${line.slice(idx + 1)}$`;
+        }
+      } else if (dollarCount > 1 && dollarCount % 2 === 1) {
+        // Có nhiều cặp $...$ nhưng lẻ thêm một dấu — bỏ dấu $ cuối cùng.
+        const lastIdx = line.lastIndexOf('$');
+        line = `${line.slice(0, lastIdx)}${line.slice(lastIdx + 1)}`;
       }
     }
-    return out.replace(/[ \t]{2,}/g, ' ');
+
+    const combined = (line + proseSuffix).replace(/[ \t]{2,}/g, ' ');
+    return combined.trimEnd();
   });
 
   return fixed.join('\n');
@@ -212,14 +258,11 @@ function renderTextWithMath(text, renderMathFn) {
   const LATEX_SQRT = String.fromCharCode(92) + 'sqrt'; // \sqrt
   const LATEX_FRAC = String.fromCharCode(92) + 'frac'; // \frac
   
-  // Auto-detect and convert math expressions if not already in LaTeX format
-  let processedText = autoDetectMath(text);
-
-  // Kéo chữ tiếng Việt (có dấu) nằm lạc trong cặp $...$ ra ngoài.
-  // AI thỉnh thoảng sinh ra "$(sử dụng hằng đẳng thức) = (4n)(-2) = -8n$" khiến
-  // MathJax render dính chữ. Ta tách các cụm (...) chứa ký tự có dấu ra khỏi math,
-  // rồi cân bằng lại cặp $...$ còn lại.
-  processedText = stripVietnameseProseFromMath(processedText);
+  // Chuẩn hoá format do AI sinh ra: kéo chữ tiếng Việt ra khỏi $...$, tự bổ
+  // sung cặp $...$ thiếu, cân bằng dấu $ lẻ. Hàm này thay thế autoDetectMath
+  // vì autoDetectMath dùng regex ASCII không nhận `[`, `]`, dễ match "lố" vào
+  // giữa cặp $...$ đã đúng khiến MathJax render hỏng các dòng dài.
+  let processedText = stripVietnameseProseFromMath(text);
 
   // Fix common LaTeX issues that might cause "Math input error"
   // Replace double backslashes with single backslash for LaTeX commands
