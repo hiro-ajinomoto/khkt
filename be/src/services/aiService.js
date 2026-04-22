@@ -137,6 +137,19 @@ PHẠM VI: Các quy tắc dưới đây áp dụng cho việc CHẤM ĐIỂM bà
 
 5. "mistakes": CHỈ liệt kê các lỗi toán học thực sự theo mục 4. TUYỆT ĐỐI KHÔNG liệt kê "không theo format lời giải mẫu", "viết nhiều bước trên một dòng", "không có giải thích trong ngoặc" vào "mistakes".
 
+   Mỗi phần tử trong "mistakes" PHẢI được viết như một "root-cause" cụ thể đến mức có thể DÙNG TRỰC TIẾP để ra bài tập bổ trợ. Cấu trúc nên dùng:
+     "<việc HS đã làm sai> — <kỹ năng / hằng đẳng thức / bước lập luận bị hỏng>".
+   Ví dụ tốt (áp dụng được):
+     - "Khai triển $(2n+3)^2$ thiếu hạng tử $12n$ — chưa nắm hằng đẳng thức $(a+b)^2 = a^2 + 2ab + b^2$".
+     - "Dừng lại ở $8n + 8$ mà không kết luận $= 8(n+1)$ — chưa biết cách đưa ra dạng $8 \\cdot k$ để khẳng định chia hết cho 8".
+     - "Bỏ quên dấu trừ khi mở $-(2x - 5)$ — sai quy tắc đổi dấu khi bỏ ngoặc có dấu trừ".
+   Ví dụ xấu (TUYỆT ĐỐI KHÔNG ĐƯỢC DÙNG vì quá chung, "remedial" không bám được):
+     - "Làm bài sai".
+     - "Chưa nắm vững kiến thức".
+     - "Yếu về hằng đẳng thức".
+     - "Thiếu lập luận".
+   Nếu phát hiện mình vừa viết một lỗi dạng "chung chung", PHẢI viết lại thành dạng cụ thể có nêu rõ kỹ năng/bước sai trước khi xuất JSON.
+
 VÍ DỤ CHẤM LINH HOẠT (PHẢI LÀM THEO CÁC VÍ DỤ NÀY):
 
 Bài: Chứng minh hiệu bình phương hai số lẻ liên tiếp chia hết cho 8.
@@ -310,12 +323,7 @@ YÊU CẦU ĐA DẠNG DẠNG BÀI (BẮT BUỘC - KHÔNG ĐƯỢC VI PHẠM):
        * Bài 3: Tam thức bậc hai tách hạng tử ($x^2 + bx + c$ với $b, c$ khác hằng đẳng thức)
        * Bài 4: Nhóm hạng tử hoặc đặt nhân tử chung ($ax + ay + bx + by$, $ax^3 + bx^2 + cx$...)
      TUYỆT ĐỐI KHÔNG được sinh 4 bài cùng một khuôn (ví dụ cả 4 bài đều là "bình phương một tổng/hiệu").
-   - 4 bài trong "remedial" PHẢI thuộc 4 KỸ NĂNG NỀN TẢNG KHÁC NHAU mà bài gốc cần đến, không trùng nhau.
-     Ví dụ nếu bài gốc là "phân tích đa thức thành nhân tử":
-       * Bài 1: Nhận dạng hằng đẳng thức cơ bản ($a^2 + 2ab + b^2$)
-       * Bài 2: Đặt nhân tử chung đơn giản ($6x + 12$, $5x^2 - 10x$)
-       * Bài 3: Khai triển hằng đẳng thức để nhận dạng ngược ($(x+3)^2$)
-       * Bài 4: Phép tính với dấu âm / mở ngoặc ($-(2x - 5)$, $3x - (x + 2)$)
+   - 4 bài trong "remedial" PHẢI bám SÁT từng lỗi cụ thể của học sinh — xem chi tiết ở mục 5 "NGUYÊN TẮC BÀI TẬP BỔ TRỢ" bên dưới. KHÔNG được sinh 4 bài kỹ năng nền tảng chung chung không liên quan trực tiếp đến lỗi.
 
 2. Đa dạng về SỐ LIỆU và KÝ HIỆU giữa các bài:
    - PHẢI dùng ít nhất 2-3 biến khác nhau trong 8 bài (ví dụ: $x$, $y$, $a$, $t$, $m$). Không dùng chỉ một biến duy nhất.
@@ -330,7 +338,48 @@ YÊU CẦU ĐA DẠNG DẠNG BÀI (BẮT BUỘC - KHÔNG ĐƯỢC VI PHẠM):
 4. Tự kiểm tra trước khi trả kết quả:
    - Nếu nhận ra 2 bài trong cùng nhóm có CÙNG khuôn mẫu (ví dụ cả hai đều là $x^2 \\pm 2\\alpha x + \\alpha^2$), PHẢI viết lại bài thứ hai sang một dạng con khác.
    - Nếu cả 4 bài trong "similar" đều cùng dạng con, PHẢI sinh lại toàn bộ nhóm.
-   - Nếu cả 4 bài "remedial" đều luyện cùng một kỹ năng, PHẢI sinh lại toàn bộ nhóm.
+   - Nếu 2 bài bất kỳ trong "remedial" cùng rèn đúng một lỗi, PHẢI viết lại để mỗi bài nhắm một lỗi riêng (trừ trường hợp học sinh chỉ có đúng 1 lỗi duy nhất — xem mục 5.3).
+
+5. NGUYÊN TẮC BÀI TẬP BỔ TRỢ ("remedial") — QUAN TRỌNG NHẤT, PHẢI TUÂN THỦ TUYỆT ĐỐI:
+
+   Mục tiêu bài tập bổ trợ KHÔNG phải là "ôn lại kiến thức nền" chung chung, mà là GIÚP HỌC SINH SỬA ĐÚNG CHỖ MÌNH VỪA SAI. Vì vậy 4 bài "remedial" phải được suy ra từ PHÂN TÍCH LỖI của chính bài làm học sinh, không được tự nghĩ ra từ chủ đề bài gốc.
+
+   5.1. Quy trình bắt buộc (thực hiện theo đúng thứ tự):
+     (a) Trước khi sinh "remedial", đọc lại "mistakes" và lập luận trong bài làm HS để LIỆT KÊ THẦM từng "root-cause" — điểm kỹ thuật cụ thể mà HS đang yếu/sai. Diễn đạt mỗi root-cause bằng một câu ngắn, KHÔNG chung chung.
+         Ví dụ tốt: "nhầm dấu khi khai triển $-(2x - 5)$"; "chưa kết luận biểu thức chia hết cho 8"; "không nhận ra dạng hiệu hai bình phương $a^2 - b^2$".
+         Ví dụ xấu (TUYỆT ĐỐI KHÔNG): "yếu về hằng đẳng thức"; "cần ôn đại số"; "chưa nắm bài".
+     (b) Với mỗi root-cause, thiết kế MỘT bài "remedial" ISOLATED: bài đó CHỈ kiểm tra đúng kỹ năng bị sai, gỡ tất cả các yếu tố khác ra.
+         Bài remedial phải DỄ HƠN rõ rệt bài gốc (hệ số nhỏ, ít bước hơn, không có lớp khai triển phức tạp) để HS tập trung được vào điểm đang yếu.
+     (c) Nếu có > 4 root-cause, chọn 4 cái ảnh hưởng lớn nhất tới kết quả. Nếu có < 4 root-cause, các slot còn lại dành cho kỹ năng "tiền đề" gần nhất cần cho bài gốc (đặt ở các slot cuối, không đặt trước các bài chữa lỗi trực tiếp).
+
+   5.2. Mỗi bài "remedial" PHẢI thoả cả 4 điều sau:
+     - Rèn ĐÚNG MỘT kỹ năng/root-cause riêng. Không được "combo" 2-3 kỹ năng trong cùng một bài bổ trợ.
+     - Dễ hơn bài gốc (hệ số nhỏ, bậc thấp hơn hoặc ít bước hơn).
+     - Khi HS làm xong bài đó, HS sẽ nhìn thấy rõ chỗ mình vừa sai được "đứng riêng" thành một bài. Nếu không đáp ứng tiêu chí này → viết lại.
+     - Lời giải ("solution") phải DỪNG LẠI và NHẤN MẠNH đúng bước mà HS đã sai ở bài gốc (ví dụ: "(bước quan trọng: đổi dấu khi bỏ ngoặc có dấu trừ)"), để HS đối chiếu.
+
+   5.3. Trường hợp đặc biệt:
+     - Học sinh chỉ có 1 lỗi duy nhất: PHẢI sinh 3 bài khác nhau cùng luyện đúng lỗi đó với mức độ tăng dần (rất dễ → dễ → gần bằng bài gốc), và 1 bài thứ 4 là "tiền đề gần nhất" cần cho bài gốc. KHÔNG được cả 4 bài giống hệt nhau.
+     - Học sinh không có lỗi nào (score ≥ 9, "mistakes" rỗng): 2 bài đầu luyện 2 KỸ NĂNG TIỀN ĐỀ QUAN TRỌNG NHẤT mà bài gốc sử dụng (ví dụ nếu bài gốc dùng hiệu hai bình phương thì luyện nhận dạng $a^2-b^2$ và khai triển $(a-b)(a+b)$). 2 bài cuối là "một bước nâng" (khó hơn bài gốc một chút) để phòng hờ rơi rụng.
+     - Bài gốc chỉ yêu cầu tính toán cơ bản (không có nhiều kỹ năng con): 4 bài bổ trợ PHẢI đa dạng tình huống (số dương, số âm, phân số, biến khác...) của chính kỹ năng đó.
+
+   5.4. Ví dụ "ĐÚNG" — bài gốc: "Chứng minh $(2n+3)^2 - (2n+1)^2$ chia hết cho 8".
+     Giả sử "mistakes" của HS là:
+       - "Khai triển $(2n+3)^2$ sai ở số hạng $12n$ (viết thành $6n$)".
+       - "Không kết luận chia hết cho 8 ở cuối bài".
+     "remedial" ĐÚNG:
+       * Bài 1 (chữa lỗi 1, mức rất dễ): "Khai triển $(2x + 3)^2$" — chỉ kiểm tra bình phương một tổng, hệ số nhỏ.
+       * Bài 2 (chữa lỗi 1, nâng một bước): "Khai triển $(2a + 5)^2$ và chỉ rõ số hạng $2 \\cdot 2a \\cdot 5$" — vẫn chỉ bình phương một tổng.
+       * Bài 3 (chữa lỗi 2): "Cho $A = 24k$. Chứng minh $A$ chia hết cho $8$" — chỉ kiểm tra kỹ năng kết luận "$A = 8 \\cdot \\text{số nguyên}$ nên $A$ chia hết cho 8".
+       * Bài 4 (tiền đề gần): "Tính $(2n+3)^2 - (2n+1)^2$" (không yêu cầu chứng minh chia hết) — để HS rèn đúng phép trừ hai bình phương, sau đó tự ghép với kỹ năng kết luận ở bài 3.
+
+   5.5. Ví dụ "SAI" cho cùng bài gốc trên (TUYỆT ĐỐI KHÔNG ĐƯỢC LÀM):
+     "remedial":
+       * "Tính $(x+1)^2$"       // quá chung chung, không gắn root-cause
+       * "Phân tích $x^2 - 4$"   // lạc đề, HS không sai chỗ này
+       * "Giải $2x + 3 = 7$"     // không liên quan
+       * "Rút gọn $3x + 2x$"    // quá dễ, không cầu nối gì
+     LỖI: Cả 4 bài đều là "kỹ năng nền tảng chung" của đại số, không bài nào chữa đúng lỗi khai triển sai $(2n+3)^2$ hay lỗi không kết luận chia hết cho 8. → PHẢI VIẾT LẠI theo cách như mục 5.4.
 
 VÍ DỤ SAI (TUYỆT ĐỐI KHÔNG ĐƯỢC LÀM):
 "similar" cho bài "phân tích $P = x^2 - 4x + 4$":
