@@ -1,6 +1,97 @@
 import { useState, useEffect, useRef } from 'react';
 import './SubmissionResult.css';
 
+const CIRCLED_NUMS = [
+  '❶', '❷', '❸', '❹', '❺', '❻', '❼', '❽', '❾', '❿',
+  '⓫', '⓬', '⓭', '⓮', '⓯', '⓰', '⓱', '⓲', '⓳', '⓴',
+];
+function circledNum(n) {
+  return CIRCLED_NUMS[n - 1] ?? String(n);
+}
+
+function PracticeSection({
+  variant,
+  icon,
+  title,
+  subtitle,
+  items,
+  showSolutions,
+  setShowSolutions,
+  renderTextWithMath,
+  renderMath,
+  defaultOpen,
+}) {
+  const toggle = (key) =>
+    setShowSolutions((prev) => ({ ...prev, [key]: !(prev[key] ?? defaultOpen) }));
+
+  return (
+    <section className={`practice-section practice-section--${variant}`}>
+      <header className="practice-section-header">
+        <span className="practice-section-icon" aria-hidden="true">
+          {icon}
+        </span>
+        <div className="practice-section-titles">
+          <h3 className="practice-section-title">{title}</h3>
+          <p className="practice-section-sub">{subtitle}</p>
+        </div>
+      </header>
+
+      <div className="practice-card-list">
+        {items.map((item, index) => {
+          const key = `${variant}-${index}`;
+          const isOpen = showSolutions[key] ?? defaultOpen;
+          const hasSolution = !!item.solution;
+
+          return (
+            <article
+              key={index}
+              className={`practice-card practice-card--${variant} ${
+                isOpen ? 'is-open' : ''
+              }`}
+            >
+              <div className="practice-card-body">
+                <div className="practice-card-row">
+                  <span className="practice-num" aria-hidden="true">
+                    {circledNum(index + 1)}
+                  </span>
+                  <div className="practice-problem-text math-content">
+                    {renderTextWithMath(item.problem, renderMath)}
+                  </div>
+                </div>
+
+                {hasSolution && (
+                  <button
+                    type="button"
+                    className={`practice-toggle ${isOpen ? 'is-open' : ''}`}
+                    onClick={() => toggle(key)}
+                    aria-expanded={isOpen}
+                  >
+                    <span className="practice-toggle-label">
+                      {isOpen ? 'Thu gọn lời giải' : 'Xem lời giải'}
+                    </span>
+                    <span className="practice-toggle-chevron" aria-hidden="true">
+                      ▾
+                    </span>
+                  </button>
+                )}
+              </div>
+
+              {hasSolution && isOpen && (
+                <div className="practice-solution-body">
+                  <span className="solution-label">LỜI GIẢI</span>
+                  <div className="solution-text math-content">
+                    {renderTextWithMath(item.solution, renderMath)}
+                  </div>
+                </div>
+              )}
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 // Math rendering hook using MathJax
 function useMathRenderer() {
   const [mathjaxLoaded, setMathjaxLoaded] = useState(false);
@@ -496,95 +587,39 @@ function SubmissionResult({ submission }) {
         </div>
       )}
 
-      {/* Practice Sets */}
+      {/* Practice Sets — Flashcard / Accordion */}
       {ai_result.practiceSets && (
         <div className="practice-sets-section">
           {ai_result.practiceSets.similar &&
             ai_result.practiceSets.similar.length > 0 && (
-              <div className="practice-set">
-                <h3>Bài tập tương tự</h3>
-                <div className="practice-list">
-                  {ai_result.practiceSets.similar.map((item, index) => (
-                    <div key={index} className="practice-item">
-                      <div className="practice-number" aria-hidden="true">
-                        <span className="practice-number-top">Bài</span>
-                        <span className="practice-number-n">{index + 1}</span>
-                      </div>
-                      <div className="practice-content">
-                        <div className="practice-problem">
-                          <span className="problem-label">ĐỀ BÀI:</span>
-                          <div className="problem-text math-content">
-                            {renderTextWithMath(item.problem, renderMath)}
-                          </div>
-                        </div>
-                        {item.solution && (
-                          <div className="practice-solution">
-                            <span className="solution-label">LỜI GIẢI:</span>
-                            <div className="solution-text math-content">
-                              {renderTextWithMath(item.solution, renderMath)}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <PracticeSection
+                variant="similar"
+                icon="📐"
+                title="Bài tập tương tự"
+                subtitle={`Cùng dạng với bài em vừa làm · ${ai_result.practiceSets.similar.length} bài`}
+                items={ai_result.practiceSets.similar}
+                showSolutions={showSolutions}
+                setShowSolutions={setShowSolutions}
+                renderTextWithMath={renderTextWithMath}
+                renderMath={renderMath}
+                defaultOpen={false}
+              />
             )}
 
           {ai_result.practiceSets.remedial &&
             ai_result.practiceSets.remedial.length > 0 && (
-              <div className="practice-set">
-                <h3>Bài tập bổ trợ</h3>
-                <div className="practice-list">
-                  {ai_result.practiceSets.remedial.map((item, index) => {
-                    const solutionKey = `remedial-${index}`;
-                    const isSolutionVisible = showSolutions[solutionKey];
-                    
-                    return (
-                      <div key={index} className="practice-item">
-                        <div className="practice-number" aria-hidden="true">
-                          <span className="practice-number-top">Bài</span>
-                          <span className="practice-number-n">{index + 1}</span>
-                        </div>
-                        <div className="practice-content">
-                          <div className="practice-problem">
-                            <span className="problem-label">ĐỀ BÀI:</span>
-                            <div className="problem-text math-content">
-                              {renderTextWithMath(item.problem, renderMath)}
-                            </div>
-                          </div>
-                          {item.solution && (
-                            <>
-                              {!isSolutionVisible && (
-                                <button
-                                  onClick={() =>
-                                    setShowSolutions((prev) => ({
-                                      ...prev,
-                                      [solutionKey]: true,
-                                    }))
-                                  }
-                                  className="show-solution-button"
-                                >
-                                  👁️ Xem bài giải
-                                </button>
-                              )}
-                              {isSolutionVisible && (
-                                <div className="practice-solution">
-                                  <span className="solution-label">LỜI GIẢI:</span>
-                                  <div className="solution-text math-content">
-                                    {renderTextWithMath(item.solution, renderMath)}
-                                  </div>
-                                </div>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+              <PracticeSection
+                variant="remedial"
+                icon="🎯"
+                title="Bài tập bổ trợ"
+                subtitle={`Luyện thêm những chỗ em chưa chắc · ${ai_result.practiceSets.remedial.length} bài`}
+                items={ai_result.practiceSets.remedial}
+                showSolutions={showSolutions}
+                setShowSolutions={setShowSolutions}
+                renderTextWithMath={renderTextWithMath}
+                renderMath={renderMath}
+                defaultOpen={false}
+              />
             )}
         </div>
       )}
