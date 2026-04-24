@@ -1,8 +1,10 @@
 name: Deploy to EC2
 
-# Tự động deploy backend (và FE nếu EC2 cũng serve FE qua nginx) mỗi khi có
-# commit vào main. Vercel tự deploy FE độc lập qua GitHub integration;
-# workflow này chỉ lo phần EC2.
+# Tự động deploy backend/frontend lên EC2 mỗi khi có commit vào main.
+# Workflow tự suy scope deploy từ các path đã đổi để tiết kiệm thời gian:
+#   - Chỉ fe/khkt/** đổi → deploy frontend (không reload backend)
+#   - Chỉ be/** đổi      → deploy backend
+#   - Cả hai, hoặc đổi deploy-ec2.sh/nginx/workflow → deploy all
 #
 # Có thể chạy tay qua "Run workflow" ở tab Actions và chọn scope deploy.
 
@@ -10,7 +12,7 @@ on:
   push:
     branches: [main]
     paths:
-      # Chỉ trigger khi có thay đổi thực sự ảnh hưởng đến BE hoặc script
+      # Chỉ trigger khi có thay đổi thực sự ảnh hưởng đến BE/FE hoặc script
       # deploy, tránh tốn minutes khi sửa docs.
       - "be/**"
       - "fe/khkt/**"
@@ -22,9 +24,10 @@ on:
       scope:
         description: "What to deploy"
         required: true
-        default: "all"
+        default: "auto"
         type: choice
         options:
+          - auto
           - all
           - backend
           - frontend
@@ -41,14 +44,69 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Lấy đủ history để so diff giữa before/after khi event là push.
+          fetch-depth: 0
+
+      - name: Detect changed paths
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          # So với commit gốc trước push (event.before). Với workflow_dispatch
+          # thì không có before → fallback về HEAD~1.
+          base: ${{ github.event.before || '' }}
+          filters: |
+            backend:
+              - 'be/**'
+            frontend:
+              - 'fe/khkt/**'
+            infra:
+              - 'deploy-ec2.sh'
+              - 'nginx.conf.example'
+              - '.github/workflows/deploy-ec2.yml'
+
       - name: Determine deploy scope
         id: scope
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "value=${{ github.event.inputs.scope }}" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          INPUT_SCOPE="${{ github.event.inputs.scope || 'auto' }}"
+
+          # Nếu người dùng chỉ định scope cố định qua workflow_dispatch thì
+          # tôn trọng lựa chọn đó; 'auto' (mặc định) rơi vào nhánh suy diễn.
+          case "$INPUT_SCOPE" in
+            all|backend|frontend)
+              echo "value=$INPUT_SCOPE" >> "$GITHUB_OUTPUT"
+              echo "Manual scope override: $INPUT_SCOPE"
+              exit 0
+              ;;
+          esac
+
+          BE="${{ steps.changes.outputs.backend }}"
+          FE="${{ steps.changes.outputs.frontend }}"
+          INFRA="${{ steps.changes.outputs.infra }}"
+
+          echo "Changed: backend=$BE frontend=$FE infra=$INFRA"
+
+          # Đổi script deploy / nginx / workflow → deploy all cho an toàn
+          # (script/cấu hình mới có thể ảnh hưởng cả hai tầng).
+          if [ "$INFRA" = "true" ]; then
+            echo "value=all" >> "$GITHUB_OUTPUT"
+          elif [ "$BE" = "true" ] && [ "$FE" = "true" ]; then
+            echo "value=all" >> "$GITHUB_OUTPUT"
+          elif [ "$FE" = "true" ]; then
+            echo "value=frontend" >> "$GITHUB_OUTPUT"
+          elif [ "$BE" = "true" ]; then
+            echo "value=backend" >> "$GITHUB_OUTPUT"
           else
+            # Không có path nào match (hiếm gặp vì `on.push.paths` đã lọc);
+            # chạy all để chắc chắn đồng bộ code mới nhất.
             echo "value=all" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Show resolved scope
+        run: echo "Deploying scope → ${{ steps.scope.outputs.value }}"
 
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -60,6 +118,7 @@ jobs:
           # 15 phút đủ cho backend npm ci + frontend npm run build trên t2.micro.
           command_timeout: 15m
           script_stop: true
+          envs: DEPLOY_SCOPE
           script: |
             set -euo pipefail
             cd /home/ec2-user/khkt
@@ -69,10 +128,14 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             chmod +x deploy-ec2.sh
-            ./deploy-ec2.sh ${{ steps.scope.outputs.value }}
+            ./deploy-ec2.sh "$DEPLOY_SCOPE"
+        env:
+          DEPLOY_SCOPE: ${{ steps.scope.outputs.value }}
 
-      - name: Health check
-        # curl qua public nginx để xác nhận backend sống sau reload.
+      - name: Health check (backend)
+        # Chỉ ping /health khi scope có động đến backend — deploy FE thuần
+        # không reload pm2 nên không cần chờ backend "lên lại".
+        if: steps.scope.outputs.value == 'all' || steps.scope.outputs.value == 'backend'
         run: |
           HOST="${{ secrets.EC2_HOST }}"
           SCHEME="${{ secrets.HEALTHCHECK_SCHEME || 'http' }}"
@@ -87,4 +150,23 @@ jobs:
             sleep 5
           done
           echo "❌ Health check failed after 5 attempts"
+          exit 1
+
+      - name: Health check (frontend)
+        # Khi deploy FE, chỉ cần đảm bảo nginx serve được index.html mới.
+        if: steps.scope.outputs.value == 'all' || steps.scope.outputs.value == 'frontend'
+        run: |
+          HOST="${{ secrets.EC2_HOST }}"
+          SCHEME="${{ secrets.HEALTHCHECK_SCHEME || 'http' }}"
+          URL="${SCHEME}://${HOST}/"
+          echo "Fetching $URL"
+          for i in 1 2 3 4 5; do
+            if curl --fail --silent --show-error --max-time 10 "$URL" | grep -qi '<!doctype html'; then
+              echo "✅ Frontend healthy"
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying in 5s..."
+            sleep 5
+          done
+          echo "❌ Frontend health check failed"
           exit 1
