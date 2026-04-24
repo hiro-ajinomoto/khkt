@@ -16,9 +16,6 @@ import { resolveMaxSubmissionsClient } from '../../utils/submissionLimits';
 import './AssignmentsList.css';
 import ReportProblemDialog from './ReportProblemDialog';
 
-/** Max assignment cards per day on the list grid. */
-const ASSIGNMENTS_LIST_MAX_CARDS_PER_DAY = 3;
-
 /** Local calendar date for filtering (missing created_at → coi như hôm nay để vẫn hiện bài cũ). */
 function getAssignmentLocalDate(assignment) {
   if (assignment?.created_at) return new Date(assignment.created_at);
@@ -923,9 +920,7 @@ function AssignmentsList() {
                         )}
                       </div>
                       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6 [&>*]:h-full [&>*]:min-h-0">
-                        {assignments
-                          .slice(0, ASSIGNMENTS_LIST_MAX_CARDS_PER_DAY)
-                          .map((assignment, idx) => (
+                        {assignments.map((assignment, idx) => (
                           <AssignmentCard
                             key={assignment.id}
                             assignment={assignment}
@@ -943,11 +938,6 @@ function AssignmentsList() {
                           />
                         ))}
                       </section>
-                      {isTeacher && assignments.length > ASSIGNMENTS_LIST_MAX_CARDS_PER_DAY && (
-                        <p className="text-xs italic text-slate-500 dark:text-slate-400">
-                          Đang hiện {ASSIGNMENTS_LIST_MAX_CARDS_PER_DAY}/{assignments.length} thẻ. Nút &quot;Chọn cả ngày&quot; vẫn chọn tất cả {assignments.length} bài của ngày.
-                        </p>
-                      )}
                     </div>
                   );
                 })}
@@ -965,9 +955,7 @@ function AssignmentsList() {
                           {formatDateHeader(date)}
                         </h2>
                         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6 [&>*]:h-full [&>*]:min-h-0">
-                          {assignments
-                            .slice(0, ASSIGNMENTS_LIST_MAX_CARDS_PER_DAY)
-                            .map((assignment, idx) => (
+                          {assignments.map((assignment, idx) => (
                             <AssignmentCard
                               key={assignment.id}
                               assignment={assignment}
