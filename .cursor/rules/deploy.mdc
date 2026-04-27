@@ -13,6 +13,11 @@ alwaysApply: true
 - **Tay qua UI**: tab **Actions** → *Deploy to EC2* → *Run workflow* → chọn scope.
 - **SSH trực tiếp** (khi workflow fail / cần hotfix): `ssh -i ec2-keypair.pem ec2-user@<EC2_HOST>` rồi chạy `cd /home/ec2-user/khkt && git pull && ./deploy-ec2.sh [frontend|backend|all]`.
 
+## Luồng GitHub Actions → EC2
+
+- Runner **checkout** repo (token GitHub), **rsync** mã lên `/home/ec2-user/khkt` (bỏ qua `git fetch` trên EC2 — tránh lỗi 128 khi repo private).
+- Sau đó SSH chạy `./deploy-ec2.sh [scope]`.
+
 ## Luồng deploy-ec2.sh
 
 - **frontend**: `cd fe/khkt && npm ci && npm run build` → `rsync -a --delete dist/ /var/www/khkt/` → `sudo systemctl reload nginx`. Không đụng PM2.

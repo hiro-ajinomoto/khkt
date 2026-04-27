@@ -142,6 +142,31 @@ jobs:
       - name: Show resolved scope
         run: echo "Deploying scope → ${{ steps.scope.outputs.value }}"
 
+      # Repo private: EC2 thường không có quyền `git fetch` → exit 128.
+      # Đẩy mã từ runner (đã checkout bằng GITHUB_TOKEN) lên máy chủ.
+      - name: Rsync repository to EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_SSH_PORT: ${{ secrets.EC2_SSH_PORT }}
+        run: |
+          set -euo pipefail
+          PORT="${EC2_SSH_PORT:-22}"
+          mkdir -p ~/.ssh
+          umask 077
+          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/ec2_deploy_key
+          chmod 600 ~/.ssh/ec2_deploy_key
+          ssh-keyscan -p "$PORT" -H "$EC2_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          RSYNC_RSH="ssh -i $HOME/.ssh/ec2_deploy_key -o StrictHostKeyChecking=accept-new -p $PORT"
+          rsync -az \
+            -e "$RSYNC_RSH" \
+            --exclude '.git' \
+            --exclude 'be/node_modules' \
+            --exclude 'fe/khkt/node_modules' \
+            --exclude '.cursor' \
+            ./ "${EC2_USER}@${EC2_HOST}:/home/ec2-user/khkt/"
+
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.5
         with:
@@ -156,11 +181,6 @@ jobs:
           script: |
             set -euo pipefail
             cd /home/ec2-user/khkt
-            # Luôn đồng bộ với main trước khi chạy deploy script (đảm bảo
-            # script dùng phiên bản mới nhất, kể cả khi chính deploy-ec2.sh
-            # vừa được vá).
-            git fetch origin main
-            git reset --hard origin/main
             chmod +x deploy-ec2.sh
             ./deploy-ec2.sh "$DEPLOY_SCOPE"
         env:
