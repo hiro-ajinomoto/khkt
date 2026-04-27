@@ -510,7 +510,7 @@ Prompt được tối ưu hóa để phù hợp với chương trình Toán THCS
 #### 3.3.2. Tài liệu và hướng dẫn
 
 - README.md cho backend và frontend.
-- Hướng dẫn deploy (EC2, Railway, Vercel).
+- Hướng dẫn deploy (EC2 + nginx + PM2).
 - Hướng dẫn sử dụng Git (branching strategy).
 
 ### 3.4. Kết quả đạt được

@@ -14,7 +14,7 @@ import {
 } from "../utils/assignmentRelease.js";
 import { resolveMaxSubmissionsLimit } from "../utils/submissionLimits.js";
 import { uploadFileToS3 } from "../services/s3Service.js";
-import { authenticate } from "../middleware/auth.js";
+import { authenticate, requireTeacher } from "../middleware/auth.js";
 import {
   STICKER_TIER_ORDER,
   computeStickerStatsFromSubmissionRows,
@@ -182,6 +182,9 @@ router.get("/my-submissions", authenticate, async (req, res) => {
         image_paths: 1,
         created_at: 1,
         "ai_result.score": 1,
+        // Chỉ kéo score_override + flag để HS thấy badge "Đã có nhận xét". Toàn
+        // bộ comment text sẽ được fetch khi mở chi tiết qua GET /submissions/:id.
+        "teacher_review.score_override": 1,
       })
       .sort({ created_at: -1 })
       .toArray();
@@ -218,6 +221,11 @@ router.get("/my-submissions", authenticate, async (req, res) => {
         submission.ai_result && typeof submission.ai_result.score === "number"
           ? submission.ai_result.score
           : null;
+      const reviewScore =
+        submission.teacher_review &&
+        typeof submission.teacher_review.score_override === "number"
+          ? submission.teacher_review.score_override
+          : null;
       return {
         id: submission._id.toString(),
         assignment_id: aid,
@@ -230,6 +238,13 @@ router.get("/my-submissions", authenticate, async (req, res) => {
         // Payload rút gọn: chỉ score cho badge; FE gọi /submissions/:id để
         // xem chi tiết đầy đủ khi người dùng mở card.
         ai_result: score !== null ? { score } : null,
+        // Chỉ trả flag + score_override cho list. Comment đầy đủ nằm ở
+        // GET /submissions/:id để tránh kéo text dài cho mọi card.
+        teacher_review:
+          reviewScore !== null || submission.teacher_review
+            ? { score_override: reviewScore }
+            : null,
+        has_teacher_review: !!submission.teacher_review,
       };
     });
 
@@ -341,6 +356,295 @@ router.get("/my-stickers", authenticate, async (req, res) => {
 });
 
 /**
+ * Chuẩn hoá teacher_review trước khi trả về client. Trả null nếu chưa nhận xét.
+ * Giữ ObjectId reviewer_id dưới dạng hex string để FE dễ so sánh quyền sửa/xóa.
+ */
+function formatTeacherReview(review) {
+  if (!review || typeof review !== "object") return null;
+  return {
+    comment: typeof review.comment === "string" ? review.comment : "",
+    score_override:
+      typeof review.score_override === "number" ? review.score_override : null,
+    reviewer_id: review.reviewer_id ? review.reviewer_id.toString() : null,
+    reviewer_username: review.reviewer_username || null,
+    reviewer_full_name: review.reviewer_full_name || null,
+    created_at: review.created_at || null,
+    updated_at: review.updated_at || null,
+  };
+}
+
+/**
+ * Validate body cho upsert teacher_review.
+ * Trả { error } nếu sai, { value } nếu ok.
+ */
+function validateReviewPayload(body) {
+  const comment = typeof body?.comment === "string" ? body.comment.trim() : "";
+  if (!comment) {
+    return { error: "Nhận xét không được để trống." };
+  }
+  if (comment.length > 4000) {
+    return { error: "Nhận xét quá dài (tối đa 4000 ký tự)." };
+  }
+
+  let scoreOverride = null;
+  if (
+    body?.score_override !== undefined &&
+    body?.score_override !== null &&
+    body?.score_override !== ""
+  ) {
+    const n = Number(body.score_override);
+    if (!Number.isFinite(n) || n < 0 || n > 10) {
+      return { error: "Điểm chấm tay phải nằm trong khoảng 0-10." };
+    }
+    // Cho phép tối đa 1 chữ số thập phân để FE tự do nhập 7.5 / 8.25 → làm tròn 1 số
+    scoreOverride = Math.round(n * 10) / 10;
+  }
+
+  return { value: { comment, score_override: scoreOverride } };
+}
+
+/**
+ * GET /submissions/teacher
+ * List bài nộp cho GV/Admin chấm tay.
+ * Query params:
+ *   - assignment_id (optional): lọc theo 1 assignment
+ *   - class_name (optional): lọc theo lớp HS
+ *   - has_review (optional): "true" → chỉ bài đã có nhận xét; "false" → chưa nhận xét; mặc định = tất cả
+ *   - limit (optional, default 100, max 500)
+ *   - offset (optional, default 0)
+ *
+ * Mỗi bản ghi trả về meta nhẹ (không kéo full ai_result để tránh payload lớn).
+ */
+router.get("/teacher", authenticate, requireTeacher, async (req, res) => {
+  try {
+    const db = getDB();
+    const { assignment_id, class_name, has_review } = req.query;
+    const limit = Math.min(
+      Math.max(parseInt(req.query.limit, 10) || 100, 1),
+      500
+    );
+    const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
+
+    const filter = {};
+
+    if (assignment_id) {
+      try {
+        filter.assignment_id = ObjectId.createFromHexString(
+          String(assignment_id)
+        );
+      } catch (_err) {
+        return res.status(400).json({ detail: "Invalid assignment_id" });
+      }
+    }
+
+    // class_name lọc gián tiếp qua student_id → cần lookup users trước
+    let studentIdFilter = null;
+    if (class_name) {
+      const students = await db
+        .collection("users")
+        .find({ role: "student", class_name: String(class_name) })
+        .project({ _id: 1 })
+        .toArray();
+      if (students.length === 0) {
+        // Lớp không có HS → trả về list rỗng luôn cho gọn.
+        return res.json({ items: [], total: 0, limit, offset });
+      }
+      studentIdFilter = students.map((s) => s._id);
+      filter.student_id = { $in: studentIdFilter };
+    }
+
+    if (has_review === "true") {
+      filter.teacher_review = { $exists: true, $ne: null };
+    } else if (has_review === "false") {
+      filter.$or = [
+        { teacher_review: { $exists: false } },
+        { teacher_review: null },
+      ];
+    }
+
+    const total = await db.collection("submissions").countDocuments(filter);
+
+    const rows = await db
+      .collection("submissions")
+      .find(filter)
+      .project({
+        assignment_id: 1,
+        student_id: 1,
+        image_paths: 1,
+        created_at: 1,
+        "ai_result.score": 1,
+        teacher_review: 1,
+      })
+      .sort({ created_at: -1 })
+      .skip(offset)
+      .limit(limit)
+      .toArray();
+
+    // Batch resolve assignments + students bằng $in để tránh N+1 round-trip.
+    const assignmentIds = Array.from(
+      new Map(
+        rows
+          .filter((r) => r.assignment_id)
+          .map((r) => [r.assignment_id.toString(), r.assignment_id])
+      ).values()
+    );
+    const studentIds = Array.from(
+      new Map(
+        rows
+          .filter((r) => r.student_id)
+          .map((r) => [r.student_id.toString(), r.student_id])
+      ).values()
+    );
+
+    const [assignmentDocs, studentDocs] = await Promise.all([
+      assignmentIds.length
+        ? db
+            .collection("assignments")
+            .find({ _id: { $in: assignmentIds } })
+            .project({ title: 1, subject: 1 })
+            .toArray()
+        : Promise.resolve([]),
+      studentIds.length
+        ? db
+            .collection("users")
+            .find({ _id: { $in: studentIds } })
+            .project({ username: 1, full_name: 1, class_name: 1 })
+            .toArray()
+        : Promise.resolve([]),
+    ]);
+
+    const assignmentMap = new Map(
+      assignmentDocs.map((a) => [a._id.toString(), a])
+    );
+    const studentMap = new Map(studentDocs.map((s) => [s._id.toString(), s]));
+
+    const items = rows.map((r) => {
+      const aid = r.assignment_id ? r.assignment_id.toString() : null;
+      const sid = r.student_id ? r.student_id.toString() : null;
+      const a = aid ? assignmentMap.get(aid) : null;
+      const s = sid ? studentMap.get(sid) : null;
+      const review = formatTeacherReview(r.teacher_review);
+      return {
+        id: r._id.toString(),
+        assignment_id: aid,
+        assignment_title: a ? a.title : null,
+        assignment_subject: a ? a.subject : null,
+        student_id: sid,
+        student_username: s ? s.username : null,
+        student_full_name: s ? s.full_name || null : null,
+        student_class: s ? s.class_name || null : null,
+        // Thumbnail đầu tiên là đủ cho list view; FE bấm vào sẽ load full chi tiết.
+        thumbnail_url:
+          r.image_paths && r.image_paths.length > 0
+            ? pathToUrl(r.image_paths[0])
+            : null,
+        created_at: r.created_at,
+        ai_score:
+          r.ai_result && typeof r.ai_result.score === "number"
+            ? r.ai_result.score
+            : null,
+        teacher_review: review,
+        has_review: !!review,
+      };
+    });
+
+    res.json({ items, total, limit, offset });
+  } catch (error) {
+    console.error("Error listing teacher submissions:", error);
+    res.status(500).json({ detail: "Failed to list submissions" });
+  }
+});
+
+/**
+ * PUT /submissions/:id/review
+ * Tạo hoặc cập nhật nhận xét thủ công của GV/Admin cho 1 bài nộp.
+ * Body: { comment: string (bắt buộc), score_override?: number 0-10 | null }
+ */
+router.put("/:id/review", authenticate, requireTeacher, async (req, res) => {
+  try {
+    const { id } = req.params;
+    let objectId;
+    try {
+      objectId = ObjectId.createFromHexString(id);
+    } catch (_err) {
+      return res.status(400).json({ detail: "Invalid submission id" });
+    }
+
+    const validated = validateReviewPayload(req.body);
+    if (validated.error) {
+      return res.status(400).json({ detail: validated.error });
+    }
+
+    const db = getDB();
+    const submission = await db
+      .collection("submissions")
+      .findOne({ _id: objectId });
+    if (!submission) {
+      return res.status(404).json({ detail: "Submission not found" });
+    }
+
+    // Lookup GV để snapshot full_name vào review (FE list view không cần
+    // populate users/lookup mỗi lần render).
+    const reviewerId = ObjectId.createFromHexString(req.user.id);
+    const reviewerDoc = await db
+      .collection("users")
+      .findOne({ _id: reviewerId }, { projection: { username: 1, full_name: 1 } });
+
+    const now = new Date();
+    const existing = submission.teacher_review || null;
+
+    const review = {
+      comment: validated.value.comment,
+      score_override: validated.value.score_override,
+      reviewer_id: reviewerId,
+      reviewer_username: reviewerDoc?.username || req.user.username || null,
+      reviewer_full_name: reviewerDoc?.full_name || null,
+      created_at: existing?.created_at || now,
+      updated_at: now,
+    };
+
+    await db
+      .collection("submissions")
+      .updateOne({ _id: objectId }, { $set: { teacher_review: review } });
+
+    res.json({ teacher_review: formatTeacherReview(review) });
+  } catch (error) {
+    console.error("Error upserting teacher review:", error);
+    res.status(500).json({ detail: "Failed to save review" });
+  }
+});
+
+/**
+ * DELETE /submissions/:id/review
+ * Xóa nhận xét thủ công.
+ */
+router.delete("/:id/review", authenticate, requireTeacher, async (req, res) => {
+  try {
+    const { id } = req.params;
+    let objectId;
+    try {
+      objectId = ObjectId.createFromHexString(id);
+    } catch (_err) {
+      return res.status(400).json({ detail: "Invalid submission id" });
+    }
+
+    const db = getDB();
+    const result = await db
+      .collection("submissions")
+      .updateOne({ _id: objectId }, { $unset: { teacher_review: "" } });
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ detail: "Submission not found" });
+    }
+
+    res.json({ ok: true });
+  } catch (error) {
+    console.error("Error deleting teacher review:", error);
+    res.status(500).json({ detail: "Failed to delete review" });
+  }
+});
+
+/**
  * GET /submissions/:id
  * Get a submission by ID
  */
@@ -372,6 +676,7 @@ router.get("/:id", async (req, res) => {
         : [],
       created_at: submission.created_at,
       ai_result: submission.ai_result || null,
+      teacher_review: formatTeacherReview(submission.teacher_review),
     });
   } catch (error) {
     console.error("Error fetching submission:", error);

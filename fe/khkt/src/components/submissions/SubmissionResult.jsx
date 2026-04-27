@@ -504,7 +504,12 @@ function SubmissionResult({ submission }) {
     );
   }
 
-  const { ai_result, image_paths, created_at } = submission;
+  const { ai_result, image_paths, created_at, teacher_review } = submission;
+  const hasTeacherReview = !!(teacher_review && teacher_review.comment);
+  const teacherScore =
+    teacher_review && typeof teacher_review.score_override === 'number'
+      ? teacher_review.score_override
+      : null;
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -524,17 +529,21 @@ function SubmissionResult({ submission }) {
     return '#dc2626';
   };
 
-  const rawScore = Number(ai_result.score);
-  const displayScore = Number.isFinite(rawScore) ? rawScore : 0;
+  const aiScoreRaw = Number(ai_result.score);
+  const aiScoreNum = Number.isFinite(aiScoreRaw) ? aiScoreRaw : 0;
+  // Khi GV đã chấm tay và nhập điểm override, ưu tiên hiện điểm đó cho HS;
+  // ngược lại giữ nguyên điểm AI. Vẫn show điểm AI dạng phụ để minh bạch.
+  const displayScore = teacherScore != null ? teacherScore : aiScoreNum;
   const scoreClamped = Math.max(0, Math.min(10, displayScore));
   const scoreAccent = getScoreColor(scoreClamped);
   const scorePct = (scoreClamped / 10) * 100;
+  const scoreEyebrow = teacherScore != null ? 'Điểm giáo viên chấm' : 'Điểm chấm';
 
   return (
     <div className="submission-result" ref={containerRef}>
       <div className="score-section">
         <div className="score-card" style={{ '--score-accent': scoreAccent }}>
-          <p className="score-eyebrow">Điểm chấm</p>
+          <p className="score-eyebrow">{scoreEyebrow}</p>
           <div className="score-main" aria-label={`Điểm ${displayScore} trên 10`}>
             <span className="score-value">{displayScore}</span>
             <span className="score-den">/10</span>
@@ -545,9 +554,32 @@ function SubmissionResult({ submission }) {
               style={{ width: `${scorePct}%`, background: scoreAccent }}
             />
           </div>
-          <p className="score-caption">Thang điểm 10</p>
+          <p className="score-caption">
+            {teacherScore != null
+              ? `Thang điểm 10 · AI gợi ý ${aiScoreNum}/10`
+              : 'Thang điểm 10'}
+          </p>
         </div>
       </div>
+
+      {hasTeacherReview && (
+        <div className="result-section teacher-review-section">
+          <h3>📝 Nhận xét của giáo viên</h3>
+          <div className="teacher-review-card">
+            <div className="teacher-review-text math-content">
+              {renderTextWithMath(teacher_review.comment, renderMath)}
+            </div>
+            <p className="teacher-review-meta">
+              — {teacher_review.reviewer_full_name ||
+                teacher_review.reviewer_username ||
+                'Giáo viên'}
+              {teacher_review.updated_at
+                ? ` · ${new Date(teacher_review.updated_at).toLocaleDateString('vi-VN')}`
+                : null}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Summary */}
       {ai_result.summary && (

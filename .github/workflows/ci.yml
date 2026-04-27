@@ -42,7 +42,7 @@ jobs:
         run: npm run build
         env:
           # Build trên CI không biết API URL production, nên dùng placeholder;
-          # artifact của CI không dùng để deploy (Vercel build lại khi deploy).
+          # artifact của CI không dùng để deploy (deploy-ec2.yml tự build lại trên EC2).
           VITE_API_BASE_URL: "/api"
 
   backend:

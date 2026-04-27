@@ -677,3 +677,39 @@ html.dark .practice-toggle:hover {
     font-size: 0.95rem;
   }
 }
+
+/* Khối nhận xét thủ công của giáo viên — palette emerald cho khác AI section. */
+.teacher-review-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.teacher-review-card {
+  position: relative;
+  background: linear-gradient(
+    135deg,
+    rgba(167, 243, 208, 0.18),
+    rgba(110, 231, 183, 0.08)
+  );
+  border: 1px solid rgba(16, 185, 129, 0.32);
+  border-left: 4px solid rgba(16, 185, 129, 0.7);
+  border-radius: 1rem;
+  padding: 1rem 1.1rem;
+  box-shadow: 0 8px 22px rgba(16, 185, 129, 0.08);
+}
+
+.teacher-review-text {
+  white-space: pre-wrap;
+  line-height: 1.6;
+  color: var(--ocean-text-strong);
+  font-size: 0.95rem;
+}
+
+.teacher-review-meta {
+  margin-top: 0.6rem;
+  font-size: 0.78rem;
+  font-style: italic;
+  color: var(--ocean-text-muted);
+  text-align: right;
+}

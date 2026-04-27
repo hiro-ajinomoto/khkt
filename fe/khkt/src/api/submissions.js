@@ -172,6 +172,127 @@ export async function fetchMySubmissionCounts() {
 }
 
 /**
+ * Lấy danh sách bài nộp cho GV/Admin chấm tay.
+ * @param {Object} [params]
+ * @param {string} [params.assignmentId]
+ * @param {string} [params.className]
+ * @param {'true'|'false'} [params.hasReview]
+ * @param {number} [params.limit]
+ * @param {number} [params.offset]
+ * @returns {Promise<{items: Array, total: number, limit: number, offset: number}>}
+ */
+export async function fetchTeacherSubmissions(params = {}) {
+  try {
+    const authHeader = getAuthHeader();
+    if (!authHeader) throw new Error('Authentication required');
+
+    const qs = new URLSearchParams();
+    if (params.assignmentId) qs.set('assignment_id', params.assignmentId);
+    if (params.className) qs.set('class_name', params.className);
+    if (params.hasReview) qs.set('has_review', params.hasReview);
+    if (params.limit) qs.set('limit', String(params.limit));
+    if (params.offset) qs.set('offset', String(params.offset));
+
+    const url = `${API_BASE_URL}/submissions/teacher${
+      qs.toString() ? `?${qs.toString()}` : ''
+    }`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: authHeader,
+      },
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        describeApiFailure(
+          response,
+          errorData,
+          'Không tải được danh sách bài nộp.',
+        ),
+      );
+    }
+    return response.json();
+  } catch (error) {
+    console.error('Error fetching teacher submissions:', error);
+    rethrowNetwork(error);
+  }
+}
+
+/**
+ * Tạo/cập nhật nhận xét thủ công cho 1 bài nộp.
+ * @param {string} submissionId
+ * @param {{comment: string, score_override?: number|null}} payload
+ * @returns {Promise<{teacher_review: Object}>}
+ */
+export async function upsertSubmissionReview(submissionId, payload) {
+  try {
+    const authHeader = getAuthHeader();
+    if (!authHeader) throw new Error('Authentication required');
+
+    const response = await fetch(
+      `${API_BASE_URL}/submissions/${submissionId}/review`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: authHeader,
+        },
+        body: JSON.stringify(payload),
+      },
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        describeApiFailure(response, errorData, 'Không lưu được nhận xét.'),
+      );
+    }
+    return response.json();
+  } catch (error) {
+    console.error('Error upserting submission review:', error);
+    rethrowNetwork(error);
+  }
+}
+
+/**
+ * Xóa nhận xét thủ công.
+ * @param {string} submissionId
+ * @returns {Promise<{ok: boolean}>}
+ */
+export async function deleteSubmissionReview(submissionId) {
+  try {
+    const authHeader = getAuthHeader();
+    if (!authHeader) throw new Error('Authentication required');
+
+    const response = await fetch(
+      `${API_BASE_URL}/submissions/${submissionId}/review`,
+      {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: authHeader,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        describeApiFailure(response, errorData, 'Không xóa được nhận xét.'),
+      );
+    }
+    return response.json();
+  } catch (error) {
+    console.error('Error deleting submission review:', error);
+    rethrowNetwork(error);
+  }
+}
+
+/**
  * Sticker totals for the authenticated student (latest grade per assignment).
  * @returns {Promise<Object>}
  */

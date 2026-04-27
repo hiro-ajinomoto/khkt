@@ -10,6 +10,8 @@ import Register from './components/auth/Register'
 import AdminApp from './components/admin/AdminApp'
 import MySubmissions from './components/submissions/MySubmissions'
 import StickerRedeem from './components/submissions/StickerRedeem'
+import TeacherSubmissionsList from './components/submissions/TeacherSubmissionsList'
+import TeacherSubmissionReview from './components/submissions/TeacherSubmissionReview'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import { OceanPageLoading } from './components/layout/OceanShell'
 import StudentStickerDock from './components/submissions/StudentStickerDock'
@@ -90,6 +92,22 @@ function AppRoutes() {
             <MySubmissions />
           </ProtectedRoute>
         } 
+      />
+      <Route
+        path="/teacher/submissions"
+        element={
+          <ProtectedRoute requiredRole="teacher">
+            <TeacherSubmissionsList />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/teacher/submissions/:id"
+        element={
+          <ProtectedRoute requiredRole="teacher">
+            <TeacherSubmissionReview />
+          </ProtectedRoute>
+        }
       />
       <Route
         path="/sticker-rewards"

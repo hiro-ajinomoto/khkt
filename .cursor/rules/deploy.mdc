@@ -1,0 +1,25 @@
+---
+description: Deployment target for this project (EC2, not Vercel)
+alwaysApply: true
+---
+
+# Deploy target: EC2 + nginx + PM2
+
+**Cả frontend và backend đều deploy trên cùng 1 EC2 instance.** Không dùng Vercel, không dùng Railway. Đừng nhắc hai dịch vụ đó.
+
+## Cách deploy
+
+- **Auto (mặc định)**: `git push origin main` → GitHub Actions `.github/workflows/deploy-ec2.yml` tự chạy, suy scope (`frontend` / `backend` / `all`) từ path đã đổi.
+- **Tay qua UI**: tab **Actions** → *Deploy to EC2* → *Run workflow* → chọn scope.
+- **SSH trực tiếp** (khi workflow fail / cần hotfix): `ssh -i ec2-keypair.pem ec2-user@<EC2_HOST>` rồi chạy `cd /home/ec2-user/khkt && git pull && ./deploy-ec2.sh [frontend|backend|all]`.
+
+## Luồng deploy-ec2.sh
+
+- **frontend**: `cd fe/khkt && npm ci && npm run build` → `rsync -a --delete dist/ /var/www/khkt/` → `sudo systemctl reload nginx`. Không đụng PM2.
+- **backend**: `cd be && npm ci --omit=dev` → `pm2 reload ecosystem.config.cjs`. Không build FE.
+
+## Ghi chú quan trọng
+
+- Nếu `npm ci` fail vì optional-dep platform (ví dụ `@emnapi/core`), fallback `rm -rf node_modules && npm install`. Script đã có logic này ở bản mới nhất.
+- Nginx serve FE từ `/var/www/khkt/`, proxy `/api` → `localhost:8000` (PM2 chạy backend).
+- `ec2-keypair.pem` nằm ở repo root, đã được `.gitignore`. Đừng commit nó.

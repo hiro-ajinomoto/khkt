@@ -768,6 +768,14 @@ function AssignmentsList() {
                   ➕ Tạo bài tập mới
                 </button>
               )}
+              {isTeacher && (
+                <button
+                  onClick={() => navigate('/teacher/submissions')}
+                  className="w-full rounded-2xl border border-amber-200/70 bg-[linear-gradient(135deg,#fcd34d_0%,#f59e0b_55%,#ea580c_100%)] px-4 py-3 font-medium text-white shadow-lg shadow-amber-200/35 transition hover:-translate-y-0.5 dark:border-amber-300/20 dark:shadow-amber-950/30"
+                >
+                  📝 Chấm tay bài nộp
+                </button>
+              )}
               <button
                 onClick={loadAllAssignments}
                 className="w-full rounded-2xl border border-sky-200/80 bg-[linear-gradient(135deg,#dbeafe_0%,#8fc2ff_35%,#ffd36a_100%)] px-4 py-3 font-medium text-slate-800 shadow-[0_10px_28px_rgba(86,132,214,0.14)] transition hover:-translate-y-0.5 dark:border-cyan-300/20 dark:bg-gradient-to-r dark:from-cyan-500/70 dark:to-blue-600/80 dark:text-white dark:shadow-cyan-950/30"

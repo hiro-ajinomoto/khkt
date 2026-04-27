@@ -82,9 +82,16 @@ deploy_frontend() {
     print_info "Pulling latest code (idempotent)..."
     git pull origin main || true
 
+    # Thử `npm ci` trước cho reproducible install; nếu fail (thường do
+    # optional-dep phụ thuộc platform như @emnapi/core khác giữa mac↔linux),
+    # fallback sang `npm install` để deploy không đứt.
     print_info "Installing dependencies..."
     if [ -f package-lock.json ]; then
-        npm ci
+        if ! npm ci; then
+            print_info "npm ci failed (likely platform optional-deps), retrying with npm install..."
+            rm -rf node_modules
+            npm install
+        fi
     else
         npm install
     fi
