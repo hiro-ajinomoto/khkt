@@ -55,8 +55,15 @@ jobs:
         # v4 chạy Node 24 — tránh cảnh báo deprecate Node 20 của các bản cũ.
         uses: dorny/paths-filter@v4
         with:
-          # Push: so với commit trước push. workflow_dispatch / edge case: HEAD~1.
-          base: ${{ github.event.before || 'HEAD~1' }}
+          # Push: so với commit trước push. GitHub đôi khi gửi before = toàn 0 (nhánh mới)
+          # hoặc thiếu (workflow_dispatch) — git sẽ lỗi 128 nếu dùng base đó.
+          base: >-
+            ${{
+              (github.event.before != '' &&
+                github.event.before != '0000000000000000000000000000000000000000' &&
+                github.event.before)
+              || 'HEAD~1'
+            }}
           filters: |
             backend:
               - 'be/**'
