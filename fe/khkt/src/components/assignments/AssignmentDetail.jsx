@@ -128,6 +128,10 @@ function AssignmentDetail() {
   const deadlineHint =
     assignment?.due_date && deadlineReminderClient(assignment.due_date);
 
+  /** HS chỉ được xem đáp án mẫu sau khi đã nộp (đối chiếu bài làm); GV/Admin xem luôn. */
+  const studentCanSeeModelSolution =
+    !isStudent || (assignment?.my_submission_count ?? 0) > 0;
+
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
@@ -234,28 +238,18 @@ function AssignmentDetail() {
           </div>
         )}
 
-        {assignment.model_solution_image_url && (
-          <div className="image-container model-solution-image-container">
-            <label>Hình ảnh bài giải mẫu:</label>
-            <img
-              src={assignment.model_solution_image_url}
-              alt="Bài giải mẫu"
-              className="assignment-image"
-              onError={(e) => {
-                e.target.style.display = 'none';
-                const errorDiv = e.target.nextSibling;
-                if (errorDiv) {
-                  errorDiv.style.display = 'block';
-                }
-              }}
-            />
-            <div className="image-error" style={{ display: 'none' }}>
-              Không thể tải hình ảnh
-            </div>
+        {isStudent && !studentCanSeeModelSolution && (assignment.model_solution_image_url || assignment.model_solution) && (
+          <div className="model-solution-text model-solution-text--locked" role="note">
+            <label>Đáp án mẫu</label>
+            <p>
+              Sau khi bạn nộp bài, bạn xem bài giải mẫu (kể cả hình ảnh, nếu có) trong phần kết quả
+              chấm để đối chiếu. Nếu có lời giải dạng chữ, bạn cũng có thể xem thêm khi quay lại trang
+              bài tập này.
+            </p>
           </div>
         )}
 
-        {assignment.model_solution && (
+        {assignment.model_solution && studentCanSeeModelSolution && (
           <div className="model-solution-text">
             <label>Bài giải mẫu:</label>
             <p>{assignment.model_solution}</p>
@@ -400,7 +394,17 @@ function AssignmentDetail() {
           )}
 
           {showResult && (
-            <SubmissionResult submission={submission} />
+            <SubmissionResult
+              submission={submission}
+              assignmentModel={
+                isStudent && assignment
+                  ? {
+                      model_solution: assignment.model_solution,
+                      model_solution_image_url: assignment.model_solution_image_url,
+                    }
+                  : null
+              }
+            />
           )}
         </div>
       )}

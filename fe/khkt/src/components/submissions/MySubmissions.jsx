@@ -6,9 +6,18 @@ import {
   fetchMyStickers,
   fetchSubmissionById,
 } from '../../api/submissions';
+import { fetchAssignmentById } from '../../api/assignments';
 import SubmissionResult from './SubmissionResult';
 import OceanShell, { OceanPageLoading, OceanPageError } from '../layout/OceanShell';
 import './MySubmissions.css';
+
+function assignmentModelFromCachedDetail(detail) {
+  if (!detail?.model_solution && !detail?.model_solution_image_url) return null;
+  return {
+    model_solution: detail.model_solution,
+    model_solution_image_url: detail.model_solution_image_url,
+  };
+}
 
 function MySubmissions() {
   const navigate = useNavigate();
@@ -74,7 +83,10 @@ function MySubmissions() {
     try {
       setLoadingDetailId(submission.id);
       setDetailErrorById((prev) => ({ ...prev, [submission.id]: null }));
-      const full = await fetchSubmissionById(submission.id);
+      const [full, assignment] = await Promise.all([
+        fetchSubmissionById(submission.id),
+        fetchAssignmentById(submission.assignment_id).catch(() => null),
+      ]);
       setDetailsById((prev) => ({
         ...prev,
         [submission.id]: {
@@ -82,6 +94,8 @@ function MySubmissions() {
           ...full,
           assignment_title: submission.assignment_title,
           assignment_subject: submission.assignment_subject,
+          model_solution: assignment?.model_solution,
+          model_solution_image_url: assignment?.model_solution_image_url,
         },
       }));
     } catch (err) {
@@ -274,6 +288,9 @@ function MySubmissions() {
                     ) : detailsById[submission.id] ? (
                       <SubmissionResult
                         submission={detailsById[submission.id]}
+                        assignmentModel={assignmentModelFromCachedDetail(
+                          detailsById[submission.id],
+                        )}
                       />
                     ) : (
                       <p className="submission-detail-loading">

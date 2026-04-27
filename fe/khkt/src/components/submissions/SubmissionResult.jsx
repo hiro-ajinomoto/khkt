@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import './SubmissionResult.css';
 
 const CIRCLED_NUMS = [
@@ -494,10 +495,25 @@ function renderTextWithMath(text, renderMathFn) {
   return <span className="math-content">{processedText}</span>;
 }
 
-function SubmissionResult({ submission }) {
+function SubmissionResult({ submission, assignmentModel = null }) {
   const { renderMath, loading: mathLoading, mathjaxLoaded } = useMathRenderer();
   const [showSolutions, setShowSolutions] = useState({}); // Track which solutions are shown
+  const [imageLightbox, setImageLightbox] = useState(null); // { src, alt }
   const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!imageLightbox) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape') setImageLightbox(null);
+    };
+    window.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [imageLightbox]);
 
   // Re-render MathJax when content changes
   useEffect(() => {
@@ -513,7 +529,7 @@ function SubmissionResult({ submission }) {
       
       return () => clearTimeout(timeoutId);
     }
-  }, [submission, mathjaxLoaded, showSolutions]);
+  }, [submission, mathjaxLoaded, showSolutions, assignmentModel]);
 
   if (!submission || !submission.ai_result) {
     return (
@@ -560,6 +576,10 @@ function SubmissionResult({ submission }) {
   const scorePct = (scoreClamped / 10) * 100;
   const scoreEyebrow = teacherScore != null ? 'Điểm giáo viên chấm' : 'Điểm chấm';
 
+  const hasModelCompare =
+    assignmentModel &&
+    (assignmentModel.model_solution || assignmentModel.model_solution_image_url);
+
   return (
     <div className="submission-result" ref={containerRef}>
       <div className="score-section">
@@ -582,6 +602,62 @@ function SubmissionResult({ submission }) {
           </p>
         </div>
       </div>
+
+      {hasModelCompare && (
+        <div className="result-section model-solution-compare-section">
+          <h3>Bài giải mẫu (đối chiếu)</h3>
+          {assignmentModel.model_solution_image_url && (
+            <div className="model-solution-compare-image-wrap model-solution-compare-image-wrap--lead">
+              <span className="model-solution-compare-label">Hình ảnh bài mẫu</span>
+              <p className="submission-zoom-hint">Bấm vào ảnh để xem phóng to.</p>
+              <button
+                type="button"
+                className="submission-result-image-zoom-trigger"
+                onClick={() =>
+                  setImageLightbox({
+                    src: assignmentModel.model_solution_image_url,
+                    alt: 'Bài giải mẫu — xem phóng to',
+                  })
+                }
+                aria-label="Xem ảnh bài giải mẫu phóng to"
+              >
+                <img
+                  src={assignmentModel.model_solution_image_url}
+                  alt=""
+                  className="model-solution-compare-image"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    const wrap = e.target.closest('.submission-result-image-zoom-trigger');
+                    if (wrap) wrap.style.display = 'none';
+                    const wrapParent = e.target.closest('.model-solution-compare-image-wrap');
+                    const err = wrapParent?.querySelector('.model-solution-compare-image-error');
+                    if (err) err.style.display = 'block';
+                  }}
+                />
+              </button>
+              <div className="image-error model-solution-compare-image-error" style={{ display: 'none' }}>
+                Không thể tải hình ảnh
+              </div>
+            </div>
+          )}
+          {assignmentModel.model_solution_image_url && (
+            <p className="model-solution-compare-hint">
+              {image_paths && image_paths.length > 0
+                ? 'So sánh với hình bài làm của bạn trong mục «Hình ảnh bài làm của bạn» phía dưới trang.'
+                : 'Tham khảo cách trình bày và hướng giải.'}
+              {assignmentModel.model_solution
+                ? ' Lời giải chữ (nếu có) nằm ngay dưới đây.'
+                : ''}
+            </p>
+          )}
+          {assignmentModel.model_solution && (
+            <div className="model-solution-compare-text math-content">
+              <span className="model-solution-compare-label">Lời giải mẫu</span>
+              {renderTextWithMath(assignmentModel.model_solution, renderMath)}
+            </div>
+          )}
+        </div>
+      )}
 
       {hasTeacherReview && (
         <div className="result-section teacher-review-section">
@@ -681,21 +757,36 @@ function SubmissionResult({ submission }) {
       {image_paths && image_paths.length > 0 && (
         <div className="result-section">
           <h3>Hình ảnh bài làm của bạn</h3>
+          <p className="submission-zoom-hint submission-zoom-hint--inline">
+            Bấm vào từng ảnh để xem phóng to.
+          </p>
           <div className="student-images">
             {image_paths.map((imageUrl, index) => (
               <div key={index} className="student-image-container">
-                <img
-                  src={imageUrl}
-                  alt={`Bài làm ${index + 1}`}
-                  className="student-image"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    const errorDiv = e.target.nextSibling;
-                    if (errorDiv) {
-                      errorDiv.style.display = 'block';
-                    }
-                  }}
-                />
+                <button
+                  type="button"
+                  className="submission-result-image-zoom-trigger submission-result-image-zoom-trigger--student"
+                  onClick={() =>
+                    setImageLightbox({
+                      src: imageUrl,
+                      alt: `Bài làm ${index + 1} — xem phóng to`,
+                    })
+                  }
+                  aria-label={`Xem ảnh bài làm ${index + 1} phóng to`}
+                >
+                  <img
+                    src={imageUrl}
+                    alt=""
+                    className="student-image"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      const wrap = e.target.closest('.submission-result-image-zoom-trigger');
+                      if (wrap) wrap.style.display = 'none';
+                      const errorDiv = e.target.closest('.student-image-container')?.querySelector('.image-error');
+                      if (errorDiv) errorDiv.style.display = 'block';
+                    }}
+                  />
+                </button>
                 <div className="image-error" style={{ display: 'none' }}>
                   Không thể tải hình ảnh
                 </div>
@@ -709,6 +800,34 @@ function SubmissionResult({ submission }) {
       <div className="submission-info">
         <small>Nộp bài lúc: {formatDate(created_at)}</small>
       </div>
+
+      {imageLightbox &&
+        createPortal(
+          <div
+            className="submission-image-lightbox"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Ảnh phóng to"
+            onClick={() => setImageLightbox(null)}
+          >
+            <button
+              type="button"
+              className="submission-image-lightbox-close"
+              onClick={() => setImageLightbox(null)}
+              aria-label="Đóng"
+            >
+              ×
+            </button>
+            <div
+              className="submission-image-lightbox-inner"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img src={imageLightbox.src} alt={imageLightbox.alt} />
+            </div>
+            <p className="submission-image-lightbox-hint">Bấm ra ngoài ảnh hoặc phím Esc để đóng</p>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
