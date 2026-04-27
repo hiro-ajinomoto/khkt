@@ -177,6 +177,7 @@ export async function fetchMySubmissionCounts() {
  * @param {string} [params.assignmentId]
  * @param {string} [params.className]
  * @param {'true'|'false'} [params.hasReview]
+ * @param {string} [params.submittedOn] YYYY-MM-DD (ngày VN) lọc thời điểm nộp bài
  * @param {number} [params.limit]
  * @param {number} [params.offset]
  * @returns {Promise<{items: Array, total: number, limit: number, offset: number}>}
@@ -190,6 +191,7 @@ export async function fetchTeacherSubmissions(params = {}) {
     if (params.assignmentId) qs.set('assignment_id', params.assignmentId);
     if (params.className) qs.set('class_name', params.className);
     if (params.hasReview) qs.set('has_review', params.hasReview);
+    if (params.submittedOn) qs.set('submitted_on', params.submittedOn);
     if (params.limit) qs.set('limit', String(params.limit));
     if (params.offset) qs.set('offset', String(params.offset));
 

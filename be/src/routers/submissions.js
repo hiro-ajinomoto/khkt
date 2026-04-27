@@ -416,6 +416,7 @@ function validateReviewPayload(body) {
  *   - assignment_id (optional): lọc theo 1 assignment
  *   - class_name (optional): lọc theo lớp HS
  *   - has_review (optional): "true" → chỉ bài đã có nhận xét; "false" → chưa nhận xét; mặc định = tất cả
+ *   - submitted_on (optional): YYYY-MM-DD theo ngày Việt Nam (Asia/Ho_Chi_Minh), lọc created_at trong ngày đó
  *   - limit (optional, default 100, max 500)
  *   - offset (optional, default 0)
  *
@@ -424,7 +425,7 @@ function validateReviewPayload(body) {
 router.get("/teacher", authenticate, requireTeacher, async (req, res) => {
   try {
     const db = getDB();
-    const { assignment_id, class_name, has_review } = req.query;
+    const { assignment_id, class_name, has_review, submitted_on } = req.query;
     const limit = Math.min(
       Math.max(parseInt(req.query.limit, 10) || 100, 1),
       500
@@ -500,6 +501,19 @@ router.get("/teacher", authenticate, requireTeacher, async (req, res) => {
         { teacher_review: { $exists: false } },
         { teacher_review: null },
       ];
+    }
+
+    if (submitted_on) {
+      const m = String(submitted_on).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!m) {
+        return res.status(400).json({
+          detail: "submitted_on phải là YYYY-MM-DD (theo ngày Việt Nam)",
+        });
+      }
+      const ymd = `${m[1]}-${m[2]}-${m[3]}`;
+      const dayStart = new Date(`${ymd}T00:00:00+07:00`);
+      const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+      filter.created_at = { $gte: dayStart, $lt: dayEnd };
     }
 
     const total = await db.collection("submissions").countDocuments(filter);

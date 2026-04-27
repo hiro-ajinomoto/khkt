@@ -15,6 +15,34 @@ const REVIEW_TABS = [
   { value: 'true', label: 'Đã nhận xét' },
 ];
 
+/** YYYY-MM-DD theo lịch Việt Nam (UTC+7) */
+function getVietnamYmdToday() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+}
+
+function addDaysVietnamYmd(ymd, deltaDays) {
+  const d = new Date(`${ymd}T12:00:00+07:00`);
+  const next = new Date(d.getTime() + deltaDays * 86400000);
+  return next.toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+}
+
+/** Ví dụ: "Thứ Hai, 28 tháng 4 năm 2026" */
+function formatVietnamWeekdayDateLine(ymd) {
+  const d = new Date(`${ymd}T12:00:00+07:00`);
+  const weekday = new Intl.DateTimeFormat('vi-VN', {
+    weekday: 'long',
+    timeZone: 'Asia/Ho_Chi_Minh',
+  }).format(d);
+  const cap = weekday.charAt(0).toUpperCase() + weekday.slice(1);
+  const datePart = new Intl.DateTimeFormat('vi-VN', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'Asia/Ho_Chi_Minh',
+  }).format(d);
+  return `${cap}, ${datePart}`;
+}
+
 function formatDate(value) {
   if (!value) return '—';
   const d = new Date(value);
@@ -53,6 +81,7 @@ export default function TeacherSubmissionsList() {
     assignmentId: '',
     className: '',
     hasReview: 'all',
+    submittedOn: getVietnamYmdToday(),
   });
   const [data, setData] = useState({ items: [], total: 0 });
   const [loading, setLoading] = useState(true);
@@ -112,6 +141,7 @@ export default function TeacherSubmissionsList() {
         if (filters.assignmentId) params.assignmentId = filters.assignmentId;
         if (filters.className) params.className = filters.className;
         if (filters.hasReview !== 'all') params.hasReview = filters.hasReview;
+        if (filters.submittedOn) params.submittedOn = filters.submittedOn;
 
         const result = await fetchTeacherSubmissions(params);
         if (cancelled) return;
@@ -175,10 +205,54 @@ export default function TeacherSubmissionsList() {
               Nhận xét thủ công của giáo viên
             </h2>
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-              Tổng số bài: <span className="font-semibold tabular-nums">{data.total}</span>
+              Tổng số bài trong ngày đã chọn:{' '}
+              <span className="font-semibold tabular-nums">{data.total}</span>
               {filters.hasReview === 'true' ? ' (đã có nhận xét)' : null}
               {filters.hasReview === 'false' ? ' (chưa nhận xét)' : null}
+              <span className="mt-1 block text-xs font-normal text-slate-500 dark:text-slate-400">
+                Lọc theo thời điểm nộp bài, múi giờ Việt Nam.
+              </span>
             </p>
+          </div>
+        </div>
+
+        <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-sky-200/70 bg-gradient-to-br from-sky-50/90 to-white/80 px-4 py-3 dark:border-cyan-300/25 dark:from-slate-800/50 dark:to-slate-900/40 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-center sm:text-left">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-sky-600/90 dark:text-cyan-200/85">
+              Ngày nộp bài
+            </p>
+            <p className="mt-1 text-base font-semibold text-slate-900 dark:text-slate-50">
+              {formatVietnamWeekdayDateLine(filters.submittedOn)}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
+            <button
+              type="button"
+              onClick={() =>
+                updateFilter({ submittedOn: addDaysVietnamYmd(filters.submittedOn, -1) })
+              }
+              className="rounded-xl border border-sky-300/80 bg-white px-3 py-2 text-sm font-medium text-sky-900 shadow-sm transition hover:bg-sky-50 disabled:opacity-50 dark:border-cyan-400/35 dark:bg-slate-900/80 dark:text-cyan-50 dark:hover:bg-slate-800"
+            >
+              ← Hôm trước
+            </button>
+            <button
+              type="button"
+              onClick={() => updateFilter({ submittedOn: getVietnamYmdToday() })}
+              disabled={filters.submittedOn === getVietnamYmdToday()}
+              className="rounded-xl border border-amber-200/90 bg-amber-50/90 px-3 py-2 text-sm font-medium text-amber-950 shadow-sm transition enabled:hover:bg-amber-100/90 disabled:cursor-not-allowed disabled:opacity-45 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-100 dark:enabled:hover:bg-amber-500/25"
+            >
+              Hôm nay
+            </button>
+            <button
+              type="button"
+              disabled={filters.submittedOn >= getVietnamYmdToday()}
+              onClick={() =>
+                updateFilter({ submittedOn: addDaysVietnamYmd(filters.submittedOn, 1) })
+              }
+              className="rounded-xl border border-sky-300/80 bg-white px-3 py-2 text-sm font-medium text-sky-900 shadow-sm transition hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-45 dark:border-cyan-400/35 dark:bg-slate-900/80 dark:text-cyan-50 dark:hover:bg-slate-800"
+            >
+              Hôm sau →
+            </button>
           </div>
         </div>
 
@@ -255,7 +329,11 @@ export default function TeacherSubmissionsList() {
       {data.items.length === 0 ? (
         <div className="rounded-3xl border border-sky-200/60 bg-white/85 p-10 text-center shadow-sm backdrop-blur-xl dark:border-cyan-300/15 dark:bg-white/5">
           <p className="text-base text-slate-600 dark:text-slate-300">
-            Không có bài nộp nào khớp bộ lọc hiện tại.
+            Không có bài nộp nào trong ngày{' '}
+            <span className="font-medium text-slate-800 dark:text-slate-200">
+              {formatVietnamWeekdayDateLine(filters.submittedOn)}
+            </span>{' '}
+            (giờ Việt Nam) khớp bộ lọc hiện tại.
           </p>
         </div>
       ) : (
