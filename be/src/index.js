@@ -7,6 +7,7 @@ import assignmentsRouter from "./routers/assignments.js";
 import submissionsRouter from "./routers/submissions.js";
 import authRouter from "./routers/auth.js";
 import adminRouter from "./routers/admin.js";
+import notificationsRouter from "./routers/notifications.js";
 import { config } from "./config.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -37,6 +38,7 @@ app.use("/auth", authRouter);
 app.use("/admin", adminRouter);
 app.use("/assignments", assignmentsRouter);
 app.use("/submissions", submissionsRouter);
+app.use("/notifications", notificationsRouter);
 
 // Health check
 app.get("/health", (req, res) => {

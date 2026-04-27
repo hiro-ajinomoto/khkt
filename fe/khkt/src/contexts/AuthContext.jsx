@@ -7,6 +7,12 @@ const AuthContext = createContext(null);
 const TOKEN_KEY = 'khkt_auth_token';
 const USER_KEY = 'khkt_auth_user';
 
+function emitAuthChanged() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('khkt-auth-changed'));
+  }
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
@@ -17,6 +23,7 @@ export function AuthProvider({ children }) {
     setUser(null);
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    emitAuthChanged();
   };
 
   // Load auth state from localStorage on mount
@@ -35,6 +42,7 @@ export function AuthProvider({ children }) {
           .then((currentUser) => {
             setUser(currentUser);
             localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+            emitAuthChanged();
           })
           .catch((error) => {
             // Token invalid or network error, clear auth
@@ -54,15 +62,48 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  // Khi tab/cửa sổ khác cùng origin đổi `localStorage` (ví dụ vừa đăng ký HS ở tab 2),
+  // `getAuthHeader()` ở tab này đã trỏ tài khoản mới nhưng state React còn cũ → API lệch quyền.
+  // Đồng bộ lại từ localStorage; sự kiện `storage` không chạy ở tab gây thay đổi.
+  useEffect(() => {
+    function onStorageEvent(e) {
+      if (e.key !== TOKEN_KEY && e.key !== USER_KEY) return;
+      if (e.newValue == null) {
+        setToken(null);
+        setUser(null);
+        emitAuthChanged();
+        return;
+      }
+      const t = localStorage.getItem(TOKEN_KEY);
+      const u = localStorage.getItem(USER_KEY);
+      if (t && u) {
+        try {
+          setToken(t);
+          setUser(JSON.parse(u));
+          emitAuthChanged();
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    window.addEventListener('storage', onStorageEvent);
+    return () => window.removeEventListener('storage', onStorageEvent);
+  }, []);
+
+  const setAuthSession = (newToken, userData) => {
+    setToken(newToken);
+    setUser(userData);
+    localStorage.setItem(TOKEN_KEY, newToken);
+    localStorage.setItem(USER_KEY, JSON.stringify(userData));
+    emitAuthChanged();
+  };
+
   const login = async (username, password) => {
     try {
       const response = await loginAPI(username, password);
       const { token: newToken, user: userData } = response;
 
-      setToken(newToken);
-      setUser(userData);
-      localStorage.setItem(TOKEN_KEY, newToken);
-      localStorage.setItem(USER_KEY, JSON.stringify(userData));
+      setAuthSession(newToken, userData);
 
       return { success: true };
     } catch (error) {
@@ -79,6 +120,7 @@ export function AuthProvider({ children }) {
     user,
     token,
     login,
+    setAuthSession,
     logout,
     isAuthenticated,
     isAdmin,

@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useMatch, useNavigate } from 'react-router-dom';
 import OceanShell, { OceanPageLoading } from '../layout/OceanShell';
 import BackToTopButton from '../layout/BackToTopButton';
+import NotificationBell from '../layout/NotificationBell';
 import OceanListPageHeader from '../layout/OceanListPageHeader';
 import ThemeToggle from '../layout/ThemeToggle';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -62,6 +63,7 @@ export default function AdminLayout() {
               >
                 {assignmentsIcon}
               </button>
+              <NotificationBell compact />
               <ThemeToggle className="admin-header-compact-theme-toggle" />
               <button
                 type="button"

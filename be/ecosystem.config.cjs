@@ -2,8 +2,9 @@ module.exports = {
   apps: [{
     name: 'khkt-backend',
     script: 'src/index.js',
-    instances: 1,
-    exec_mode: 'fork',
+    // Một worker / lõi CPU (tận dụng đa tiến trình). Đặt 1 + fork nếu cần debug đơn luồng.
+    instances: 'max',
+    exec_mode: 'cluster',
     env: {
       NODE_ENV: 'production',
       PORT: 8000

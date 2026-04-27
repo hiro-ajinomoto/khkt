@@ -2,12 +2,14 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { register as registerAPI } from '../../api/auth';
 import { fetchSchoolClasses, groupClassesByGrade } from '../../api/classes';
+import { useAuth } from '../../contexts/AuthContext';
 import { getAuthErrorMessage } from '../../utils/authErrors';
 import OceanShell from '../layout/OceanShell';
 import './AuthPage.css';
 
 function Register() {
   const navigate = useNavigate();
+  const { setAuthSession } = useAuth();
 
   const [formData, setFormData] = useState({
     username: '',
@@ -75,6 +77,10 @@ function Register() {
       setError('Mật khẩu xác nhận không khớp.');
       return;
     }
+    if (!formData.class_name?.trim()) {
+      setError('Vui lòng chọn lớp để giáo viên nhận được thông báo đăng ký mới.');
+      return;
+    }
 
     try {
       setIsSubmitting(true);
@@ -88,9 +94,7 @@ function Register() {
       );
 
       if (result.token && result.user) {
-        // Store auth data
-        localStorage.setItem('khkt_auth_token', result.token);
-        localStorage.setItem('khkt_auth_user', JSON.stringify(result.user));
+        setAuthSession(result.token, result.user);
 
         // Redirect based on role (though new users are always students)
         if (result.user.role === 'admin') {
@@ -156,15 +160,16 @@ function Register() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="class_name">Lớp (tùy chọn)</label>
+            <label htmlFor="class_name">Lớp</label>
             <select
               id="class_name"
               name="class_name"
               value={formData.class_name || ''}
               onChange={handleInputChange}
               disabled={isSubmitting}
+              required
             >
-              <option value="">Chọn lớp (tùy chọn)</option>
+              <option value="">Chọn lớp</option>
               {schoolClassesByGrade.map(([gradeTitle, classesInGrade]) => (
                 <optgroup key={gradeTitle} label={gradeTitle}>
                   {classesInGrade.map((c) => (
@@ -176,7 +181,7 @@ function Register() {
               ))}
             </select>
             <p className="field-hint">
-              * Lưu ý: Chỉ học sinh cần chọn lớp. Nếu bạn trở thành giáo viên sau này, bạn không cần lớp.
+              * Giáo viên sẽ nhận được thông báo khi học sinh đăng ký vào lớp.
             </p>
           </div>
 

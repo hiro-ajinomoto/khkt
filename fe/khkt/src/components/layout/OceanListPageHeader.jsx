@@ -1,5 +1,6 @@
 import { useTheme } from '../../contexts/ThemeContext';
 import { getAssignmentsNavIcon } from './assignmentsNavIcon';
+import NotificationBell from './NotificationBell';
 import ThemeToggle from './ThemeToggle';
 
 /**
@@ -64,6 +65,7 @@ export default function OceanListPageHeader({
                 <span aria-hidden>{assignmentsIcon}</span>
               </button>
             )}
+            <NotificationBell compact />
             <ThemeToggle />
             <button
               type="button"
@@ -112,6 +114,7 @@ export default function OceanListPageHeader({
 
       {isAuthenticated ? (
         <div className="relative hidden shrink-0 flex-wrap items-center gap-3 md:flex md:w-auto md:justify-end">
+          <NotificationBell />
           <ThemeToggle />
           {adminHome ? (
             <button

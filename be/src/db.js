@@ -58,6 +58,14 @@ async function ensureIndexes(database) {
     database
       .collection('assignments')
       .createIndex({ created_at: -1 }, { name: 'created_at_desc_idx' }),
+
+    // Chuông thông báo cho GV/Admin: list mới nhất + đếm unread theo role.
+    database
+      .collection('notifications')
+      .createIndex({ target_roles: 1, created_at: -1 }, { name: 'notification_role_created_idx' }),
+    database
+      .collection('notifications')
+      .createIndex({ read_by: 1 }, { name: 'notification_read_by_idx' }),
   ]
 
   const results = await Promise.allSettled(jobs)

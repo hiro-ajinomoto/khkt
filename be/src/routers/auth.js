@@ -96,6 +96,11 @@ router.post('/register', async (req, res) => {
       req.body.class_name != null && String(req.body.class_name).trim() !== ''
         ? String(req.body.class_name).trim()
         : null;
+    if (!class_name) {
+      return res.status(400).json({
+        detail: 'Vui lòng chọn lớp để giáo viên nhận được thông báo đăng ký mới.',
+      });
+    }
     if (class_name) {
       const exists = await classNameExists(db, class_name);
       if (!exists) {
@@ -120,6 +125,25 @@ router.post('/register', async (req, res) => {
     };
 
     const result = await db.collection('users').insertOne(newUser);
+
+    if (class_name) {
+      try {
+        await db.collection('notifications').insertOne({
+          type: 'student_registered',
+          title: 'Học sinh mới đăng ký',
+          message: `${newUser.name} vừa đăng ký vào lớp ${class_name}.`,
+          target_roles: ['teacher', 'admin'],
+          actor_user_id: result.insertedId,
+          actor_username: username,
+          actor_name: newUser.name,
+          class_name,
+          read_by: [],
+          created_at: new Date(),
+        });
+      } catch (notifyErr) {
+        console.error('Failed to create student registration notification:', notifyErr);
+      }
+    }
 
     // Generate JWT token
     const token = jwt.sign(
