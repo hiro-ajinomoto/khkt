@@ -50,29 +50,56 @@ jobs:
           # Lấy đủ history để so diff (before/after push hoặc HEAD~1 khi chạy tay).
           fetch-depth: 0
 
+      # Không dùng dorny/paths-filter: trên runner mới đôi khi git exit 128 trong action đó.
       - name: Detect changed paths
         id: changes
-        # v4 chạy Node 24 — tránh cảnh báo deprecate Node 20 của các bản cũ.
-        uses: dorny/paths-filter@v4
-        with:
-          # Push: so với commit trước push. GitHub đôi khi gửi before = toàn 0 (nhánh mới)
-          # hoặc thiếu (workflow_dispatch) — git sẽ lỗi 128 nếu dùng base đó.
-          base: >-
-            ${{
-              (github.event.before != '' &&
-                github.event.before != '0000000000000000000000000000000000000000' &&
-                github.event.before)
-              || 'HEAD~1'
-            }}
-          filters: |
-            backend:
-              - 'be/**'
-            frontend:
-              - 'fe/khkt/**'
-            infra:
-              - 'deploy-ec2.sh'
-              - 'nginx.conf.example'
-              - '.github/workflows/deploy-ec2.yml'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if ! git rev-parse -q --verify "HEAD~1" >/dev/null; then
+            echo "Single-commit history; mark all path groups true."
+            echo "backend=true" >> "$GITHUB_OUTPUT"
+            echo "frontend=true" >> "$GITHUB_OUTPUT"
+            echo "infra=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "${{ github.event_name }}" = "push" ]; then
+            BEFORE="${{ github.event.before }}"
+            if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+              RANGE="HEAD~1..HEAD"
+            elif git merge-base --is-ancestor "$BEFORE" HEAD 2>/dev/null; then
+              RANGE="${BEFORE}..HEAD"
+            else
+              echo "before is not an ancestor of HEAD; using HEAD~1..HEAD"
+              RANGE="HEAD~1..HEAD"
+            fi
+          else
+            RANGE="HEAD~1..HEAD"
+          fi
+
+          echo "Path filter range: $RANGE"
+          backend=false
+          frontend=false
+          infra=false
+          while IFS= read -r line; do
+            [ -z "$line" ] && continue
+            case "$line" in
+              be/*) backend=true ;;
+            esac
+            case "$line" in
+              fe/khkt/*) frontend=true ;;
+            esac
+            case "$line" in
+              deploy-ec2.sh|nginx.conf.example|.github/workflows/deploy-ec2.yml) infra=true ;;
+            esac
+          done < <(git diff --name-only "$RANGE" 2>/dev/null || true)
+
+          echo "backend=$backend" >> "$GITHUB_OUTPUT"
+          echo "frontend=$frontend" >> "$GITHUB_OUTPUT"
+          echo "infra=$infra" >> "$GITHUB_OUTPUT"
+          echo "Detected: backend=$backend frontend=$frontend infra=$infra"
 
       - name: Determine deploy scope
         id: scope
