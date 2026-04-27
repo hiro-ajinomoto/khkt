@@ -331,6 +331,25 @@ function stripVietnameseProseFromMath(input) {
 }
 
 /**
+ * Bỏ cặp $...$ hoặc $$...$$ nếu bên trong có chữ tiếng Việt có dấu.
+ * MathJax coi nội dung là "math mode" và nuốt khoảng trắng → chữ dính (vd. Gọichiềurộng).
+ * Biểu thức thuần toán không dấu vẫn giữ trong $...$.
+ */
+function unwrapMathWrappersContainingVietnamese(input) {
+  if (!input || typeof input !== 'string') return input;
+  let out = input;
+  out = out.replace(/\$\$([\s\S]+?)\$\$/g, (full, inner) => {
+    if (VI_DIACRITICS_RE.test(inner)) return inner.trim();
+    return full;
+  });
+  out = out.replace(/\$([^$]+)\$/g, (full, inner) => {
+    if (VI_DIACRITICS_RE.test(inner)) return inner;
+    return full;
+  });
+  return out;
+}
+
+/**
  * Render text with LaTeX math expressions using MathJax
  * Supports inline math: $...$ and display math: $$...$$
  * @param {string} text - Text with LaTeX math
@@ -353,7 +372,9 @@ function renderTextWithMath(text, renderMathFn) {
   // sung cặp $...$ thiếu, cân bằng dấu $ lẻ. Hàm này thay thế autoDetectMath
   // vì autoDetectMath dùng regex ASCII không nhận `[`, `]`, dễ match "lố" vào
   // giữa cặp $...$ đã đúng khiến MathJax render hỏng các dòng dài.
-  let processedText = stripVietnameseProseFromMath(text);
+  let processedText = unwrapMathWrappersContainingVietnamese(
+    stripVietnameseProseFromMath(text),
+  );
 
   // Fix common LaTeX issues that might cause "Math input error"
   // Replace double backslashes with single backslash for LaTeX commands

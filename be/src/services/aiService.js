@@ -300,23 +300,45 @@ Required JSON format:
   "nextSteps": array of strings (in Vietnamese, ALL equations/formulas MUST use LaTeX: "$x^2 - 5x + 6 = 0$"),
   "practiceSets": {
     "similar": [
-      {"problem": string (ONLY the mathematical expression/equation itself, NO instruction text, NO solution, use LaTeX: $equation$ or $$equation$$), "solution": string (step-by-step solution in Vietnamese, ALL math in LaTeX)},
+      {"problem": string (định dạng xem mục KHỚP DẠNG BÀI + CRITICAL FORMATTING bên dưới), "solution": string (lời giải từng bước, tiếng Việt, toán trong LaTeX)},
       {"problem": string, "solution": string},
       {"problem": string, "solution": string},
       {"problem": string, "solution": string}
     ],
     "remedial": [
-      {"problem": string (ONLY the mathematical expression/equation itself, NO instruction text, NO solution, use LaTeX), "solution": string (step-by-step solution in Vietnamese, ALL math in LaTeX)},
+      {"problem": string (định dạng xem mục KHỚP DẠNG BÀI + CRITICAL FORMATTING), "solution": string (lời giải từng bước, tiếng Việt, toán trong LaTeX)},
       {"problem": string, "solution": string},
       {"problem": string, "solution": string},
       {"problem": string, "solution": string}
     ]
   }
 
+KHỚP DẠNG BÀI VỚI ĐỀ GỐC (BẮT BUỘC — ƯU TIÊN CAO HƠN "CHỈ GHI MỖI BIỂU THỨC"):
+Trước khi viết "practiceSets", đọc kỹ "Question (text)" và ảnh đề (nếu có). Xác định **NHIỆM VỤ CHÍNH** của bài gốc, ví dụ:
+- **LẬP PT:** Bài toán có lời văn / tình huống, yêu cầu **lập phương trình** (bậc nhất một ẩn, mô hình hoá…), chưa cho sẵn một phương trình đầy đủ để chỉ "giải".
+- **GIẢI PT:** Đề đã cho sẵn phương trình/bất phương trình, nhiệm vụ là **giải** (biến đổi, tìm ẩn).
+- **Khác:** Chứng minh, rút gọn biểu thức, phân tích đa thức, hình học tính toán…
+
+Quy tắc:
+1. Cả 4 bài trong **"similar"** PHẢI cùng **loại nhiệm vụ** với bài gốc (lập PT thì similar cũng là lập PT; giải PT thì similar cũng là giải PT; không đổi sang dạng khác).
+2. **Nếu bài gốc là LẬP phương trình bậc nhất một ẩn từ lời văn:**
+   - Mỗi "problem" PHẢI là một **bài toán lời văn mới** (bối cảnh khác nhau giữa 4 bài: tuổi, chuyển động, mua bán, tỉ lệ, hình học đơn giản…), đủ dữ kiện để học sinh **tự lập** phương trình.
+   - **TUYỆT ĐỐI KHÔNG** dùng "similar" chỉ gồm phương trình đã lập sẵn kiểu "$2x+3=10$" hoặc câu "Giải phương trình $\\\\ldots$" — đó là dạng **GIẢI PT**, vi phạm nếu đề gốc là **LẬP PT**.
+   - Trong "solution": gọi ẩn, chuyển lời văn thành hai vế, ghi **phương trình đã lập**, sau đó (nếu đề gốc của học sinh cũng yêu cầu tìm ẩn) có thể **giải** tiếp; nhưng **đề** ("problem") vẫn phải là bài lời văn lập PT.
+3. **Nếu bài gốc là GIẢI phương trình (đã cho sẵn PT):** "problem" có thể chỉ là biểu thức/phương trình trong LaTeX, ngắn gọn như trước.
+4. **"remedial":** Khi học sinh sai ở bài **lập PT**, ưu tiên bài bổ trợ cùng dạng (lời văn → lập PT) hoặc kỹ năng tiền đề **đúng chỗ sai**; chỉ dùng bài "chỉ có một phương trình để giải" nếu root-cause là sai **bước giải** sau khi đã lập đúng phương trình.
+
 CRITICAL FORMATTING RULES FOR PRACTICE PROBLEMS:
-- "problem" field MUST contain ONLY the mathematical expression/equation itself. NO instruction text like "Giải phương trình:", "Tìm giá trị của", "Phân tích đa thức thành nhân tử:", etc.
-- "problem" field should be SHORT and CONCISE - just the math expression, nothing else.
-- "solution" field MUST contain ONLY the step-by-step solution, starting with the problem expression and showing each step.
+- "problem" LUÔN chỉ chứa **phần đề / yêu cầu**, KHÔNG chứa lời giải, đáp án hay gợi ý lời giải.
+- Với bài **lời văn (lập PT, bài toán có chữ…):** "problem" là đoạn tiếng Việt (có thể 2–6 câu), mọi số và công thức trong LaTeX $...$.
+- Với bài **chỉ toán (giải PT, rút gọn, phân tích…):** "problem" ngắn — chủ yếu biểu thức trong LaTeX; KHÔNG thêm dòng dẫn thừa như "Bài toán:" nếu không cần.
+- "solution" MUST chỉ chứa lời giải từng bước; không lặp nguyên văn toàn bộ đề dài nếu không cần (có thể mở đầu bằng "Gọi $x$ là..." rồi vào bước).
+
+TÁCH ĐỀ / LỜI GIẢI VÀ HIỂN THỊ TIẾNG VIỆT (BẮT BUỘC — TRÁNH LỖI UI):
+- **"problem"** CHỈ được là **đề bài** (giả thiết + hỏi). **CẤM** nhét vào "problem" các dòng kiểu: "Gọi chiều rộng là...", "Chiều dài là...", "Diện tích ban đầu là...", "Lập phương trình:", "Giải phương trình:", từng bước biến đổi đại số, "Vậy chiều rộng là ... m" — toàn bộ đó chỉ được ở **"solution"**.
+- Viết tiếng Việt **luôn có khoảng trắng giữa các từ** (đúng: "Gọi chiều rộng là $x$ (m)."; **SAI**: "Gọichiềurộnglàx").
+- **TUYỆT ĐỐI KHÔNG** bọc cả một cụm tiếng Việt dài trong `$...$`. Trong `$...$` chỉ để **biểu thức toán** (ví dụ $x(x+4)$, $(x+1)(x+2)$, $2x+25=45$). Câu chữ đứng **ngoài** $...$.
+- Nếu đề gốc là **phương trình bậc nhất một ẩn**, ưu tiên bài "similar" dẫn tới PT **bậc nhất** sau khi lập (tránh cố tình chọn tình huống chỉ để luyện $x^2$ khi chương trình yêu cầu bậc nhất).
 
 YÊU CẦU ĐA DẠNG DẠNG BÀI (BẮT BUỘC - KHÔNG ĐƯỢC VI PHẠM):
 Đây là quy tắc QUAN TRỌNG NHẤT cho "practiceSets". Mục tiêu: học sinh phải gặp NHIỀU DẠNG KHÁC NHAU, không bị lặp cùng một khuôn mẫu.
@@ -328,6 +350,9 @@ YÊU CẦU ĐA DẠNG DẠNG BÀI (BẮT BUỘC - KHÔNG ĐƯỢC VI PHẠM):
        * Bài 2: Hiệu hai bình phương ($a^2 - b^2$)
        * Bài 3: Tam thức bậc hai tách hạng tử ($x^2 + bx + c$ với $b, c$ khác hằng đẳng thức)
        * Bài 4: Nhóm hạng tử hoặc đặt nhân tử chung ($ax + ay + bx + by$, $ax^3 + bx^2 + cx$...)
+     Ví dụ nếu bài gốc là **lập phương trình bậc nhất một ẩn từ bài toán có lời văn**:
+       * Bốn bài similar là **bốn bài lời văn khác nhau** (tuổi, chuyển động đều, mua bán, tỉ lệ, hình học đơn giản…), mỗi bài yêu cầu **lập** phương trình (có thể thêm "tìm ẩn" nếu đề gốc có).
+       * TUYỆT ĐỐI KHÔNG lấy 4 phương trình dạng "$ax+b=c$" sẵn để "giải" thay cho 4 bài lời văn lập PT.
      TUYỆT ĐỐI KHÔNG được sinh 4 bài cùng một khuôn (ví dụ cả 4 bài đều là "bình phương một tổng/hiệu").
    - 4 bài trong "remedial" PHẢI bám SÁT từng lỗi cụ thể của học sinh — xem chi tiết ở mục 5 "NGUYÊN TẮC BÀI TẬP BỔ TRỢ" bên dưới. KHÔNG được sinh 4 bài kỹ năng nền tảng chung chung không liên quan trực tiếp đến lỗi.
 
@@ -483,15 +508,21 @@ Another WRONG example (DO NOT DO THIS - problem is too long):
   "solution": "..."
 }
 
-CRITICAL FORMATTING RULES FOR PRACTICE PROBLEMS:
-- "problem" field MUST contain ONLY the problem statement/question. DO NOT include any solution steps, answers, or explanations in the "problem" field.
-- "solution" field MUST contain ONLY the step-by-step solution. DO NOT repeat the problem statement in the "solution" field.
-- Example CORRECT format:
+CRITICAL FORMATTING RULES FOR PRACTICE PROBLEMS (bổ sung cho mục KHỚP DẠNG BÀI ở trên):
+- "problem" chỉ chứa đề / yêu cầu. "solution" chỉ chứa lời giải, không nhét đáp án vào "problem".
+- Ví dụ ĐÚNG — đề gốc là **GIẢI** phương trình:
   {
     "problem": "Giải phương trình: $2x + 6 = 2(x + 3)$",
     "solution": "Ta có: $2x + 6 = 2(x + 3)$\n$2x + 6 = 2x + 6$\n$0 = 0$\nPhương trình có vô số nghiệm."
   }
-- Example WRONG format (DO NOT DO THIS):
+- Ví dụ ĐÚNG — đề gốc là **LẬP** phương trình bậc nhất (similar phải là lời văn, không chỉ $2x+3=10$):
+  {
+    "problem": "Mẹ hơn con $25$ tuổi. Tổng số tuổi hai mẹ con hiện nay là $45$. Gọi $x$ là số tuổi của con. Hãy lập phương trình bậc nhất theo ẩn $x$ mô tả tình huống.",
+    "solution": "Gọi $x$ là số tuổi của con ($x > 0$).\nTuổi mẹ là $x + 25$.\nTổng số tuổi: $x + (x + 25) = 45$.\nVậy phương trình cần lập là $2x + 25 = 45$ (có thể rút gọn tiếp tùy yêu cầu đề gốc)."
+  }
+- Ví dụ SAI nếu đề gốc là **LẬP PT** (similar mà chỉ đưa PT sẵn — đổi sang dạng GIẢI):
+  { "problem": "$2x + 3 = 10$", "solution": "..." }
+- Ví dụ SAI chung (lồng lời giải vào problem):
   {
     "problem": "Giải phương trình: $2x + 6 = 2(x + 3)$. Giải: Ta có $2x + 6 = 2x + 6$...",
     "solution": "Giải phương trình: $2x + 6 = 2(x + 3)$. Ta có: $2x + 6 = 2x + 6$..."
