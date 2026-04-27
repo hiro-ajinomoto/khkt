@@ -36,6 +36,35 @@ export const config = {
       const n = parseInt(process.env.OPENAI_REQUEST_TIMEOUT_MS || '180000', 10);
       return Number.isFinite(n) && n >= 30000 ? n : 180000;
     })(),
+    /**
+     * Resize/nén ảnh trước khi gửi Vision API — giảm payload, thường rút latency.
+     * Tắt: OPENAI_VISION_OPTIMIZE_IMAGES=false
+     */
+    visionOptimizeImages: (() => {
+      const v = (process.env.OPENAI_VISION_OPTIMIZE_IMAGES || 'true').toLowerCase();
+      return v !== 'false' && v !== '0' && v !== 'no';
+    })(),
+    /** Cạnh dài tối đa sau resize (px), 512–4096 */
+    visionImageMaxEdgePx: (() => {
+      const n = parseInt(process.env.OPENAI_VISION_MAX_EDGE_PX || '2048', 10);
+      if (!Number.isFinite(n)) return 2048;
+      return Math.min(Math.max(n, 512), 4096);
+    })(),
+    /** Chất lượng JPEG đầu ra (60–95) */
+    visionImageJpegQuality: (() => {
+      const n = parseInt(process.env.OPENAI_VISION_JPEG_QUALITY || '84', 10);
+      if (!Number.isFinite(n)) return 84;
+      return Math.min(Math.max(n, 60), 95);
+    })(),
+    visionFetchTimeoutMs: (() => {
+      const n = parseInt(process.env.OPENAI_VISION_FETCH_TIMEOUT_MS || '30000', 10);
+      return Number.isFinite(n) && n >= 5000 ? n : 30000;
+    })(),
+    visionFetchMaxBytes: (() => {
+      const n = parseInt(process.env.OPENAI_VISION_FETCH_MAX_BYTES || String(20 * 1024 * 1024), 10);
+      if (!Number.isFinite(n) || n < 1024 * 1024) return 20 * 1024 * 1024;
+      return Math.min(n, 40 * 1024 * 1024);
+    })(),
   },
   server: {
     port: parseInt(process.env.PORT || '8000', 10),

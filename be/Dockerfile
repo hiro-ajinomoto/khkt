@@ -2,6 +2,9 @@ FROM node:18-alpine
 
 WORKDIR /app
 
+# sharp cần trên Alpine (musl)
+RUN apk add --no-cache libc6-compat
+
 # Copy package files
 COPY package*.json ./
 
