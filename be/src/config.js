@@ -20,6 +20,22 @@ export const config = {
     apiKey: process.env.OPENAI_API_KEY || '',
     baseUrl: process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
     model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+    /** Vision: low = ít token ảnh, thường nhanh hơn; high = chi tiết hơn, chậm hơn */
+    visionDetail: ['low', 'high', 'auto'].includes(
+      (process.env.OPENAI_VISION_DETAIL || 'low').toLowerCase()
+    )
+      ? (process.env.OPENAI_VISION_DETAIL || 'low').toLowerCase()
+      : 'low',
+    /** Giới hạn độ dài JSON trả về — tránh sinh văn bản dài làm tăng latency */
+    maxCompletionTokens: (() => {
+      const n = parseInt(process.env.OPENAI_MAX_COMPLETION_TOKENS || '8192', 10);
+      if (!Number.isFinite(n) || n <= 0) return 8192;
+      return Math.min(Math.max(n, 512), 16384);
+    })(),
+    requestTimeoutMs: (() => {
+      const n = parseInt(process.env.OPENAI_REQUEST_TIMEOUT_MS || '180000', 10);
+      return Number.isFinite(n) && n >= 30000 ? n : 180000;
+    })(),
   },
   server: {
     port: parseInt(process.env.PORT || '8000', 10),

@@ -84,6 +84,13 @@ async function prepareImageForAPI(imageUrlOrPath) {
   }
 }
 
+function visionImageContentPart(url) {
+  return {
+    type: "image_url",
+    image_url: { url, detail: config.openai.visionDetail },
+  };
+}
+
 // Vietnamese tutor prompt - source of truth
 const TUTOR_PROMPT = `You are an expert Vietnamese math tutor with deep pedagogical knowledge specializing in THCS (Middle School) mathematics curriculum.
 You are grading a handwritten student submission with careful, step-by-step reasoning.
@@ -657,10 +664,7 @@ export async function gradeSubmissionWithAI(
         continue;
       }
       userContent.push({ type: "text", text: `Question image #${idx + 1}:` });
-      userContent.push({
-        type: "image_url",
-        image_url: { url: imageUrl },
-      });
+      userContent.push(visionImageContentPart(imageUrl));
     } catch (error) {
       console.error(`Failed to process question image ${urlOrPath}:`, error);
       // Continue with other images
@@ -689,10 +693,7 @@ export async function gradeSubmissionWithAI(
         type: "text",
         text: `Teacher model solution image #${idx + 1}:`,
       });
-      userContent.push({
-        type: "image_url",
-        image_url: { url: imageUrl },
-      });
+      userContent.push(visionImageContentPart(imageUrl));
     } catch (error) {
       console.error(
         `Failed to process teacher solution image ${urlOrPath}:`,
@@ -719,12 +720,7 @@ export async function gradeSubmissionWithAI(
           );
           continue;
         }
-        userContent.push({
-          type: "image_url",
-          image_url: {
-            url: imageUrl,
-          },
-        });
+        userContent.push(visionImageContentPart(imageUrl));
       } catch (error) {
         console.error(
           `Failed to process student image ${studentImagePaths[i]}:`,
@@ -767,6 +763,7 @@ export async function gradeSubmissionWithAI(
     // Điểm số phải ổn định: temperature cao (vd. 0.85) dễ khiến cùng một bài đúng bị 5–7 hoặc 9–10 ngẫu nhiên.
     // 0.2 vẫn cho practiceSets hơi đa dạng nhưng chấm sát rubric hơn nhiều.
     ...(isReasoningModel ? {} : { temperature: 0.2 }),
+    max_completion_tokens: config.openai.maxCompletionTokens,
   };
 
   // Log request payload structure (without base64 data) for debugging
@@ -801,6 +798,7 @@ export async function gradeSubmissionWithAI(
       Authorization: `Bearer ${config.openai.apiKey}`,
       "Content-Type": "application/json",
     },
+    timeout: config.openai.requestTimeoutMs,
   };
 
   // Retry logic for rate limit errors
