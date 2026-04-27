@@ -53,7 +53,7 @@ const storage = multer.diskStorage({
 
 // Configure multer with file size limits
 // Allow up to 10MB per file, max 10 files
-const upload = multer({ 
+const upload = multer({
   storage,
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB per file
@@ -333,7 +333,7 @@ router.get("/my-stickers", authenticate, async (req, res) => {
     const stickersRedeemedTotal = await getStudentRedeemedTotal(db, studentId);
     const total_sticker_count = Math.max(
       0,
-      stickersEarnedTotal - stickersRedeemedTotal
+      stickersEarnedTotal - stickersRedeemedTotal,
     );
 
     /** @type {Record<string, { code: string, label: string, emoji: string, count: number }>} */
@@ -428,7 +428,7 @@ router.get("/teacher", authenticate, requireTeacher, async (req, res) => {
     const { assignment_id, class_name, has_review, submitted_on } = req.query;
     const limit = Math.min(
       Math.max(parseInt(req.query.limit, 10) || 100, 1),
-      500
+      500,
     );
     const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
 
@@ -466,7 +466,12 @@ router.get("/teacher", authenticate, requireTeacher, async (req, res) => {
         return res.status(400).json({ detail: "Invalid assignment_id" });
       }
       if (req.user.role === "teacher") {
-        const ok = await canTeacherManageAssignmentDb(db, req.user, aid, scoped);
+        const ok = await canTeacherManageAssignmentDb(
+          db,
+          req.user,
+          aid,
+          scoped,
+        );
         if (!ok) {
           return res.status(403).json({ detail: "Forbidden" });
         }
@@ -539,15 +544,15 @@ router.get("/teacher", authenticate, requireTeacher, async (req, res) => {
       new Map(
         rows
           .filter((r) => r.assignment_id)
-          .map((r) => [r.assignment_id.toString(), r.assignment_id])
-      ).values()
+          .map((r) => [r.assignment_id.toString(), r.assignment_id]),
+      ).values(),
     );
     const studentIds = Array.from(
       new Map(
         rows
           .filter((r) => r.student_id)
-          .map((r) => [r.student_id.toString(), r.student_id])
-      ).values()
+          .map((r) => [r.student_id.toString(), r.student_id]),
+      ).values(),
     );
 
     const [assignmentDocs, studentDocs] = await Promise.all([
@@ -568,7 +573,7 @@ router.get("/teacher", authenticate, requireTeacher, async (req, res) => {
     ]);
 
     const assignmentMap = new Map(
-      assignmentDocs.map((a) => [a._id.toString(), a])
+      assignmentDocs.map((a) => [a._id.toString(), a]),
     );
     const studentMap = new Map(studentDocs.map((s) => [s._id.toString(), s]));
 
@@ -639,7 +644,12 @@ router.put("/:id/review", authenticate, requireTeacher, async (req, res) => {
 
     if (req.user.role === "teacher") {
       const scoped = await getTeacherScopedClassSet(db, req.user);
-      const ok = await teacherCanAccessSubmission(db, req.user, submission, scoped);
+      const ok = await teacherCanAccessSubmission(
+        db,
+        req.user,
+        submission,
+        scoped,
+      );
       if (!ok) {
         return res.status(403).json({ detail: "Forbidden" });
       }
@@ -650,7 +660,10 @@ router.put("/:id/review", authenticate, requireTeacher, async (req, res) => {
     const reviewerId = ObjectId.createFromHexString(req.user.id);
     const reviewerDoc = await db
       .collection("users")
-      .findOne({ _id: reviewerId }, { projection: { username: 1, full_name: 1 } });
+      .findOne(
+        { _id: reviewerId },
+        { projection: { username: 1, full_name: 1 } },
+      );
 
     const now = new Date();
     const existing = submission.teacher_review || null;
@@ -691,14 +704,21 @@ router.delete("/:id/review", authenticate, requireTeacher, async (req, res) => {
     }
 
     const db = getDB();
-    const submission = await db.collection("submissions").findOne({ _id: objectId });
+    const submission = await db
+      .collection("submissions")
+      .findOne({ _id: objectId });
     if (!submission) {
       return res.status(404).json({ detail: "Submission not found" });
     }
 
     if (req.user.role === "teacher") {
       const scoped = await getTeacherScopedClassSet(db, req.user);
-      const ok = await teacherCanAccessSubmission(db, req.user, submission, scoped);
+      const ok = await teacherCanAccessSubmission(
+        db,
+        req.user,
+        submission,
+        scoped,
+      );
       if (!ok) {
         return res.status(403).json({ detail: "Forbidden" });
       }
@@ -865,11 +885,11 @@ router.post("/", authenticate, upload.array("files"), async (req, res) => {
     // Warn if some fields are missing (but don't fail)
     if (hasImages && !hasText) {
       console.log(
-        `Assignment ${assignment_id} uses images only. AI grading will use images.`
+        `Assignment ${assignment_id} uses images only. AI grading will use images.`,
       );
     } else if (hasText && !hasImages) {
       console.warn(
-        `Assignment ${assignment_id} uses text only. AI grading will use text.`
+        `Assignment ${assignment_id} uses text only. AI grading will use text.`,
       );
     }
 
@@ -921,7 +941,7 @@ router.post("/", authenticate, upload.array("files"), async (req, res) => {
         assignment.model_solution || "",
         assignment.question || "",
         questionImageUrls, // Optional - can be empty array
-        solutionImageUrls // Optional - can be empty array
+        solutionImageUrls, // Optional - can be empty array
       );
     } catch (error) {
       // Log detailed error information for debugging

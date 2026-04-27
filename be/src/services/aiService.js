@@ -32,7 +32,7 @@ function isValidUrl(url) {
   ];
 
   return !invalidPatterns.some((pattern) =>
-    url.toLowerCase().includes(pattern)
+    url.toLowerCase().includes(pattern),
   );
 }
 
@@ -77,7 +77,7 @@ async function prepareImageForAPI(imageUrlOrPath) {
     } catch (error) {
       console.error(
         `Failed to convert local path to base64: ${imageUrlOrPath}`,
-        error
+        error,
       );
       return null;
     }
@@ -605,7 +605,7 @@ export async function gradeSubmissionWithAI(
   questionText,
   questionImageUrls = [],
   teacherSolutionImageUrls = [],
-  maxRetries = 3
+  maxRetries = 3,
 ) {
   // Validate API key
   if (!config.openai.apiKey || config.openai.apiKey.trim() === "") {
@@ -625,7 +625,7 @@ export async function gradeSubmissionWithAI(
   // Validate API key format (should start with sk-)
   if (!config.openai.apiKey.startsWith("sk-")) {
     console.warn(
-      "⚠️  OpenAI API key format may be incorrect (should start with 'sk-')"
+      "⚠️  OpenAI API key format may be incorrect (should start with 'sk-')",
     );
   }
 
@@ -641,7 +641,7 @@ export async function gradeSubmissionWithAI(
     (!studentImagePaths || studentImagePaths.length === 0)
   ) {
     throw new Error(
-      "At least one of questionText, teacherModelSolution, or studentImagePaths must be provided"
+      "At least one of questionText, teacherModelSolution, or studentImagePaths must be provided",
     );
   }
 
@@ -697,7 +697,7 @@ export async function gradeSubmissionWithAI(
     } catch (error) {
       console.error(
         `Failed to process teacher solution image ${urlOrPath}:`,
-        error
+        error,
       );
       // Continue with other images
     }
@@ -716,7 +716,7 @@ export async function gradeSubmissionWithAI(
         const imageUrl = await prepareImageForAPI(studentImagePaths[i]);
         if (!imageUrl) {
           console.warn(
-            `Skipping invalid student image: ${studentImagePaths[i]}`
+            `Skipping invalid student image: ${studentImagePaths[i]}`,
           );
           continue;
         }
@@ -724,7 +724,7 @@ export async function gradeSubmissionWithAI(
       } catch (error) {
         console.error(
           `Failed to process student image ${studentImagePaths[i]}:`,
-          error
+          error,
         );
         // Continue with other images even if one fails
       }
@@ -739,7 +739,7 @@ export async function gradeSubmissionWithAI(
   let finalUserContent = userContent;
   if (isReasoningModel && hasImages) {
     console.warn(
-      "⚠️  Reasoning model (o1) does not support vision API. Images will be ignored."
+      "⚠️  Reasoning model (o1) does not support vision API. Images will be ignored.",
     );
     // Filter out images for reasoning models
     finalUserContent = userContent.filter((item) => item.type !== "image_url");
@@ -789,7 +789,7 @@ export async function gradeSubmissionWithAI(
     });
     console.log(
       "OpenAI API Request Payload Structure:",
-      JSON.stringify({ ...logPayload, messages: logMessages }, null, 2)
+      JSON.stringify({ ...logPayload, messages: logMessages }, null, 2),
     );
   }
 
@@ -808,7 +808,7 @@ export async function gradeSubmissionWithAI(
       const response = await axios.post(
         `${config.openai.baseUrl}/chat/completions`,
         requestPayload,
-        requestConfig
+        requestConfig,
       );
 
       const content = response.data.choices[0].message.content;
@@ -843,7 +843,7 @@ export async function gradeSubmissionWithAI(
         console.warn(
           `⚠️  Rate limit hit (429). Retrying in ${delay}ms (attempt ${
             attempt + 1
-          }/${maxRetries + 1})...`
+          }/${maxRetries + 1})...`,
         );
         await sleep(delay);
         continue;
@@ -859,7 +859,7 @@ export async function gradeSubmissionWithAI(
       };
       console.error(
         "AI grading error details:",
-        JSON.stringify(errorDetails, null, 2)
+        JSON.stringify(errorDetails, null, 2),
       );
       throw error;
     }
