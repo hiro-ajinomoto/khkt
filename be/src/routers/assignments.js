@@ -272,6 +272,7 @@ async function mapAssignmentDocToApi(item, creatorMap, listCtx = null, opts = {}
     question_image_url: questionImageUrl,
     model_solution_image_url: modelSolutionImageUrl,
     created_at: item.created_at || null,
+    updated_at: item.updated_at || null,
     available_from_date: item.available_from_date ?? null,
     due_date: item.due_date ?? null,
     max_submissions_per_student: storedMaxSubmissionsForApi(item),
@@ -1280,6 +1281,8 @@ router.patch(
           detail: "No fields provided to update",
         });
       }
+
+      updateData.updated_at = new Date();
 
       // Update assignment in database
       await db

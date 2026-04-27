@@ -99,6 +99,15 @@ export default function OceanListPageHeader({
                 >
                   <span aria-hidden>🔑</span>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/teacher/classes')}
+                  className="flex h-11 w-11 items-center justify-center rounded-2xl border border-violet-200/80 bg-[linear-gradient(135deg,#ddd6fe_0%,#e0e7ff_100%)] text-base shadow-md shadow-violet-200/30 transition hover:-translate-y-0.5 dark:border-violet-400/35 dark:from-violet-500/25 dark:to-indigo-600/30 dark:text-violet-50"
+                  aria-label="Lớp của tôi"
+                  title="Bài tập và học sinh theo lớp"
+                >
+                  <span aria-hidden>🏫</span>
+                </button>
               </>
             )}
             <NotificationBell compact />
@@ -174,6 +183,13 @@ export default function OceanListPageHeader({
                 className="rounded-2xl border border-teal-200/80 bg-[linear-gradient(135deg,#ccfbf1_0%,#e0f2fe_100%)] px-4 py-3 text-sm font-medium text-teal-900 shadow-md shadow-teal-200/30 transition hover:-translate-y-0.5 dark:border-teal-400/40 dark:from-teal-500/30 dark:to-cyan-600/25 dark:text-teal-50"
               >
                 🔑 Mã lớp
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/teacher/classes')}
+                className="rounded-2xl border border-violet-200/80 bg-[linear-gradient(135deg,#ddd6fe_0%,#e0e7ff_100%)] px-4 py-3 text-sm font-medium text-violet-900 shadow-md shadow-violet-200/30 transition hover:-translate-y-0.5 dark:border-violet-400/40 dark:from-violet-500/30 dark:to-indigo-600/30 dark:text-violet-50"
+              >
+                🏫 Lớp
               </button>
             </>
           )}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   fetchClassEnrollmentItems,
@@ -91,6 +91,14 @@ export default function TeacherClassCodesPage() {
         <p className="mb-6 text-sm text-slate-600 dark:text-slate-300">
           Học sinh nhập mã 4 số khi đăng ký để vào đúng lớp. Đổi mã khi cần chặn người lạ hoặc lớp
           bị lộ mã — học sinh hiện tại vẫn ở lớp cũ.
+        </p>
+        <p className="mb-6">
+          <Link
+            to="/teacher/classes"
+            className="text-sm font-medium text-violet-700 underline decoration-violet-400/60 underline-offset-2 hover:text-violet-900 dark:text-violet-300 dark:hover:text-violet-100"
+          >
+            → Xem bài tập và học sinh theo từng lớp
+          </Link>
         </p>
         {error ? (
           <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-200">

@@ -13,6 +13,9 @@ import StickerRedeem from './components/submissions/StickerRedeem'
 import TeacherSubmissionsList from './components/submissions/TeacherSubmissionsList'
 import TeacherSubmissionReview from './components/submissions/TeacherSubmissionReview'
 import TeacherClassCodesPage from './components/teacher/TeacherClassCodesPage'
+import TeacherClassesHomePage from './components/teacher/TeacherClassesHomePage'
+import TeacherClassAssignmentsPage from './components/teacher/TeacherClassAssignmentsPage'
+import TeacherClassStudentsPage from './components/teacher/TeacherClassStudentsPage'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import { OceanPageLoading } from './components/layout/OceanShell'
 import StudentStickerDock from './components/submissions/StudentStickerDock'
@@ -115,6 +118,30 @@ function AppRoutes() {
         element={
           <ProtectedRoute requiredRole="teacher">
             <TeacherClassCodesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/teacher/classes"
+        element={
+          <ProtectedRoute requiredRole="teacher">
+            <TeacherClassesHomePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/teacher/classes/:className/assignments"
+        element={
+          <ProtectedRoute requiredRole="teacher">
+            <TeacherClassAssignmentsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/teacher/classes/:className/students"
+        element={
+          <ProtectedRoute requiredRole="teacher">
+            <TeacherClassStudentsPage />
           </ProtectedRoute>
         }
       />
