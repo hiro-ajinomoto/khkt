@@ -1,3 +1,4 @@
+import { useLocation } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getAssignmentsNavIcon } from './assignmentsNavIcon';
 import NotificationBell from './NotificationBell';
@@ -19,10 +20,14 @@ export default function OceanListPageHeader({
    */
   teacherToolbar = false,
 }) {
+  const location = useLocation();
   const adminHome = variant === 'adminHome';
   const { theme } = useTheme();
   const assignmentsIcon = getAssignmentsNavIcon(theme);
   const showTeacherBar = !adminHome && teacherToolbar;
+  /** Lối về danh sách bài chính — ẩn khi đang ở /assignments. */
+  const showTeacherAssignmentsNav =
+    showTeacherBar && location.pathname !== '/assignments';
 
   return (
     <header className="relative mb-8 flex flex-col gap-4 overflow-hidden rounded-[28px] border border-sky-200/60 bg-white/70 p-4 shadow-[0_12px_40px_rgba(86,132,214,0.12)] backdrop-blur-xl dark:border-cyan-300/15 dark:bg-white/5 dark:shadow-2xl dark:shadow-cyan-950/30 md:mb-10 md:gap-6 md:p-6 lg:flex-row lg:items-center lg:justify-between">
@@ -72,6 +77,17 @@ export default function OceanListPageHeader({
             )}
             {showTeacherBar && (
               <>
+                {showTeacherAssignmentsNav ? (
+                  <button
+                    type="button"
+                    onClick={() => navigate('/assignments')}
+                    className="flex h-11 w-11 items-center justify-center rounded-2xl border border-sky-200/80 bg-[linear-gradient(135deg,#e0f2fe_0%,#fff7ed_100%)] text-lg shadow-md shadow-sky-200/35 transition hover:-translate-y-0.5 dark:border-cyan-300/40 dark:bg-gradient-to-r dark:from-cyan-500/35 dark:to-sky-600/35 dark:text-cyan-50 dark:shadow-cyan-950/40"
+                    aria-label="Danh sách bài tập"
+                    title="Về danh sách bài tập"
+                  >
+                    <span aria-hidden>{assignmentsIcon}</span>
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => navigate('/assignments/create')}
@@ -163,6 +179,17 @@ export default function OceanListPageHeader({
           <ThemeToggle />
           {showTeacherBar && (
             <>
+              {showTeacherAssignmentsNav ? (
+                <button
+                  type="button"
+                  onClick={() => navigate('/assignments')}
+                  className="group relative overflow-hidden rounded-2xl border border-sky-200/80 bg-[linear-gradient(135deg,#e0f2fe_0%,#fff7ed_55%,#ffedd5_100%)] px-5 py-3 text-sm font-medium text-sky-900 shadow-md shadow-sky-200/35 transition hover:-translate-y-0.5 dark:border-cyan-300/40 dark:bg-gradient-to-r dark:from-cyan-500/35 dark:via-sky-500/30 dark:to-blue-600/35 dark:text-cyan-50 dark:shadow-cyan-950/40"
+                >
+                  <span className="relative z-10">
+                    {assignmentsIcon} Danh sách bài tập
+                  </span>
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={() => navigate('/assignments/create')}

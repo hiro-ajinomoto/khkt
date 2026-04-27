@@ -62,14 +62,31 @@ export default function TeacherSubmissionsList() {
   useEffect(() => {
     let cancelled = false;
     async function loadFilterOptions() {
+      if (!user) return;
       try {
-        const [aRes, cRes] = await Promise.all([
-          fetchAssignments(),
-          fetchSchoolClasses(),
-        ]);
+        const aRes = await fetchAssignments();
         if (cancelled) return;
         setAssignments(Array.isArray(aRes) ? aRes : []);
-        setClasses(Array.isArray(cRes) ? cRes : []);
+
+        let classList = [];
+        if (user.role === 'admin') {
+          const cRes = await fetchSchoolClasses();
+          classList = Array.isArray(cRes) ? cRes : [];
+        } else if (user.role === 'teacher') {
+          classList = Array.isArray(user.assigned_class_names)
+            ? [...user.assigned_class_names].sort((a, b) =>
+                a.localeCompare(b, 'vi', { numeric: true }),
+              )
+            : [];
+        }
+        if (cancelled) return;
+        setClasses(classList);
+        setFilters((prev) => {
+          if (prev.className && classList.length > 0 && !classList.includes(prev.className)) {
+            return { ...prev, className: '' };
+          }
+          return prev;
+        });
       } catch (err) {
         if (!cancelled) {
           console.warn('Failed to load filter options:', err);
@@ -80,7 +97,7 @@ export default function TeacherSubmissionsList() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     let cancelled = false;
@@ -189,7 +206,9 @@ export default function TeacherSubmissionsList() {
               onChange={(e) => updateFilter({ className: e.target.value })}
               className="rounded-xl border border-sky-200/80 bg-white/90 px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200 dark:border-cyan-300/30 dark:bg-slate-900/70 dark:text-slate-100"
             >
-              <option value="">— Tất cả lớp —</option>
+              <option value="">
+                {user?.role === 'admin' ? '— Tất cả lớp —' : '— Tất cả lớp được gán —'}
+              </option>
               {groupedClasses.map(([grade, list]) => (
                 <optgroup key={grade} label={grade}>
                   {list.map((c) => (
