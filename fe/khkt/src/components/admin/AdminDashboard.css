@@ -1068,6 +1068,125 @@ html:not(.dark) .admin-dashboard .cancel-button {
   padding: 0.4rem 0.85rem;
 }
 
+.admin-dashboard .admin-ct-view-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.admin-dashboard .admin-ct-view-tab {
+  border-radius: 0.75rem;
+  border: 1px solid var(--ocean-border);
+  padding: 0.45rem 1rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--ocean-surface, #fff);
+  color: var(--ocean-text-muted, #64748b);
+}
+
+.admin-dashboard .admin-ct-view-tab--active {
+  border-color: rgba(56, 189, 248, 0.55);
+  background: linear-gradient(135deg, rgba(224, 242, 254, 0.95), rgba(255, 247, 237, 0.9));
+  color: var(--ocean-accent-text, #0e7490);
+  box-shadow: 0 4px 14px rgba(56, 189, 248, 0.15);
+}
+
+html.dark .admin-dashboard .admin-ct-view-tab--active {
+  background: linear-gradient(
+    135deg,
+    rgba(103, 232, 249, 0.18),
+    rgba(56, 189, 248, 0.12)
+  );
+  border-color: rgba(103, 232, 249, 0.4);
+  color: #a5f3fc;
+}
+
+.admin-dashboard .admin-ct-teacher-badge {
+  margin-right: 0.35rem;
+}
+
+.admin-dashboard .admin-ct-teacher-user {
+  font-size: 0.82rem;
+  display: block;
+  margin-top: 0.15rem;
+}
+
+.admin-dashboard .admin-ct-modal-list--scroll {
+  flex: 1;
+  min-height: 8rem;
+  max-height: min(50vh, 20rem);
+  overflow-y: auto;
+  padding: 0.25rem 0.5rem 0.5rem;
+  margin: 0;
+}
+
+.admin-dashboard .admin-ct-class-group {
+  margin-bottom: 0.35rem;
+}
+
+.admin-dashboard .admin-ct-class-group-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem 0.75rem;
+  margin: 0.5rem 0.35rem 0.25rem 0.35rem;
+}
+
+.admin-dashboard .admin-ct-class-group-head .admin-ct-class-group-title {
+  margin: 0;
+}
+
+.admin-dashboard .admin-ct-class-group-grade-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  align-items: center;
+}
+
+.admin-dashboard .admin-ct-grade-toggle-square {
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: 0;
+  flex-shrink: 0;
+  border-radius: 0.2rem;
+  accent-color: var(--ocean-accent-text, #0e7490);
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.admin-dashboard .admin-ct-grade-toggle-square:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-dashboard .admin-ct-grade-toggle-square:focus-visible {
+  outline: 2px solid rgba(56, 189, 248, 0.55);
+  outline-offset: 2px;
+}
+
+html.dark .admin-dashboard .admin-ct-grade-toggle-square {
+  accent-color: #5eead4;
+}
+
+.admin-dashboard .admin-ct-class-group-title {
+  margin: 0.5rem 0 0.25rem 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ocean-accent-text, #0e7490);
+  opacity: 0.9;
+}
+
+.admin-dashboard .admin-ct-modal-list-inner {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
 /* Modal gán giáo viên */
 .admin-dashboard .admin-ct-modal-backdrop {
   position: fixed;
