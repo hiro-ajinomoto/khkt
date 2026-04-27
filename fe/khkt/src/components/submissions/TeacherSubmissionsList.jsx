@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { fetchTeacherSubmissions } from '../../api/submissions';
 import { fetchAssignments } from '../../api/assignments';
 import { fetchSchoolClasses, groupClassesByGrade } from '../../api/classes';
@@ -343,9 +343,10 @@ export default function TeacherSubmissionsList() {
             const teacherScore = item.teacher_review?.score_override;
             return (
               <li key={item.id}>
-                <button
-                  type="button"
-                  onClick={() => navigate(`/teacher/submissions/${item.id}`)}
+                <Link
+                  to={`/teacher/submissions/${item.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="group flex h-full w-full flex-col gap-3 rounded-2xl border border-sky-200/60 bg-white/90 p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-sky-300 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 dark:border-cyan-300/20 dark:bg-slate-900/60 dark:hover:border-cyan-300/40"
                 >
                   <div className="flex items-start gap-3">
@@ -405,9 +406,9 @@ export default function TeacherSubmissionsList() {
                   </div>
 
                   <span className="mt-auto text-right text-xs font-medium text-sky-700 transition group-hover:translate-x-0.5 dark:text-cyan-200">
-                    Mở để nhận xét →
+                    Mở nhận xét trong tab mới →
                   </span>
-                </button>
+                </Link>
               </li>
             );
           })}
