@@ -3,6 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { register as registerAPI } from '../../api/auth';
 import { getAuthErrorMessage, normalizeLoginPayload } from '../../utils/authErrors';
+import {
+  LOGIN_USERNAME_RULES_VI,
+  sanitizeLoginUsernameInput,
+  validateLoginUsernameClient,
+} from '../../utils/loginUsername';
 import OceanShell from '../layout/OceanShell';
 import './AuthPage.css';
 
@@ -37,7 +42,12 @@ function AuthPage() {
 
   const handleRegisterChange = (e) => {
     const { name, value } = e.target;
-    const nextVal = name === 'class_code' ? String(value).replace(/\D/g, '').slice(0, 4) : value;
+    let nextVal = value;
+    if (name === 'class_code') {
+      nextVal = String(value).replace(/\D/g, '').slice(0, 4);
+    } else if (name === 'username') {
+      nextVal = sanitizeLoginUsernameInput(value);
+    }
     setRegisterData((prev) => ({
       ...prev,
       [name]: nextVal,
@@ -84,11 +94,12 @@ function AuthPage() {
     e.preventDefault();
     setError(null);
 
-    const username = registerData.username.trim();
-    if (!username) {
-      setError('Vui lòng nhập tên đăng nhập.');
+    const userCheck = validateLoginUsernameClient(registerData.username);
+    if (!userCheck.ok) {
+      setError(userCheck.detail);
       return;
     }
+    const username = userCheck.username;
     if (!registerData.password || !registerData.confirmPassword) {
       setError('Vui lòng nhập mật khẩu và xác nhận mật khẩu.');
       return;
@@ -247,17 +258,16 @@ function AuthPage() {
                 name="username"
                 value={registerData.username}
                 onChange={handleRegisterChange}
-                onBlur={(e) => {
-                  const t = e.target.value.trim();
-                  if (t !== e.target.value) {
-                    setRegisterData((prev) => ({ ...prev, username: t }));
-                  }
-                }}
-                placeholder="Nhập tên đăng nhập"
+                placeholder="Ví dụ: hocsinh_nguyenvana"
                 autoComplete="username"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
                 disabled={isSubmitting}
                 autoFocus
+                className="font-mono"
               />
+              <p className="field-hint">{LOGIN_USERNAME_RULES_VI}</p>
             </div>
 
             <div className="form-group">

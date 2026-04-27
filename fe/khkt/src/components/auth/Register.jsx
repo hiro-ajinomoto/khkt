@@ -3,6 +3,11 @@ import { useNavigate, Link } from 'react-router-dom';
 import { register as registerAPI } from '../../api/auth';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAuthErrorMessage } from '../../utils/authErrors';
+import {
+  LOGIN_USERNAME_RULES_VI,
+  sanitizeLoginUsernameInput,
+  validateLoginUsernameClient,
+} from '../../utils/loginUsername';
 import OceanShell from '../layout/OceanShell';
 import './AuthPage.css';
 
@@ -28,9 +33,12 @@ function Register() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    let next = value;
+    if (name === 'class_code') next = digitsOnly4(value);
+    else if (name === 'username') next = sanitizeLoginUsernameInput(value);
     setFormData((prev) => ({
       ...prev,
-      [name]: name === 'class_code' ? digitsOnly4(value) : value,
+      [name]: next,
     }));
     setError(null);
   };
@@ -39,11 +47,12 @@ function Register() {
     e.preventDefault();
     setError(null);
 
-    const username = formData.username.trim();
-    if (!username) {
-      setError('Vui lòng nhập tên đăng nhập.');
+    const userCheck = validateLoginUsernameClient(formData.username);
+    if (!userCheck.ok) {
+      setError(userCheck.detail);
       return;
     }
+    const username = userCheck.username;
     if (!formData.password || !formData.confirmPassword) {
       setError('Vui lòng nhập mật khẩu và xác nhận mật khẩu.');
       return;
@@ -117,17 +126,16 @@ function Register() {
               name="username"
               value={formData.username}
               onChange={handleInputChange}
-              onBlur={(e) => {
-                const t = e.target.value.trim();
-                if (t !== e.target.value) {
-                  setFormData((prev) => ({ ...prev, username: t }));
-                }
-              }}
-              placeholder="Nhập tên đăng nhập"
+              placeholder="Ví dụ: hocsinh_nguyenvana"
               autoComplete="username"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
               disabled={isSubmitting}
               autoFocus
+              className="font-mono"
             />
+            <p className="field-hint">{LOGIN_USERNAME_RULES_VI}</p>
           </div>
 
           <div className="form-group">

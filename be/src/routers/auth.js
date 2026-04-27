@@ -7,6 +7,7 @@ import { config } from '../config.js';
 import { authenticate } from '../middleware/auth.js';
 import { listClassNames, resolveClassNameFromEnrollmentCode } from '../schoolClasses.js';
 import { listClassNamesForTeacher } from '../classTeacherAssignments.js';
+import { validateNewLoginUsername } from '../utils/loginUsername.js';
 
 const router = express.Router();
 
@@ -77,14 +78,19 @@ router.post('/login', async (req, res) => {
  */
 router.post('/register', async (req, res) => {
   try {
-    const username = String(req.body?.username ?? '').trim();
     const password =
       req.body?.password != null ? String(req.body.password) : '';
     const { name } = req.body;
 
-    if (!username || !password) {
+    const usernameCheck = validateNewLoginUsername(req.body?.username);
+    if (!usernameCheck.ok) {
+      return res.status(400).json({ detail: usernameCheck.detail });
+    }
+    const username = usernameCheck.username;
+
+    if (!password) {
       return res.status(400).json({
-        detail: 'Vui lòng nhập tên đăng nhập và mật khẩu.',
+        detail: 'Vui lòng nhập mật khẩu.',
       });
     }
 
@@ -235,7 +241,14 @@ router.post('/init', async (req, res) => {
     }
 
     // Create default admin account
-    const defaultUsername = req.body.username || 'admin';
+    const requestedUsername = req.body.username
+      ? String(req.body.username).trim()
+      : 'admin';
+    const usernameCheck = validateNewLoginUsername(requestedUsername);
+    if (!usernameCheck.ok) {
+      return res.status(400).json({ detail: usernameCheck.detail });
+    }
+    const defaultUsername = usernameCheck.username;
     const defaultPassword = req.body.password || 'admin123';
 
     const hashedPassword = await bcrypt.hash(defaultPassword, 10);
