@@ -46,17 +46,17 @@ export async function login(username, password) {
  * @param {string} password - Password
  * @param {string} role - Role ('teacher' or 'student')
  * @param {string} name - Display name (optional)
- * @param {string} class_name - Class name for students (optional, e.g., '8A1', '8A2')
+ * @param {string} class_code - Mã lớp 4 chữ số (đăng ký học sinh)
  * @returns {Promise<Object>} { token, user }
  */
-export async function register(username, password, role = 'student', name = null, class_name = null) {
+export async function register(username, password, role = 'student', name = null, class_code = null) {
   try {
     const response = await fetch(`${API_BASE_URL}/auth/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ username, password, role, name, class_name }),
+      body: JSON.stringify({ username, password, role, name, class_code }),
     });
 
     if (!response.ok) {

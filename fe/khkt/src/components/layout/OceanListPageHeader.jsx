@@ -14,10 +14,15 @@ export default function OceanListPageHeader({
   variant,
   navigate,
   logout,
+  /**
+   * Giáo viên (role teacher): luôn hiện lối tắt Tạo bài / Chấm tay / Mã lớp — tránh “mất” chức năng khi cuộn trang.
+   */
+  teacherToolbar = false,
 }) {
   const adminHome = variant === 'adminHome';
   const { theme } = useTheme();
   const assignmentsIcon = getAssignmentsNavIcon(theme);
+  const showTeacherBar = !adminHome && teacherToolbar;
 
   return (
     <header className="relative mb-8 flex flex-col gap-4 overflow-hidden rounded-[28px] border border-sky-200/60 bg-white/70 p-4 shadow-[0_12px_40px_rgba(86,132,214,0.12)] backdrop-blur-xl dark:border-cyan-300/15 dark:bg-white/5 dark:shadow-2xl dark:shadow-cyan-950/30 md:mb-10 md:gap-6 md:p-6 lg:flex-row lg:items-center lg:justify-between">
@@ -64,6 +69,37 @@ export default function OceanListPageHeader({
               >
                 <span aria-hidden>{assignmentsIcon}</span>
               </button>
+            )}
+            {showTeacherBar && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => navigate('/assignments/create')}
+                  className="flex h-11 w-11 items-center justify-center rounded-2xl border border-emerald-200/80 bg-[linear-gradient(135deg,#6ee7b7_0%,#14b8a6_100%)] text-base font-bold text-white shadow-md shadow-emerald-200/35 transition hover:-translate-y-0.5 dark:border-emerald-400/40"
+                  aria-label="Tạo bài tập"
+                  title="Tạo bài tập mới"
+                >
+                  <span aria-hidden>➕</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/teacher/submissions')}
+                  className="flex h-11 w-11 items-center justify-center rounded-2xl border border-amber-200/80 bg-[linear-gradient(135deg,#fcd34d_0%,#ea580c_100%)] text-base shadow-md shadow-amber-200/35 transition hover:-translate-y-0.5 dark:border-amber-400/40"
+                  aria-label="Chấm tay bài nộp"
+                  title="Chấm tay bài nộp"
+                >
+                  <span aria-hidden>📝</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/teacher/class-codes')}
+                  className="flex h-11 w-11 items-center justify-center rounded-2xl border border-teal-200/80 bg-[linear-gradient(135deg,#ccfbf1_0%,#e0f2fe_100%)] text-base shadow-md shadow-teal-200/30 transition hover:-translate-y-0.5 dark:border-teal-400/35 dark:from-teal-500/25 dark:to-cyan-600/25 dark:text-teal-50"
+                  aria-label="Mã lớp"
+                  title="Mã đăng ký lớp"
+                >
+                  <span aria-hidden>🔑</span>
+                </button>
+              </>
             )}
             <NotificationBell compact />
             <ThemeToggle />
@@ -116,6 +152,31 @@ export default function OceanListPageHeader({
         <div className="relative hidden shrink-0 flex-wrap items-center gap-3 md:flex md:w-auto md:justify-end">
           <NotificationBell />
           <ThemeToggle />
+          {showTeacherBar && (
+            <>
+              <button
+                type="button"
+                onClick={() => navigate('/assignments/create')}
+                className="rounded-2xl border border-emerald-200/80 bg-[linear-gradient(135deg,#34d399_0%,#0d9488_100%)] px-4 py-3 text-sm font-medium text-white shadow-md shadow-emerald-200/35 transition hover:-translate-y-0.5 dark:border-emerald-400/40"
+              >
+                ➕ Tạo bài
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/teacher/submissions')}
+                className="rounded-2xl border border-amber-200/80 bg-[linear-gradient(135deg,#fcd34d_0%,#ea580c_100%)] px-4 py-3 text-sm font-medium text-white shadow-md shadow-amber-200/35 transition hover:-translate-y-0.5 dark:border-amber-400/40"
+              >
+                📝 Chấm tay
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/teacher/class-codes')}
+                className="rounded-2xl border border-teal-200/80 bg-[linear-gradient(135deg,#ccfbf1_0%,#e0f2fe_100%)] px-4 py-3 text-sm font-medium text-teal-900 shadow-md shadow-teal-200/30 transition hover:-translate-y-0.5 dark:border-teal-400/40 dark:from-teal-500/30 dark:to-cyan-600/25 dark:text-teal-50"
+              >
+                🔑 Mã lớp
+              </button>
+            </>
+          )}
           {adminHome ? (
             <button
               type="button"

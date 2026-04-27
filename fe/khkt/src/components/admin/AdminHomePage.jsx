@@ -1,7 +1,13 @@
+import { useCallback, useEffect, useState } from 'react';
 import { useAdminWorkspace } from './AdminWorkspaceContext';
 import { AdminUserTableHead, AdminUserTableRow } from './AdminUserTable';
+import {
+  fetchClassEnrollmentItems,
+  rotateClassEnrollmentCode,
+} from '../../api/classEnrollment';
 
 export default function AdminHomePage() {
+  const [enrollmentByClass, setEnrollmentByClass] = useState(() => new Map());
   const {
     stats,
     schoolClasses,
@@ -23,6 +29,50 @@ export default function AdminHomePage() {
     setUserFilter,
     loadData,
   } = useAdminWorkspace();
+
+  const classListKey = schoolClasses.join('|');
+
+  useEffect(() => {
+    let cancelled = false;
+    if (schoolClasses.length === 0) {
+      setEnrollmentByClass(new Map());
+      return undefined;
+    }
+    fetchClassEnrollmentItems()
+      .then((items) => {
+        if (!cancelled) {
+          setEnrollmentByClass(
+            new Map(items.map((i) => [i.class_name, i.enrollment_code]))
+          );
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setEnrollmentByClass(new Map());
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [classListKey]);
+
+  const handleRotateEnrollment = useCallback(async (classLabel) => {
+    if (
+      !window.confirm(
+        `Đổi mã đăng ký lớp "${classLabel}"? Học sinh đã trong lớp giữ nguyên; chỉ đăng ký mới cần mã mới.`
+      )
+    ) {
+      return;
+    }
+    try {
+      const r = await rotateClassEnrollmentCode(classLabel);
+      setEnrollmentByClass((prev) => {
+        const next = new Map(prev);
+        next.set(r.class_name, r.enrollment_code);
+        return next;
+      });
+    } catch (e) {
+      alert(e.message || 'Không đổi được mã');
+    }
+  }, []);
 
   return (
     <>
@@ -59,6 +109,7 @@ export default function AdminHomePage() {
           <p className="admin-class-hint">
             Đặt tên lớp tùy ý (ví dụ <strong>8A1</strong>, <strong>Lớp chọn Toán</strong>), tối đa 80 ký tự, có ít nhất một chữ hoặc số.
             Có thể <strong>sửa tên</strong> lớp (học sinh và gán bài sẽ theo tên mới), <strong>xóa</strong> khi không còn dùng.
+            Mỗi lớp có <strong>mã 4 số</strong> để học sinh đăng ký; đổi mã khi cần (học sinh cũ không mất lớp).
           </p>
           <div className="admin-class-row">
             <input
@@ -137,6 +188,21 @@ export default function AdminHomePage() {
                       ) : (
                         <>
                           <span className="class-badge">{c}</span>
+                          <span
+                            className="admin-class-enrollment-code"
+                            title="Mã đăng ký (học sinh nhập khi tạo tài khoản)"
+                          >
+                            {enrollmentByClass.get(c) ?? '…'}
+                          </span>
+                          <button
+                            type="button"
+                            className="edit-button"
+                            title="Đổi mã đăng ký lớp"
+                            disabled={classBusy || classRename != null}
+                            onClick={() => handleRotateEnrollment(c)}
+                          >
+                            🔑
+                          </button>
                           <button
                             type="button"
                             className="edit-button"

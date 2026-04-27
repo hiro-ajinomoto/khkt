@@ -8,6 +8,7 @@ import submissionsRouter from "./routers/submissions.js";
 import authRouter from "./routers/auth.js";
 import adminRouter from "./routers/admin.js";
 import notificationsRouter from "./routers/notifications.js";
+import classEnrollmentRouter from "./routers/classEnrollment.js";
 import { config } from "./config.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -39,6 +40,7 @@ app.use("/admin", adminRouter);
 app.use("/assignments", assignmentsRouter);
 app.use("/submissions", submissionsRouter);
 app.use("/notifications", notificationsRouter);
+app.use("/class-enrollment", classEnrollmentRouter);
 
 // Health check
 app.get("/health", (req, res) => {

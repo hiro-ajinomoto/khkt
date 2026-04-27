@@ -26,7 +26,7 @@ function formatDate(value) {
 export default function TeacherSubmissionReview() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, isAuthenticated, isAdmin, logout } = useAuth();
+  const { user, isAuthenticated, isAdmin, isTeacher, logout } = useAuth();
 
   const [submission, setSubmission] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -158,6 +158,7 @@ export default function TeacherSubmissionReview() {
         isAdmin={isAdmin}
         navigate={navigate}
         logout={logout}
+        teacherToolbar={isTeacher}
       />
 
       <div className="mb-4 flex items-center justify-between gap-3">

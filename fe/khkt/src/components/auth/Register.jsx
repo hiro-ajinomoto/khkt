@@ -1,11 +1,16 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { register as registerAPI } from '../../api/auth';
-import { fetchSchoolClasses, groupClassesByGrade } from '../../api/classes';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAuthErrorMessage } from '../../utils/authErrors';
 import OceanShell from '../layout/OceanShell';
 import './AuthPage.css';
+
+function digitsOnly4(value) {
+  return String(value ?? '')
+    .replace(/\D/g, '')
+    .slice(0, 4);
+}
 
 function Register() {
   const navigate = useNavigate();
@@ -16,36 +21,16 @@ function Register() {
     password: '',
     confirmPassword: '',
     name: '',
-    class_name: '',
+    class_code: '',
   });
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [schoolClasses, setSchoolClasses] = useState([]);
-
-  const schoolClassesByGrade = useMemo(
-    () => groupClassesByGrade(schoolClasses),
-    [schoolClasses]
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchSchoolClasses()
-      .then((list) => {
-        if (!cancelled) setSchoolClasses(list);
-      })
-      .catch(() => {
-        if (!cancelled) setSchoolClasses([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: name === 'class_code' ? digitsOnly4(value) : value,
     }));
     setError(null);
   };
@@ -77,26 +62,25 @@ function Register() {
       setError('Mật khẩu xác nhận không khớp.');
       return;
     }
-    if (!formData.class_name?.trim()) {
-      setError('Vui lòng chọn lớp để giáo viên nhận được thông báo đăng ký mới.');
+    const code = digitsOnly4(formData.class_code);
+    if (code.length !== 4) {
+      setError('Nhập đủ mã lớp 4 chữ số do giáo viên cung cấp.');
       return;
     }
 
     try {
       setIsSubmitting(true);
-      // Register as student by default
       const result = await registerAPI(
         username,
         formData.password,
         'student',
         formData.name?.trim() || username,
-        formData.class_name?.trim() || null
+        code
       );
 
       if (result.token && result.user) {
         setAuthSession(result.token, result.user);
 
-        // Redirect based on role (though new users are always students)
         if (result.user.role === 'admin') {
           navigate('/admin', { replace: true });
         } else if (result.user.role === 'teacher') {
@@ -160,28 +144,25 @@ function Register() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="class_name">Lớp</label>
-            <select
-              id="class_name"
-              name="class_name"
-              value={formData.class_name || ''}
+            <label htmlFor="class_code">Mã lớp (4 số)</label>
+            <input
+              id="class_code"
+              type="text"
+              name="class_code"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              autoComplete="off"
+              maxLength={4}
+              value={formData.class_code}
               onChange={handleInputChange}
+              placeholder="Ví dụ: 4829"
               disabled={isSubmitting}
+              className="font-mono tracking-[0.35em]"
               required
-            >
-              <option value="">Chọn lớp</option>
-              {schoolClassesByGrade.map(([gradeTitle, classesInGrade]) => (
-                <optgroup key={gradeTitle} label={gradeTitle}>
-                  {classesInGrade.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
+            />
             <p className="field-hint">
-              * Giáo viên sẽ nhận được thông báo khi học sinh đăng ký vào lớp.
+              Giáo viên chủ nhiệm hoặc quản trị cung cấp mã để vào đúng lớp. Nếu lớp đổi mã, chỉ
+              học sinh mới đăng ký cần mã mới.
             </p>
           </div>
 

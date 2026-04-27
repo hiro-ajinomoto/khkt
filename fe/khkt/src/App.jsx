@@ -12,6 +12,7 @@ import MySubmissions from './components/submissions/MySubmissions'
 import StickerRedeem from './components/submissions/StickerRedeem'
 import TeacherSubmissionsList from './components/submissions/TeacherSubmissionsList'
 import TeacherSubmissionReview from './components/submissions/TeacherSubmissionReview'
+import TeacherClassCodesPage from './components/teacher/TeacherClassCodesPage'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import { OceanPageLoading } from './components/layout/OceanShell'
 import StudentStickerDock from './components/submissions/StudentStickerDock'
@@ -106,6 +107,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute requiredRole="teacher">
             <TeacherSubmissionReview />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/teacher/class-codes"
+        element={
+          <ProtectedRoute requiredRole="teacher">
+            <TeacherClassCodesPage />
           </ProtectedRoute>
         }
       />

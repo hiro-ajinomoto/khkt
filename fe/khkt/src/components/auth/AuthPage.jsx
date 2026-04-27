@@ -1,8 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { register as registerAPI } from '../../api/auth';
-import { fetchSchoolClasses, groupClassesByGrade } from '../../api/classes';
 import { getAuthErrorMessage, normalizeLoginPayload } from '../../utils/authErrors';
 import OceanShell from '../layout/OceanShell';
 import './AuthPage.css';
@@ -22,38 +21,11 @@ function AuthPage() {
     password: '',
     confirmPassword: '',
     name: '',
-    class_name: '',
+    class_code: '',
   });
   
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [schoolClasses, setSchoolClasses] = useState([]);
-
-  const schoolClassesByGrade = useMemo(
-    () => groupClassesByGrade(schoolClasses),
-    [schoolClasses]
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchSchoolClasses()
-      .then((list) => {
-        if (!cancelled) setSchoolClasses(list);
-      })
-      .catch(() => {
-        if (!cancelled) setSchoolClasses([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (activeTab === 'register') {
-      console.log('Register tab active, class_name:', registerData.class_name);
-    }
-  }, [activeTab, registerData.class_name]);
-
   const handleLoginChange = (e) => {
     const { name, value } = e.target;
     setLoginData((prev) => ({
@@ -65,10 +37,10 @@ function AuthPage() {
 
   const handleRegisterChange = (e) => {
     const { name, value } = e.target;
-    console.log('Register field changed:', name, value);
+    const nextVal = name === 'class_code' ? String(value).replace(/\D/g, '').slice(0, 4) : value;
     setRegisterData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: nextVal,
     }));
     setError(null);
   };
@@ -136,6 +108,12 @@ function AuthPage() {
       return;
     }
 
+    const classCode = String(registerData.class_code || '').replace(/\D/g, '');
+    if (classCode.length !== 4) {
+      setError('Nhập đủ mã lớp 4 chữ số do giáo viên cung cấp.');
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       // Register as student by default
@@ -144,7 +122,7 @@ function AuthPage() {
         registerData.password,
         'student',
         registerData.name?.trim() || username,
-        registerData.class_name?.trim() || null
+        classCode
       );
 
       if (result.token && result.user) {
@@ -296,27 +274,23 @@ function AuthPage() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="register-class">Lớp (tùy chọn)</label>
-              <select
-                id="register-class"
-                name="class_name"
-                value={registerData.class_name || ''}
+              <label htmlFor="register-class-code">Mã lớp (4 số)</label>
+              <input
+                id="register-class-code"
+                type="text"
+                name="class_code"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={4}
+                value={registerData.class_code}
                 onChange={handleRegisterChange}
+                placeholder="Ví dụ: 4829"
                 disabled={isSubmitting}
-              >
-                <option value="">Chọn lớp (tùy chọn)</option>
-                {schoolClassesByGrade.map(([gradeTitle, classesInGrade]) => (
-                  <optgroup key={gradeTitle} label={gradeTitle}>
-                    {classesInGrade.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
+                autoComplete="off"
+                className="font-mono tracking-[0.35em]"
+              />
               <p className="field-hint">
-                * Lưu ý: Chỉ học sinh cần chọn lớp. Nếu bạn trở thành giáo viên sau này, bạn không cần lớp.
+                Nhập mã do giáo viên hoặc quản trị cung cấp để vào đúng lớp.
               </p>
             </div>
 

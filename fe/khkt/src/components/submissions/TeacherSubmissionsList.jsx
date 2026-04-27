@@ -44,7 +44,7 @@ function ScoreBadge({ value, label, accentClass }) {
 }
 
 export default function TeacherSubmissionsList() {
-  const { user, isAuthenticated, isAdmin, logout } = useAuth();
+  const { user, isAuthenticated, isAdmin, isTeacher, logout } = useAuth();
   const navigate = useNavigate();
 
   const [assignments, setAssignments] = useState([]);
@@ -145,6 +145,7 @@ export default function TeacherSubmissionsList() {
         isAdmin={isAdmin}
         navigate={navigate}
         logout={logout}
+        teacherToolbar={isTeacher}
       />
 
       <section className="mb-6 rounded-3xl border border-sky-200/60 bg-white/85 p-4 shadow-[0_12px_30px_rgba(86,132,214,0.10)] backdrop-blur-xl dark:border-cyan-300/15 dark:bg-white/5 md:p-6">

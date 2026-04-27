@@ -3,6 +3,55 @@ const COLLECTION = 'school_classes';
 const MIN_CLASS_LEN = 1;
 const MAX_CLASS_LEN = 80;
 
+/** Chuỗi 4 chữ số (0000–9999), chỉ lấy digit từ input. */
+export function normalizeEnrollmentCode(raw) {
+  const digits = String(raw ?? '').replace(/\D/g, '');
+  if (digits.length !== 4) return null;
+  return digits;
+}
+
+export async function generateUniqueEnrollmentCode(db) {
+  const coll = db.collection(COLLECTION);
+  for (let attempt = 0; attempt < 120; attempt += 1) {
+    const code = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+    const dup = await coll.findOne({ enrollment_code: code }, { projection: { _id: 1 } });
+    if (!dup) return code;
+  }
+  const err = new Error('Không tạo được mã lớp duy nhất');
+  err.status = 500;
+  throw err;
+}
+
+async function ensureEnrollmentIndex(coll) {
+  await coll.createIndex(
+    { enrollment_code: 1 },
+    {
+      unique: true,
+      name: 'school_class_enrollment_code_idx',
+      partialFilterExpression: {
+        enrollment_code: { $exists: true, $type: 'string', $gt: '' },
+      },
+    },
+  );
+}
+
+export async function ensureAllClassesHaveEnrollmentCodes(db) {
+  const coll = db.collection(COLLECTION);
+  const missing = await coll
+    .find({
+      $or: [
+        { enrollment_code: { $exists: false } },
+        { enrollment_code: null },
+        { enrollment_code: '' },
+      ],
+    })
+    .toArray();
+  for (const doc of missing) {
+    const code = await generateUniqueEnrollmentCode(db);
+    await coll.updateOne({ _id: doc._id }, { $set: { enrollment_code: code } });
+  }
+}
+
 /** Ký tự điều khiển, HTML/XML và dấu gạch chéo ngược — không cho phép trong tên lớp. */
 const DISALLOWED_CHARS = /[\u0000-\u001F\u007F<>\\]/;
 
@@ -47,12 +96,19 @@ export function validateClassNameFormat(name) {
 export async function ensureDefaultClasses(db) {
   const coll = db.collection(COLLECTION);
   await coll.createIndex({ name: 1 }, { unique: true });
+  await ensureEnrollmentIndex(coll);
   const count = await coll.countDocuments();
   if (count === 0) {
-    await coll.insertMany(
-      DEFAULT_NAMES.map((name) => ({ name, created_at: new Date() }))
-    );
+    for (const name of DEFAULT_NAMES) {
+      const code = await generateUniqueEnrollmentCode(db);
+      await coll.insertOne({
+        name,
+        created_at: new Date(),
+        enrollment_code: code,
+      });
+    }
   }
+  await ensureAllClassesHaveEnrollmentCodes(db);
 }
 
 export async function listClassNames(db) {
@@ -91,10 +147,12 @@ export async function addClassDocument(db, rawName) {
     throw err;
   }
   await ensureDefaultClasses(db);
+  const code = await generateUniqueEnrollmentCode(db);
   try {
     await db.collection(COLLECTION).insertOne({
       name: v.name,
       created_at: new Date(),
+      enrollment_code: code,
     });
   } catch (e) {
     if (e.code === 11000) {
@@ -191,4 +249,83 @@ export async function renameClassDocument(db, rawOldName, rawNewName) {
   await renameClassInTeacherAssignments(db, vOld.name, vNew.name);
 
   return { oldName: vOld.name, newName: vNew.name };
+}
+
+/**
+ * Tra cứu lớp theo mã đăng ký (học sinh).
+ * @returns {{ ok: true, class_name: string } | { ok: false }}
+ */
+export async function resolveClassNameFromEnrollmentCode(db, raw) {
+  const code = normalizeEnrollmentCode(raw);
+  if (!code) {
+    return { ok: false };
+  }
+  await ensureDefaultClasses(db);
+  const doc = await db.collection(COLLECTION).findOne({ enrollment_code: code });
+  if (!doc) {
+    return { ok: false };
+  }
+  return { ok: true, class_name: doc.name };
+}
+
+/**
+ * Đổi mã đăng ký — học sinh cũ giữ nguyên lớp; chỉ ảnh hưởng đăng ký mới.
+ */
+export async function rotateEnrollmentCodeForClass(db, rawClassName) {
+  const v = validateClassNameFormat(rawClassName);
+  if (!v.ok) {
+    const err = new Error(v.error);
+    err.status = 400;
+    throw err;
+  }
+  await ensureDefaultClasses(db);
+  const coll = db.collection(COLLECTION);
+  const doc = await coll.findOne({ name: v.name });
+  if (!doc) {
+    const err = new Error('Không tìm thấy lớp');
+    err.status = 404;
+    throw err;
+  }
+  const newCode = await generateUniqueEnrollmentCode(db);
+  await coll.updateOne(
+    { name: v.name },
+    {
+      $set: {
+        enrollment_code: newCode,
+        enrollment_code_rotated_at: new Date(),
+      },
+    },
+  );
+  return { class_name: v.name, enrollment_code: newCode };
+}
+
+/** Danh sách tất cả lớp + mã (admin). */
+export async function listClassesEnrollmentMetadata(db) {
+  await ensureDefaultClasses(db);
+  const docs = await db
+    .collection(COLLECTION)
+    .find({})
+    .sort({ name: 1 })
+    .project({ name: 1, enrollment_code: 1 })
+    .toArray();
+  return docs.map((d) => ({
+    class_name: d.name,
+    enrollment_code: d.enrollment_code || null,
+  }));
+}
+
+/** Chỉ các lớp trong danh sách tên (giáo viên được gán). */
+export async function listClassesEnrollmentMetadataForNames(db, classNames) {
+  if (!classNames || classNames.length === 0) return [];
+  await ensureDefaultClasses(db);
+  const docs = await db
+    .collection(COLLECTION)
+    .find({ name: { $in: classNames } })
+    .sort({ name: 1 })
+    .project({ name: 1, enrollment_code: 1 })
+    .toArray();
+  return docs.map((d) => ({
+    class_name: d.name,
+    enrollment_code: d.enrollment_code || null,
+  }));
 }

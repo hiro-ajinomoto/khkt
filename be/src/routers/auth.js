@@ -5,7 +5,7 @@ import { ObjectId } from 'mongodb';
 import { getDB } from '../db.js';
 import { config } from '../config.js';
 import { authenticate } from '../middleware/auth.js';
-import { classNameExists, listClassNames } from '../schoolClasses.js';
+import { listClassNames, resolveClassNameFromEnrollmentCode } from '../schoolClasses.js';
 import { listClassNamesForTeacher } from '../classTeacherAssignments.js';
 
 const router = express.Router();
@@ -99,24 +99,20 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ detail: 'Tên đăng nhập đã được sử dụng.' });
     }
 
-    let class_name =
-      req.body.class_name != null && String(req.body.class_name).trim() !== ''
-        ? String(req.body.class_name).trim()
-        : null;
-    if (!class_name) {
+    const rawCode = req.body.class_code ?? req.body.classCode;
+    if (rawCode == null || String(rawCode).trim() === '') {
       return res.status(400).json({
-        detail: 'Vui lòng chọn lớp để giáo viên nhận được thông báo đăng ký mới.',
+        detail: 'Vui lòng nhập mã lớp 4 chữ số do giáo viên cung cấp.',
       });
     }
-    if (class_name) {
-      const exists = await classNameExists(db, class_name);
-      if (!exists) {
-        return res.status(400).json({
-          detail:
-            'Lớp không hợp lệ hoặc chưa được khai báo trong hệ thống.',
-        });
-      }
+    const resolved = await resolveClassNameFromEnrollmentCode(db, rawCode);
+    if (!resolved.ok) {
+      return res.status(400).json({
+        detail:
+          'Mã lớp không đúng hoặc đã được đổi. Hỏi giáo viên để nhận mã mới.',
+      });
     }
+    const class_name = resolved.class_name;
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);

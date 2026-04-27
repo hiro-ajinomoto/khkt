@@ -22,6 +22,16 @@ function getAssignmentLocalDate(assignment) {
   return new Date();
 }
 
+/** YYYY-MM-DD theo lịch máy — khớp với input type="date", tránh lệch ngày so với UTC. */
+function toLocalDateKey(d) {
+  const dt = d instanceof Date ? d : new Date(d);
+  if (Number.isNaN(dt.getTime())) return toLocalDateKey(new Date());
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, '0');
+  const day = String(dt.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 /** Ngày tạo bài dạng chip #d/m (thêm năm nếu khác năm hiện tại). */
 function formatAssignmentDateHashtag(assignment) {
   const d = getAssignmentLocalDate(assignment);
@@ -68,10 +78,7 @@ function AssignmentsList() {
   const [adminTeacherFilterId, setAdminTeacherFilterId] = useState(null);
 
   // For teachers: filter by date
-  const [selectedDate, setSelectedDate] = useState(() => {
-    const today = new Date();
-    return today.toISOString().split('T')[0]; // YYYY-MM-DD
-  });
+  const [selectedDate, setSelectedDate] = useState(() => toLocalDateKey(new Date()));
 
   // For students: filter by month
   const [selectedYear, setSelectedYear] = useState(() => {
@@ -97,10 +104,8 @@ function AssignmentsList() {
       // Find the latest date with assignments
       const dates = new Set();
       allAssignments.forEach((assignment) => {
-        if (assignment.created_at) {
-          const date = new Date(assignment.created_at);
-          dates.add(date.toISOString().split('T')[0]);
-        }
+        const date = getAssignmentLocalDate(assignment);
+        dates.add(toLocalDateKey(date));
       });
       
       if (dates.size > 0) {
@@ -253,21 +258,19 @@ function AssignmentsList() {
 
     const source = isAdmin ? assignmentsForAdminView : allAssignments;
 
-    // Filter by selected date
+    // Filter by selected date (dùng cùng quy tắc ngày như học sinh — bài cũ thiếu created_at vẫn hiện)
     const filtered = source.filter((assignment) => {
-      if (!assignment.created_at) return false;
-      const date = new Date(assignment.created_at);
-      const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+      const date = getAssignmentLocalDate(assignment);
+      const dateKey = toLocalDateKey(date);
       return dateKey === selectedDate;
     });
 
     // Group by date (should be only one date after filtering)
     const groups = {};
     filtered.forEach((assignment) => {
-      if (!assignment.created_at) return;
-      const date = new Date(assignment.created_at);
-      const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
-      
+      const date = getAssignmentLocalDate(assignment);
+      const dateKey = toLocalDateKey(date);
+
       if (!groups[dateKey]) {
         groups[dateKey] = [];
       }
@@ -312,8 +315,8 @@ function AssignmentsList() {
     const groups = {};
     filtered.forEach((assignment) => {
       const date = getAssignmentLocalDate(assignment);
-      const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
-      
+      const dateKey = toLocalDateKey(date);
+
       if (!groups[dateKey]) {
         groups[dateKey] = [];
       }
@@ -465,10 +468,8 @@ function AssignmentsList() {
     const source = isAdmin ? assignmentsForAdminView : allAssignments;
     const dates = new Set();
     source.forEach((assignment) => {
-      if (assignment.created_at) {
-        const date = new Date(assignment.created_at);
-        dates.add(date.toISOString().split('T')[0]);
-      }
+      const date = getAssignmentLocalDate(assignment);
+      dates.add(toLocalDateKey(date));
     });
 
     return Array.from(dates).sort((a, b) => b.localeCompare(a));
@@ -529,7 +530,20 @@ function AssignmentsList() {
           variant="assignments"
           navigate={navigate}
           logout={logout}
+          teacherToolbar={isTeacher}
         />
+        {user?.role === 'teacher' &&
+          (!user?.assigned_class_names || user.assigned_class_names.length === 0) && (
+            <div
+              className="mb-6 rounded-2xl border border-amber-300/70 bg-amber-50/95 px-4 py-3 text-sm text-amber-950 shadow-sm dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-100"
+              role="status"
+            >
+              <strong>Chưa được gán lớp.</strong> Quản trị viên cần gán bạn vào lớp ở mục{' '}
+              <span className="font-semibold">Quản trị → GV — lớp</span> thì bạn mới thấy bài tập / bài
+              nộp của các lớp đó. Bạn vẫn có thể <strong>tạo bài nháp</strong> (chưa gán lớp) bằng nút{' '}
+              <strong>Tạo bài</strong> phía trên.
+            </div>
+          )}
         {isAdmin && allAssignments.length > 0 && (
           <section
             className="mb-6 rounded-[28px] border border-amber-200/60 bg-[linear-gradient(135deg,#fffbeb_0%,#fff7ed_100%)] p-5 shadow-md shadow-amber-100/50 dark:border-amber-300/25 dark:bg-gradient-to-br dark:from-amber-950/50 dark:to-slate-950/60 dark:shadow-lg dark:shadow-amber-950/20"
@@ -581,7 +595,7 @@ function AssignmentsList() {
 
         {/* Filters + quick actions */}
         <section className="mb-8 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="hidden rounded-[28px] border border-sky-200/70 bg-white/72 p-5 shadow-[0_12px_32px_rgba(86,132,214,0.08)] backdrop-blur-xl dark:border-cyan-300/15 dark:bg-white/5 dark:shadow-none md:block">
+          <div className="rounded-[28px] border border-sky-200/70 bg-white/72 p-5 shadow-[0_12px_32px_rgba(86,132,214,0.08)] backdrop-blur-xl dark:border-cyan-300/15 dark:bg-white/5 dark:shadow-none">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-slate-800 dark:text-white">Bộ lọc thời gian</h2>
               <div className="mx-4 h-px flex-1 bg-[linear-gradient(90deg,#7fb7ff,#ffd36a,#ff8d4d)] opacity-80 dark:bg-gradient-to-r dark:from-cyan-300/30 dark:to-transparent" />

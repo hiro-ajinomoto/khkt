@@ -42,7 +42,9 @@ export async function canTeacherManageAssignmentDb(db, user, assignmentObjectId,
 }
 
 /**
- * Assignment IDs a teacher may see: union of (assignments tied to their classes) and (own drafts without class).
+ * Assignment IDs a teacher may see:
+ * - mọi bài gắn với lớp họ được phân công, và
+ * - mọi bài do chính họ tạo (kể cả đã gán lớp — tránh “mất” bài khi dữ liệu lớp/GV lệch hoặc created_by kiểu string cũ).
  * @param {Set<string>} scopedSet
  */
 export async function listScopedAssignmentObjectIdsForTeacher(db, teacherUserIdHex, scopedSet) {
@@ -55,23 +57,17 @@ export async function listScopedAssignmentObjectIdsForTeacher(db, teacherUserIdH
           class_name: { $in: classArr },
         });
 
-  const assignedIds = await db.collection('assignment_classes').distinct('assignment_id');
-  const assignedSet = new Set(assignedIds.map((id) => id.toString()));
-
-  const myAssignments = await db
+  const myCreated = await db
     .collection('assignments')
-    .find({ created_by: teacherOid })
+    .find({
+      $or: [{ created_by: teacherOid }, { created_by: teacherUserIdHex }],
+    })
     .project({ _id: 1 })
     .toArray();
 
-  const drafts = [];
-  for (const a of myAssignments) {
-    if (!assignedSet.has(a._id.toString())) drafts.push(a._id);
-  }
-
   const seen = new Set();
   const merged = [];
-  for (const id of [...fromClasses, ...drafts]) {
+  for (const id of [...fromClasses, ...myCreated.map((a) => a._id)]) {
     const s = id.toString();
     if (!seen.has(s)) {
       seen.add(s);
