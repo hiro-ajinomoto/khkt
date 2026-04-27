@@ -191,7 +191,6 @@ jobs:
           port: ${{ env.DEPLOY_SSH_PORT != '' && env.DEPLOY_SSH_PORT || 22 }}
           # 15 phút đủ cho backend npm ci + frontend npm run build trên t2.micro.
           command_timeout: 15m
-          script_stop: true
           envs: DEPLOY_SCOPE
           script: |
             set -euo pipefail
