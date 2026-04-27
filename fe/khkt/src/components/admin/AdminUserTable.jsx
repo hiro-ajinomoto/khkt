@@ -101,6 +101,12 @@ export function AdminUserTableRow({ rowUser }) {
           )
         ) : u.role === 'student' ? (
           <span className="class-badge">{u.class_name || 'Chưa có lớp'}</span>
+        ) : u.role === 'teacher' ? (
+          <span className="class-badge" title="Các lớp được quản trị gán">
+            {u.assigned_class_names?.length
+              ? u.assigned_class_names.join(', ')
+              : 'Chưa gán lớp'}
+          </span>
         ) : (
           <span className="class-na">-</span>
         )}

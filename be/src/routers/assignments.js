@@ -30,6 +30,12 @@ import {
   assertClassNamesRegistered,
   validateClassNameFormat,
 } from "../schoolClasses.js";
+import {
+  getTeacherScopedClassSet,
+  canTeacherManageAssignmentDb,
+  listScopedAssignmentObjectIdsForTeacher,
+  assertTeacherClassesAllowed,
+} from "../utils/teacherClassScope.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -292,7 +298,8 @@ async function mapAssignmentDocToApi(item, creatorMap, listCtx = null, opts = {}
  * GET /assignments
  * List assignments
  * - Students: only see assignments assigned to their class
- * - Teachers/Admins: see all assignments
+ * - Admins: see all assignments
+ * - Teachers: assignments for their assigned classes + bản nháp (chưa gán lớp) do chính họ tạo
  * - Unauthenticated: always []
  */
 router.get("/", optionalAuthenticate, async (req, res) => {
@@ -377,13 +384,22 @@ router.get("/", optionalAuthenticate, async (req, res) => {
         );
         return res.json([]);
       }
-    } else if (
-      req.user &&
-      (req.user.role === "teacher" || req.user.role === "admin")
-    ) {
-      // Teachers and admins see all assignments
+    } else if (req.user && req.user.role === "admin") {
       query = {};
-      console.log("Teacher/Admin query: {} (all assignments)");
+      console.log("Admin query: {} (all assignments)");
+    } else if (req.user && req.user.role === "teacher") {
+      const scoped = await getTeacherScopedClassSet(db, req.user);
+      const ids = await listScopedAssignmentObjectIdsForTeacher(
+        db,
+        req.user.id,
+        scoped,
+      );
+      if (ids.length === 0) {
+        console.log("Teacher has no scoped assignments, returning []");
+        return res.json([]);
+      }
+      query = { _id: { $in: ids } };
+      console.log(`Teacher scoped query: ${ids.length} assignments`);
     } else {
       console.log("Unauthenticated user, returning empty array");
       return res.json([]);
@@ -426,7 +442,7 @@ router.get("/", optionalAuthenticate, async (req, res) => {
  * GET /assignments/by-date?date=YYYY-MM-DD
  * List assignments created on a specific date
  */
-router.get("/by-date", async (req, res) => {
+router.get("/by-date", optionalAuthenticate, async (req, res) => {
   try {
     const { date } = req.query;
 
@@ -447,7 +463,7 @@ router.get("/by-date", async (req, res) => {
     end.setUTCDate(end.getUTCDate() + 1);
 
     const db = getDB();
-    const assignments = await db
+    let assignments = await db
       .collection("assignments")
       .find({
         created_at: {
@@ -457,6 +473,20 @@ router.get("/by-date", async (req, res) => {
       })
       .sort({ created_at: -1 }) // Sort by newest first
       .toArray();
+
+    if (req.user?.role === "teacher") {
+      const scoped = await getTeacherScopedClassSet(db, req.user);
+      const allowed = new Set(
+        (
+          await listScopedAssignmentObjectIdsForTeacher(
+            db,
+            req.user.id,
+            scoped,
+          )
+        ).map((x) => x.toString()),
+      );
+      assignments = assignments.filter((a) => allowed.has(a._id.toString()));
+    }
 
     const creatorMap = await loadCreatorMapForAssignments(db, assignments);
     const result = await Promise.all(
@@ -476,7 +506,7 @@ router.get("/by-date", async (req, res) => {
  * GET /assignments/by-month?year=YYYY&month=MM
  * List assignments created in a specific month
  */
-router.get("/by-month", async (req, res) => {
+router.get("/by-month", optionalAuthenticate, async (req, res) => {
   try {
     const { year, month } = req.query;
 
@@ -503,7 +533,7 @@ router.get("/by-month", async (req, res) => {
     const end = new Date(Date.UTC(yearNum, monthNum, 1));
 
     const db = getDB();
-    const assignments = await db
+    let assignments = await db
       .collection("assignments")
       .find({
         created_at: {
@@ -513,6 +543,20 @@ router.get("/by-month", async (req, res) => {
       })
       .sort({ created_at: -1 }) // Sort by newest first
       .toArray();
+
+    if (req.user?.role === "teacher") {
+      const scoped = await getTeacherScopedClassSet(db, req.user);
+      const allowed = new Set(
+        (
+          await listScopedAssignmentObjectIdsForTeacher(
+            db,
+            req.user.id,
+            scoped,
+          )
+        ).map((x) => x.toString()),
+      );
+      assignments = assignments.filter((a) => allowed.has(a._id.toString()));
+    }
 
     const creatorMap = await loadCreatorMapForAssignments(db, assignments);
     const result = await Promise.all(
@@ -575,6 +619,20 @@ router.get("/:id", optionalAuthenticate, async (req, res) => {
         class_name: student.class_name,
       });
       if (!assigned || !isAssignmentReleased(assignment)) {
+        return res.status(404).json({
+          detail:
+            "Không tìm thấy bài tập hoặc bài chưa đến ngày mở cho học sinh",
+        });
+      }
+    } else if (req.user.role === "teacher") {
+      const scoped = await getTeacherScopedClassSet(db, req.user);
+      const ok = await canTeacherManageAssignmentDb(
+        db,
+        req.user,
+        objectId,
+        scoped,
+      );
+      if (!ok) {
         return res.status(404).json({
           detail:
             "Không tìm thấy bài tập hoặc bài chưa đến ngày mở cho học sinh",
@@ -909,6 +967,13 @@ router.post(
       }
 
       if (classParse.names.length > 0) {
+        if (req.user.role === "teacher") {
+          const scoped = await getTeacherScopedClassSet(db, req.user);
+          if (!assertTeacherClassesAllowed(scoped, classParse.names, res)) {
+            await db.collection("assignments").deleteOne({ _id: result.insertedId });
+            return;
+          }
+        }
         try {
           await assertClassNamesRegistered(db, classParse.names);
         } catch (e) {
@@ -998,6 +1063,19 @@ router.patch(
 
       if (!assignment) {
         return res.status(404).json({ detail: "Assignment not found" });
+      }
+
+      if (req.user.role === "teacher") {
+        const scoped = await getTeacherScopedClassSet(db, req.user);
+        const ok = await canTeacherManageAssignmentDb(
+          db,
+          req.user,
+          objectId,
+          scoped,
+        );
+        if (!ok) {
+          return res.status(404).json({ detail: "Assignment not found" });
+        }
       }
 
       // Build update object
@@ -1260,6 +1338,18 @@ router.delete("/", authenticate, requireTeacher, async (req, res) => {
 
     const db = getDB();
 
+    if (req.user.role === "teacher") {
+      const scoped = await getTeacherScopedClassSet(db, req.user);
+      for (const oid of objectIds) {
+        const ok = await canTeacherManageAssignmentDb(db, req.user, oid, scoped);
+        if (!ok) {
+          return res.status(403).json({
+            detail: "Bạn không có quyền xóa một hoặc nhiều bài tập trong danh sách.",
+          });
+        }
+      }
+    }
+
     // Find assignments to get image URLs before deletion
     const assignments = await db
       .collection("assignments")
@@ -1346,6 +1436,19 @@ router.delete("/:id", authenticate, requireTeacher, async (req, res) => {
       return res.status(404).json({ detail: "Assignment not found" });
     }
 
+    if (req.user.role === "teacher") {
+      const scoped = await getTeacherScopedClassSet(db, req.user);
+      const ok = await canTeacherManageAssignmentDb(
+        db,
+        req.user,
+        objectId,
+        scoped,
+      );
+      if (!ok) {
+        return res.status(404).json({ detail: "Assignment not found" });
+      }
+    }
+
     // Delete images from S3 if they exist
     const imagesToDelete = [];
 
@@ -1381,6 +1484,10 @@ router.delete("/:id", authenticate, requireTeacher, async (req, res) => {
         // Continue even if S3 deletion fails
       }
     }
+
+    await db.collection("assignment_classes").deleteMany({
+      assignment_id: objectId,
+    });
 
     // Delete assignment from database
     const result = await db.collection("assignments").deleteOne({
@@ -1452,6 +1559,22 @@ router.post("/:id/assign", authenticate, requireTeacher, async (req, res) => {
       return res.status(404).json({ detail: "Assignment not found" });
     }
 
+    if (req.user.role === "teacher") {
+      const scoped = await getTeacherScopedClassSet(db, req.user);
+      const ok = await canTeacherManageAssignmentDb(
+        db,
+        req.user,
+        assignmentObjectId,
+        scoped,
+      );
+      if (!ok) {
+        return res.status(404).json({ detail: "Assignment not found" });
+      }
+      if (!assertTeacherClassesAllowed(scoped, normalizedClassNames, res)) {
+        return;
+      }
+    }
+
     await upsertAssignmentClasses(
       db,
       assignmentObjectId,
@@ -1487,6 +1610,26 @@ router.get("/:id/classes", authenticate, requireTeacher, async (req, res) => {
     }
 
     const db = getDB();
+
+    const assignment = await db.collection("assignments").findOne({
+      _id: assignmentObjectId,
+    });
+    if (!assignment) {
+      return res.status(404).json({ detail: "Assignment not found" });
+    }
+
+    if (req.user.role === "teacher") {
+      const scoped = await getTeacherScopedClassSet(db, req.user);
+      const ok = await canTeacherManageAssignmentDb(
+        db,
+        req.user,
+        assignmentObjectId,
+        scoped,
+      );
+      if (!ok) {
+        return res.status(404).json({ detail: "Assignment not found" });
+      }
+    }
 
     // Get all classes this assignment is assigned to
     const assignmentClasses = await db

@@ -225,6 +225,7 @@ export function AdminWorkspaceProvider({ children }) {
         u.username,
         u.name || '',
         u.class_name || '',
+        (u.assigned_class_names || []).join(' '),
         u.role === 'admin' ? 'quản trị' : '',
         u.role === 'teacher' ? 'giáo viên' : '',
         u.role === 'student' ? 'học sinh' : '',

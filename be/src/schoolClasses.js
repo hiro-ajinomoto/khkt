@@ -126,6 +126,8 @@ export async function removeClassDocument(db, rawName) {
     { $set: { class_name: null } }
   );
   await db.collection('assignment_classes').deleteMany({ class_name: v.name });
+  const { deleteAssignmentsForClassName } = await import('./classTeacherAssignments.js');
+  await deleteAssignmentsForClassName(db, v.name);
   return v.name;
 }
 
@@ -184,6 +186,9 @@ export async function renameClassDocument(db, rawOldName, rawNewName) {
     { class_name: vOld.name },
     { $set: { class_name: vNew.name } }
   );
+
+  const { renameClassInTeacherAssignments } = await import('./classTeacherAssignments.js');
+  await renameClassInTeacherAssignments(db, vOld.name, vNew.name);
 
   return { oldName: vOld.name, newName: vNew.name };
 }

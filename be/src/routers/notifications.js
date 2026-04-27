@@ -2,6 +2,7 @@ import express from 'express';
 import { ObjectId } from 'mongodb';
 import { getDB } from '../db.js';
 import { authenticate, requireTeacher } from '../middleware/auth.js';
+import { listClassNamesForTeacher } from '../classTeacherAssignments.js';
 
 const router = express.Router();
 
@@ -29,6 +30,23 @@ function notificationVisibilityFilter(role) {
   return {
     target_roles: role,
   };
+}
+
+/** Thông báo theo lớp: GV chỉ thấy lớp được gán + thông báo chung (không gắn lớp). */
+async function notificationScopeFilter(db, user) {
+  const base = notificationVisibilityFilter(user.role);
+  if (user.role !== 'teacher') return base;
+  const classes = await listClassNamesForTeacher(db, user.id);
+  const classOr = [
+    { class_name: { $in: classes } },
+    { class_name: { $exists: false } },
+    { class_name: null },
+    { class_name: '' },
+  ];
+  if (classes.length === 0) {
+    return { ...base, $or: classOr.slice(1) };
+  }
+  return { ...base, $or: classOr };
 }
 
 /**
@@ -60,7 +78,7 @@ router.get('/', authenticate, requireTeacher, async (req, res) => {
     );
     const unreadOnly = String(req.query.unread_only || '') === 'true';
 
-    const base = notificationVisibilityFilter(req.user.role);
+    const base = await notificationScopeFilter(db, req.user);
     const filter = unreadOnly
       ? { ...base, ...notReadByUserFilter(userId) }
       : base;
@@ -73,7 +91,7 @@ router.get('/', authenticate, requireTeacher, async (req, res) => {
       .toArray();
 
     const unread_count = await db.collection('notifications').countDocuments({
-      ...base,
+      ...(await notificationScopeFilter(db, req.user)),
       ...notReadByUserFilter(userId),
     });
 
@@ -102,10 +120,11 @@ router.post('/:id/read', authenticate, requireTeacher, async (req, res) => {
 
     const db = getDB();
     const userId = ObjectId.createFromHexString(req.user.id);
+    const scope = await notificationScopeFilter(db, req.user);
     const result = await db.collection('notifications').updateOne(
       {
         _id: notificationId,
-        ...notificationVisibilityFilter(req.user.role),
+        ...scope,
       },
       { $addToSet: { read_by: userId } }
     );
@@ -129,10 +148,10 @@ router.post('/read-all', authenticate, requireTeacher, async (req, res) => {
   try {
     const db = getDB();
     const userId = ObjectId.createFromHexString(req.user.id);
-    await db.collection('notifications').updateMany(
-      notificationVisibilityFilter(req.user.role),
-      { $addToSet: { read_by: userId } }
-    );
+    const scope = await notificationScopeFilter(db, req.user);
+    await db.collection('notifications').updateMany(scope, {
+      $addToSet: { read_by: userId },
+    });
 
     res.json({ ok: true });
   } catch (error) {

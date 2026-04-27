@@ -217,6 +217,56 @@ export async function createStickerRedemption(body) {
   return response.json();
 }
 
+/**
+ * @returns {Promise<Array<{ class_name: string, teachers: Array<{ id: string, username: string, name: string }> }>>}
+ */
+export async function fetchClassTeacherMappings() {
+  const authHeader = getAuthHeader();
+  if (!authHeader) throw new Error('Authentication required');
+
+  const response = await fetch(`${API_BASE_URL}/admin/class-teachers`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: authHeader,
+    },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Không tải được gán giáo viên.');
+  }
+
+  const data = await response.json();
+  return data.classes;
+}
+
+/**
+ * @param {string} class_name
+ * @param {string[]} teacher_ids
+ */
+export async function putClassTeachers(class_name, teacher_ids) {
+  const authHeader = getAuthHeader();
+  if (!authHeader) throw new Error('Authentication required');
+
+  const response = await fetch(`${API_BASE_URL}/admin/class-teachers`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: authHeader,
+    },
+    body: JSON.stringify({ class_name, teacher_ids }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Không lưu được gán giáo viên.');
+  }
+
+  return response.json();
+}
+
 export async function fetchStats() {
   try {
     const authHeader = getAuthHeader();

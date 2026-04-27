@@ -6,6 +6,7 @@ import { getDB } from '../db.js';
 import { config } from '../config.js';
 import { authenticate } from '../middleware/auth.js';
 import { classNameExists, listClassNames } from '../schoolClasses.js';
+import { listClassNamesForTeacher } from '../classTeacherAssignments.js';
 
 const router = express.Router();
 
@@ -49,6 +50,11 @@ router.post('/login', async (req, res) => {
       { expiresIn: config.jwt.expiresIn }
     );
 
+    let assigned_class_names = [];
+    if (user.role === 'teacher') {
+      assigned_class_names = await listClassNamesForTeacher(db, user._id.toString());
+    }
+
     res.json({
       token,
       user: {
@@ -56,6 +62,7 @@ router.post('/login', async (req, res) => {
         username: user.username,
         role: user.role,
         name: user.name || user.username,
+        ...(user.role === 'teacher' ? { assigned_class_names } : {}),
       },
     });
   } catch (error) {
@@ -197,12 +204,18 @@ router.get('/me', authenticate, async (req, res) => {
       return res.status(404).json({ detail: 'User not found' });
     }
 
+    let assigned_class_names = [];
+    if (user.role === 'teacher') {
+      assigned_class_names = await listClassNamesForTeacher(db, user._id.toString());
+    }
+
     res.json({
       id: user._id.toString(),
       username: user.username,
       role: user.role,
       name: user.name || user.username,
       class_name: user.class_name || null, // For students
+      ...(user.role === 'teacher' ? { assigned_class_names } : {}),
     });
   } catch (error) {
     console.error('Get user error:', error);

@@ -15,6 +15,11 @@ import {
   getStudentStickerEarnedTotal,
   isValidRedemptionCost,
 } from '../utils/stickerRedemptions.js';
+import {
+  listAllClassTeacherMappings,
+  setTeachersForClass,
+  removeAllForTeacher,
+} from '../classTeacherAssignments.js';
 
 const router = express.Router();
 
@@ -32,12 +37,37 @@ router.get('/users', async (req, res) => {
     const users = await db.collection('users').find({}).toArray();
 
     // Remove password from response
+    const teacherIds = users
+      .filter((u) => u.role === 'teacher')
+      .map((u) => u._id);
+    const assignRows =
+      teacherIds.length === 0
+        ? []
+        : await db
+            .collection('class_teacher_assignments')
+            .find({ teacher_id: { $in: teacherIds } })
+            .project({ teacher_id: 1, class_name: 1 })
+            .toArray();
+    const classesByTeacher = new Map();
+    for (const r of assignRows) {
+      const tid = r.teacher_id.toString();
+      if (!classesByTeacher.has(tid)) classesByTeacher.set(tid, []);
+      classesByTeacher.get(tid).push(r.class_name);
+    }
+    for (const [, arr] of classesByTeacher) {
+      arr.sort((a, b) => a.localeCompare(b, 'vi', { numeric: true }));
+    }
+
     const result = users.map((user) => ({
       id: user._id.toString(),
       username: user.username,
       role: user.role,
       name: user.name || user.username,
       class_name: user.class_name || null, // For students
+      assigned_class_names:
+        user.role === 'teacher'
+          ? classesByTeacher.get(user._id.toString()) || []
+          : undefined,
       created_at: user.created_at || null,
     }));
 
@@ -94,6 +124,10 @@ router.patch('/users/:id/role', async (req, res) => {
       { _id: objectId },
       { $set: { role } }
     );
+
+    if (role !== 'teacher') {
+      await removeAllForTeacher(db, id);
+    }
 
     res.json({
       message: 'User role updated successfully',
@@ -178,6 +212,54 @@ router.patch('/users/:id/class', async (req, res) => {
   } catch (error) {
     console.error('Error updating user class:', error);
     res.status(500).json({ detail: 'Failed to update user class' });
+  }
+});
+
+/**
+ * GET /admin/class-teachers
+ * Mỗi lớp và danh sách giáo viên được gán.
+ */
+router.get('/class-teachers', async (req, res) => {
+  try {
+    const db = getDB();
+    const classes = await listAllClassTeacherMappings(db);
+    res.json({ classes });
+  } catch (error) {
+    console.error('Error listing class-teachers:', error);
+    res.status(500).json({ detail: 'Failed to load class teacher assignments' });
+  }
+});
+
+/**
+ * PUT /admin/class-teachers
+ * Body: { class_name: string, teacher_ids: string[] } — thay toàn bộ GV của lớp.
+ */
+router.put('/class-teachers', async (req, res) => {
+  try {
+    const { class_name, teacher_ids } = req.body;
+    if (class_name == null || typeof class_name !== 'string') {
+      return res.status(400).json({ detail: 'class_name is required' });
+    }
+    if (!Array.isArray(teacher_ids)) {
+      return res.status(400).json({ detail: 'teacher_ids must be an array' });
+    }
+    const db = getDB();
+    const teachers = await setTeachersForClass(db, class_name, teacher_ids);
+    res.json({
+      class_name: String(class_name).trim(),
+      teachers: teachers.map((t) => ({
+        id: t.teacher_id,
+        username: t.username,
+        name: t.name,
+      })),
+    });
+  } catch (error) {
+    const status = error.status || 500;
+    if (status >= 400 && status < 500) {
+      return res.status(status).json({ detail: error.message });
+    }
+    console.error('Error updating class-teachers:', error);
+    res.status(500).json({ detail: 'Failed to update class teacher assignments' });
   }
 });
 
@@ -304,6 +386,8 @@ router.delete('/users/:id', async (req, res) => {
         detail: 'Cannot delete your own account',
       });
     }
+
+    await removeAllForTeacher(db, id);
 
     // Delete user
     await db.collection('users').deleteOne({ _id: objectId });

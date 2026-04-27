@@ -96,6 +96,9 @@ export default function AdminLayout() {
           <NavLink to="/admin" end className={subnavClass}>
             Tổng quan
           </NavLink>
+          <NavLink to="/admin/class-teachers" className={subnavClass}>
+            GV — lớp
+          </NavLink>
           <NavLink to="/admin/users/teachers" className={subnavClass}>
             Giáo viên
           </NavLink>

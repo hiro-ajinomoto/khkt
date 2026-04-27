@@ -16,6 +16,12 @@ import { resolveMaxSubmissionsLimit } from "../utils/submissionLimits.js";
 import { uploadFileToS3 } from "../services/s3Service.js";
 import { authenticate, requireTeacher } from "../middleware/auth.js";
 import {
+  getTeacherScopedClassSet,
+  canTeacherManageAssignmentDb,
+  listScopedAssignmentObjectIdsForTeacher,
+  teacherCanAccessSubmission,
+} from "../utils/teacherClassScope.js";
+import {
   STICKER_TIER_ORDER,
   computeStickerStatsFromSubmissionRows,
   scoreToStickerTier,
@@ -425,24 +431,58 @@ router.get("/teacher", authenticate, requireTeacher, async (req, res) => {
     );
     const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
 
+    const scoped = await getTeacherScopedClassSet(db, req.user);
+
     const filter = {};
 
+    if (req.user.role === "teacher") {
+      if (scoped.size === 0) {
+        return res.json({ items: [], total: 0, limit, offset });
+      }
+      const classArr = [...scoped];
+      const allowedAssignmentIds =
+        await listScopedAssignmentObjectIdsForTeacher(db, req.user.id, scoped);
+      const studentsInScope = await db
+        .collection("users")
+        .find({ role: "student", class_name: { $in: classArr } })
+        .project({ _id: 1 })
+        .toArray();
+      const allowedStudentIds = studentsInScope.map((s) => s._id);
+      if (allowedStudentIds.length === 0 || allowedAssignmentIds.length === 0) {
+        return res.json({ items: [], total: 0, limit, offset });
+      }
+      filter.$and = [
+        { assignment_id: { $in: allowedAssignmentIds } },
+        { student_id: { $in: allowedStudentIds } },
+      ];
+    }
+
     if (assignment_id) {
+      let aid;
       try {
-        filter.assignment_id = ObjectId.createFromHexString(
-          String(assignment_id)
-        );
+        aid = ObjectId.createFromHexString(String(assignment_id));
       } catch (_err) {
         return res.status(400).json({ detail: "Invalid assignment_id" });
       }
+      if (req.user.role === "teacher") {
+        const ok = await canTeacherManageAssignmentDb(db, req.user, aid, scoped);
+        if (!ok) {
+          return res.status(403).json({ detail: "Forbidden" });
+        }
+      }
+      filter.assignment_id = aid;
     }
 
     // class_name lọc gián tiếp qua student_id → cần lookup users trước
     let studentIdFilter = null;
     if (class_name) {
+      const cn = String(class_name);
+      if (req.user.role === "teacher" && !scoped.has(cn)) {
+        return res.status(403).json({ detail: "Forbidden" });
+      }
       const students = await db
         .collection("users")
-        .find({ role: "student", class_name: String(class_name) })
+        .find({ role: "student", class_name: cn })
         .project({ _id: 1 })
         .toArray();
       if (students.length === 0) {
@@ -583,6 +623,14 @@ router.put("/:id/review", authenticate, requireTeacher, async (req, res) => {
       return res.status(404).json({ detail: "Submission not found" });
     }
 
+    if (req.user.role === "teacher") {
+      const scoped = await getTeacherScopedClassSet(db, req.user);
+      const ok = await teacherCanAccessSubmission(db, req.user, submission, scoped);
+      if (!ok) {
+        return res.status(403).json({ detail: "Forbidden" });
+      }
+    }
+
     // Lookup GV để snapshot full_name vào review (FE list view không cần
     // populate users/lookup mỗi lần render).
     const reviewerId = ObjectId.createFromHexString(req.user.id);
@@ -629,6 +677,19 @@ router.delete("/:id/review", authenticate, requireTeacher, async (req, res) => {
     }
 
     const db = getDB();
+    const submission = await db.collection("submissions").findOne({ _id: objectId });
+    if (!submission) {
+      return res.status(404).json({ detail: "Submission not found" });
+    }
+
+    if (req.user.role === "teacher") {
+      const scoped = await getTeacherScopedClassSet(db, req.user);
+      const ok = await teacherCanAccessSubmission(db, req.user, submission, scoped);
+      if (!ok) {
+        return res.status(403).json({ detail: "Forbidden" });
+      }
+    }
+
     const result = await db
       .collection("submissions")
       .updateOne({ _id: objectId }, { $unset: { teacher_review: "" } });

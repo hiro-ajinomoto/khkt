@@ -5,6 +5,7 @@ import AdminHomePage from './AdminHomePage';
 import AdminTeachersPage from './AdminTeachersPage';
 import AdminStudentsPage from './AdminStudentsPage';
 import AdminStickerRedeemPage from './AdminStickerRedeemPage';
+import AdminClassTeachersPage from './AdminClassTeachersPage';
 
 export default function AdminApp() {
   return (
@@ -12,6 +13,7 @@ export default function AdminApp() {
       <Routes>
         <Route element={<AdminLayout />}>
           <Route index element={<AdminHomePage />} />
+          <Route path="class-teachers" element={<AdminClassTeachersPage />} />
           <Route path="users/teachers" element={<AdminTeachersPage />} />
           <Route path="users/students" element={<AdminStudentsPage />} />
           <Route path="sticker-redeem" element={<AdminStickerRedeemPage />} />
