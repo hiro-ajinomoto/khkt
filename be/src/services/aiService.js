@@ -337,7 +337,7 @@ CRITICAL FORMATTING RULES FOR PRACTICE PROBLEMS:
 TÁCH ĐỀ / LỜI GIẢI VÀ HIỂN THỊ TIẾNG VIỆT (BẮT BUỘC — TRÁNH LỖI UI):
 - **"problem"** CHỈ được là **đề bài** (giả thiết + hỏi). **CẤM** nhét vào "problem" các dòng kiểu: "Gọi chiều rộng là...", "Chiều dài là...", "Diện tích ban đầu là...", "Lập phương trình:", "Giải phương trình:", từng bước biến đổi đại số, "Vậy chiều rộng là ... m" — toàn bộ đó chỉ được ở **"solution"**.
 - Viết tiếng Việt **luôn có khoảng trắng giữa các từ** (đúng: "Gọi chiều rộng là $x$ (m)."; **SAI**: "Gọichiềurộnglàx").
-- **TUYỆT ĐỐI KHÔNG** bọc cả một cụm tiếng Việt dài trong `$...$`. Trong `$...$` chỉ để **biểu thức toán** (ví dụ $x(x+4)$, $(x+1)(x+2)$, $2x+25=45$). Câu chữ đứng **ngoài** $...$.
+- **TUYỆT ĐỐI KHÔNG** bọc cả một cụm tiếng Việt dài trong \`$...$\`. Trong \`$...$\` chỉ để **biểu thức toán** (ví dụ $x(x+4)$, $(x+1)(x+2)$, $2x+25=45$). Câu chữ đứng **ngoài** $...$.
 - Nếu đề gốc là **phương trình bậc nhất một ẩn**, ưu tiên bài "similar" dẫn tới PT **bậc nhất** sau khi lập (tránh cố tình chọn tình huống chỉ để luyện $x^2$ khi chương trình yêu cầu bậc nhất).
 
 YÊU CẦU ĐA DẠNG DẠNG BÀI (BẮT BUỘC - KHÔNG ĐƯỢC VI PHẠM):

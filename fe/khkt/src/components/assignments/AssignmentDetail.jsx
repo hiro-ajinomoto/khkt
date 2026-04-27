@@ -234,8 +234,27 @@ function AssignmentDetail() {
           </div>
         )}
 
-        {/* Note: model_solution_image_url is used for AI comparison only, not displayed to students */}
-        
+        {assignment.model_solution_image_url && (
+          <div className="image-container model-solution-image-container">
+            <label>Hình ảnh bài giải mẫu:</label>
+            <img
+              src={assignment.model_solution_image_url}
+              alt="Bài giải mẫu"
+              className="assignment-image"
+              onError={(e) => {
+                e.target.style.display = 'none';
+                const errorDiv = e.target.nextSibling;
+                if (errorDiv) {
+                  errorDiv.style.display = 'block';
+                }
+              }}
+            />
+            <div className="image-error" style={{ display: 'none' }}>
+              Không thể tải hình ảnh
+            </div>
+          </div>
+        )}
+
         {assignment.model_solution && (
           <div className="model-solution-text">
             <label>Bài giải mẫu:</label>
