@@ -25,6 +25,7 @@ alwaysApply: true
 
 ## Ghi chú quan trọng
 
+- GitHub Actions cần **EC2_HOST**, **EC2_USER**, **EC2_SSH_KEY** (Secrets hoặc Variables cho host/user — workflow dùng `secrets.* || vars.*`). Nếu thiếu, bước rsync báo hostname rỗng.
 - Nếu `npm ci` fail vì optional-dep platform (ví dụ `@emnapi/core`), fallback `rm -rf node_modules && npm install`. Script đã có logic này ở bản mới nhất.
 - Nginx serve FE từ `/var/www/khkt/`, proxy `/api` → `localhost:8000` (PM2 chạy backend).
 - `ec2-keypair.pem` nằm ở repo root, đã được `.gitignore`. Đừng commit nó.

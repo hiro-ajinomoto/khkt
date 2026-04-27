@@ -43,6 +43,12 @@ jobs:
     name: SSH deploy
     runs-on: ubuntu-latest
     environment: production
+    # Host/user có thể để Variables (public IP) hoặc Secrets; rsync cần env thật, không rỗng.
+    env:
+      DEPLOY_SSH_HOST: ${{ secrets.EC2_HOST || vars.EC2_HOST }}
+      DEPLOY_SSH_USER: ${{ secrets.EC2_USER || vars.EC2_USER }}
+      DEPLOY_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+      DEPLOY_SSH_PORT: ${{ secrets.EC2_SSH_PORT }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -142,22 +148,31 @@ jobs:
       - name: Show resolved scope
         run: echo "Deploying scope → ${{ steps.scope.outputs.value }}"
 
+      - name: Validate EC2 SSH settings
+        run: |
+          set -euo pipefail
+          if [ -z "${DEPLOY_SSH_HOST// }" ] || [ -z "${DEPLOY_SSH_USER// }" ]; then
+            echo "::error::EC2_HOST hoặc EC2_USER đang rỗng. Vào Settings → Secrets and variables → Actions:"
+            echo "  - Thêm Repository secrets: EC2_HOST, EC2_USER, EC2_SSH_KEY (và tùy chọn EC2_SSH_PORT), hoặc"
+            echo "  - Thêm cùng tên trong Environment **production**, hoặc dùng Variables EC2_HOST / EC2_USER (IP + user không nhạy cảm)."
+            exit 1
+          fi
+          if [ -z "${DEPLOY_SSH_KEY:-}" ]; then
+            echo "::error::Thiếu secret EC2_SSH_KEY."
+            exit 1
+          fi
+
       # Repo private: EC2 thường không có quyền `git fetch` → exit 128.
       # Đẩy mã từ runner (đã checkout bằng GITHUB_TOKEN) lên máy chủ.
       - name: Rsync repository to EC2
-        env:
-          EC2_HOST: ${{ secrets.EC2_HOST }}
-          EC2_USER: ${{ secrets.EC2_USER }}
-          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
-          EC2_SSH_PORT: ${{ secrets.EC2_SSH_PORT }}
         run: |
           set -euo pipefail
-          PORT="${EC2_SSH_PORT:-22}"
+          PORT="${DEPLOY_SSH_PORT:-22}"
           mkdir -p ~/.ssh
           umask 077
-          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/ec2_deploy_key
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/ec2_deploy_key
           chmod 600 ~/.ssh/ec2_deploy_key
-          ssh-keyscan -p "$PORT" -H "$EC2_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -p "$PORT" -H "$DEPLOY_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
           RSYNC_RSH="ssh -i $HOME/.ssh/ec2_deploy_key -o StrictHostKeyChecking=accept-new -p $PORT"
           rsync -az \
             -e "$RSYNC_RSH" \
@@ -165,15 +180,15 @@ jobs:
             --exclude 'be/node_modules' \
             --exclude 'fe/khkt/node_modules' \
             --exclude '.cursor' \
-            ./ "${EC2_USER}@${EC2_HOST}:/home/ec2-user/khkt/"
+            ./ "${DEPLOY_SSH_USER}@${DEPLOY_SSH_HOST}:/home/ec2-user/khkt/"
 
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.5
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          port: ${{ secrets.EC2_SSH_PORT || 22 }}
+          host: ${{ env.DEPLOY_SSH_HOST }}
+          username: ${{ env.DEPLOY_SSH_USER }}
+          key: ${{ env.DEPLOY_SSH_KEY }}
+          port: ${{ env.DEPLOY_SSH_PORT != '' && env.DEPLOY_SSH_PORT || 22 }}
           # 15 phút đủ cho backend npm ci + frontend npm run build trên t2.micro.
           command_timeout: 15m
           script_stop: true
@@ -191,7 +206,7 @@ jobs:
         # không reload pm2 nên không cần chờ backend "lên lại".
         if: steps.scope.outputs.value == 'all' || steps.scope.outputs.value == 'backend'
         run: |
-          HOST="${{ secrets.EC2_HOST }}"
+          HOST="${{ env.DEPLOY_SSH_HOST }}"
           SCHEME="${{ secrets.HEALTHCHECK_SCHEME || 'http' }}"
           HEALTH_URL="${SCHEME}://${HOST}/health"
           echo "Pinging $HEALTH_URL"
@@ -210,7 +225,7 @@ jobs:
         # Khi deploy FE, chỉ cần đảm bảo nginx serve được index.html mới.
         if: steps.scope.outputs.value == 'all' || steps.scope.outputs.value == 'frontend'
         run: |
-          HOST="${{ secrets.EC2_HOST }}"
+          HOST="${{ env.DEPLOY_SSH_HOST }}"
           SCHEME="${{ secrets.HEALTHCHECK_SCHEME || 'http' }}"
           URL="${SCHEME}://${HOST}/"
           echo "Fetching $URL"
