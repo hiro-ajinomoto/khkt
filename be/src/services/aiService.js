@@ -89,13 +89,12 @@ const TUTOR_PROMPT = `You are an expert Vietnamese math tutor with deep pedagogi
 You are grading a handwritten student submission with careful, step-by-step reasoning.
 
 THINKING PROCESS (think deeply before responding):
-1. Carefully analyze the student's work step by step
-2. Understand the student's reasoning and thought process
-3. Compare each step with the teacher's model solution
-4. Identify specific mistakes, misconceptions, or gaps in understanding
-5. Consider why the student made these mistakes
-6. Provide constructive, educational feedback
-7. Generate practice problems that address the specific learning gaps
+1. Đọc ẢNH bài làm tay từng bước. Nếu một chữ số/ký hiệu mơ hồ, ưu tiên cách đọc làm cho CẢ CHUỖI biến đổi nhất quán và dẫn tới nghiệm/kết luận đúng — không được “bẻ” thành sai chỉ vì một nét có thể hiểu hai cách.
+2. Kiểm tra ĐÚNG/SAI về mặt TOÁN HỘC độc lập trước; lời giải mẫu của giáo viên chỉ để đối chiếu thêm, KHÔNG phải chuẩn duy nhất.
+3. Nếu kết quả cuối đúng và mọi phép biến đổi nhìn thấy trên bài đều hợp lệ → phải cho điểm cao (9–10). Không trừ điểm vì trình bày gọn, nhiều phép trên một dòng, hoặc cách làm khác lời giải mẫu nhưng vẫn đúng.
+4. Chỉ ghi "mistakes" khi có lỗi toán THẬT SỰ (sai phép, sai logic, kết luận sai). Nếu không tìm được lỗi như vậy → "mistakes": [] và điểm phản ánh bài gần như hoàn hảo.
+5. Sau khi đã kết luận đúng/sai, mới soi lại lời giải mẫu để viết nhận xét hay — tuyệt đối không “bịa” lỗi chỉ vì thứ tự bước hoặc văn phong khác mẫu.
+6. Viết gợi ý bổ trợ (practiceSets) bám theo lỗi thật (nếu có).
 
 Your analysis should be thorough, insightful, and educational.
 
@@ -111,12 +110,15 @@ PHẠM VI: Các quy tắc dưới đây áp dụng cho việc CHẤM ĐIỂM bà
 
 2. THANG ĐIỂM (score 0-10):
    - 10/10: Bài làm đi đến kết quả đúng + lập luận đầy đủ & chặt chẽ. Cho phép cách trình bày/phương pháp khác lời giải mẫu.
-   - 9/10: Kết quả đúng, lập luận về cơ bản đủ, chỉ thiếu ghi chú rất nhỏ không ảnh hưởng bản chất (ví dụ thiếu chữ "đpcm" ở cuối nhưng đã ra kết quả rõ ràng).
-   - 8/10: Kết quả đúng nhưng thiếu 1 bước lập luận phụ đáng kể hoặc thiếu đặt điều kiện quan trọng.
-   - 6-7/10: Hướng đúng, kết quả đúng, nhưng thiếu ≥ 1 bước lập luận quan trọng hoặc thiếu kết luận.
-   - 4-5/10: Hướng đúng nhưng có sai sót ở bước trung gian khiến kết quả lệch một phần.
+   - 9/10: Kết quả đúng, mọi bước đại số nhìn thấy đều đúng; chỉ thiếu câu kết luận tối giản hoặc ghi chú nhỏ không ảnh hưởng bản chất (ví dụ không ghi "Vậy $x=...$" nhưng đã ghi rõ $x=1$ ở cuối).
+   - 8/10: Kết quả đúng nhưng có 1 chỗ THẬT SỰ mơ hồ hoặc thiếu đặt điều kiện bắt buộc của dạng bài (ví dụ bài chứng minh chia hết mà không ghi $n \\in \\mathbb{Z}$), không áp dụng mức này chỉ vì “thiếu bước” khi các bước đã đủ ý trên giấy.
+   - 6-7/10: Có đúng hướng nhưng thiếu hoặc sai một bước LẬP LUẬN/PHÉP biến đổi quan trọng khiến chưa thể coi là hoàn chỉnh — KHÔNG dùng mức này nếu mọi bước nhìn thấy đều đúng và nghiệm cuối đúng (trong trường hợp đó tối thiểu 9/10).
+   - 4-5/10: Có sai sót ở bước trung gian dẫn tới kết quả sai hoặc chỉ đúng một phần.
    - 2-3/10: Hiểu đề nhưng phương pháp không đạt, sai nhiều bước lớn.
    - 0-1/10: Sai hoàn toàn / không liên quan / bỏ giấy trắng.
+
+   QUAN TRỌNG — Bài giải phương trình đại số cơ bản (THCS, một ẩn, biến đổi tương đương):
+   - Nếu sau khi kiểm tra lại, nghiệm cuối đúng và các dòng làm trên ảnh không chứa phép sai → tối thiểu 9/10. Ví dụ: $1{,}5 - 2(x-0{,}5) = x - 0{,}5$ dẫn tới $x=1$ đúng toàn bộ → 10/10 hoặc 9/10, không được 5–6 chỉ vì trình bày gọn.
 
 3. ĐƯỢC PHÉP (KHÔNG ĐƯỢC TRỪ ĐIỂM vì các điều sau):
    - Trình bày nhiều phép biến đổi trên CÙNG MỘT DÒNG nếu tất cả các phép đều đúng. Ví dụ: $(2n+3)^2 - (2n+1)^2 = [(2n+3)+(2n+1)][(2n+3)-(2n+1)] = (4n+4) \\cdot 2 = 8(n+1)$ → đúng và đủ, PHẢI cho điểm tối đa phần này.
@@ -166,6 +168,10 @@ Lời giải HS B (gọn, một dòng):
 Lời giải HS C (sai logic):
   $(2n+3)^2 - (2n+1)^2 = 8n + 8$ → chia hết cho 2 → đpcm.
   → score: 3-4/10. Kết quả $8n+8 = 8(n+1)$ đúng nhưng kết luận chỉ "chia hết cho 2" là THIẾU LẬP LUẬN cho "chia hết cho 8".
+
+Lời giải HS D (giải phương trình bậc nhất, chữ viết tay, vài dòng):
+  $1{,}5 - 2(x-0{,}5) = x - 0{,}5$ → khai triển và rút gọn đúng → $x = 1$.
+  → score: 10/10 hoặc 9/10 nếu vẫn thấy rõ nghiệm; KHÔNG được 4–7 vì “thiếu bước” khi chuỗi biến đổi đã đúng và đủ.
 
 ========================================================================
 (HẾT PHẦN GRADING RUBRIC. Các quy tắc dưới đây chỉ áp dụng cho lời giải AI tự sinh.)
@@ -727,9 +733,9 @@ export async function gradeSubmissionWithAI(
     messages: [{ role: "system", content: systemMessage }, userMessage],
     response_format: { type: "json_object" },
     // Reasoning models don't support temperature parameter.
-    // 0.85 tăng độ đa dạng cho practiceSets (sinh bài tập) mà vẫn giữ chấm ổn định
-    // nhờ prompt nghiêm ngặt + JSON schema + response_format: json_object.
-    ...(isReasoningModel ? {} : { temperature: 0.85 }),
+    // Điểm số phải ổn định: temperature cao (vd. 0.85) dễ khiến cùng một bài đúng bị 5–7 hoặc 9–10 ngẫu nhiên.
+    // 0.2 vẫn cho practiceSets hơi đa dạng nhưng chấm sát rubric hơn nhiều.
+    ...(isReasoningModel ? {} : { temperature: 0.2 }),
   };
 
   // Log request payload structure (without base64 data) for debugging
