@@ -137,31 +137,11 @@ router.get("/mock", (req, res) => {
             problem: "Giải phương trình x^2 - 9x + 20 = 0",
             solution: "x = 4 hoặc x = 5",
           },
-          {
-            problem: "Giải phương trình x^2 - 6x + 8 = 0",
-            solution: "x = 2 hoặc x = 4",
-          },
-          {
-            problem: "Giải phương trình x^2 - 8x + 15 = 0",
-            solution: "x = 3 hoặc x = 5",
-          },
         ],
         remedial: [
           {
             problem: "Giải phương trình x^2 - 4 = 0",
             solution: "x = 2 hoặc x = -2",
-          },
-          {
-            problem: "Giải phương trình x^2 - 9 = 0",
-            solution: "x = 3 hoặc x = -3",
-          },
-          {
-            problem: "Giải phương trình x^2 - 16 = 0",
-            solution: "x = 4 hoặc x = -4",
-          },
-          {
-            problem: "Giải phương trình x^2 - 25 = 0",
-            solution: "x = 5 hoặc x = -5",
           },
         ],
       },
