@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchMyStickers } from '../../api/submissions';
 import { STUDENT_STICKERS_REFRESH_EVENT } from './studentStickersEvents';
+import NotificationBell from '../layout/NotificationBell';
 import './StudentStickerDock.css';
 
 const PHONE_IDLE_MS = 2200;
@@ -115,29 +116,34 @@ export default function StudentStickerDock() {
       aria-label={`Sticker: ${total}`}
     >
       <div className="student-sticker-bloom__inner">
-        <Link
-          to="/sticker-rewards"
-          className="student-sticker-bloom__hit"
-          aria-label={'\u0110\u1ebfn trang \u0111\u1ed5i qu\u00e0 sticker'}
-        >
-          <div
-            className={`student-sticker-bloom__figure ${justIncreased ? 'student-sticker-bloom__figure--bump' : ''}`}
-          >
-            <img
-              className="student-sticker-bloom__img"
-              src={BEAR_SRC}
-              alt=""
-              width={682}
-              height={1024}
-              decoding="async"
-            />
-            <span
-              className={`student-sticker-bloom__count-on-sign ${justIncreased ? 'student-sticker-bloom__count-on-sign--pulse' : ''}`}
+        <div className="student-sticker-bloom__stack">
+          <NotificationBell variant="dock" />
+          <div className="student-sticker-bloom__bear-motion">
+            <Link
+              to="/sticker-rewards"
+              className="student-sticker-bloom__hit"
+              aria-label={'\u0110\u1ebfn trang \u0111\u1ed5i qu\u00e0 sticker'}
             >
-              {total}
-            </span>
+              <div
+                className={`student-sticker-bloom__figure ${justIncreased ? 'student-sticker-bloom__figure--bump' : ''}`}
+              >
+                <img
+                  className="student-sticker-bloom__img"
+                  src={BEAR_SRC}
+                  alt=""
+                  width={682}
+                  height={1024}
+                  decoding="async"
+                />
+                <span
+                  className={`student-sticker-bloom__count-on-sign ${justIncreased ? 'student-sticker-bloom__count-on-sign--pulse' : ''}`}
+                >
+                  {total}
+                </span>
+              </div>
+            </Link>
           </div>
-        </Link>
+        </div>
       </div>
     </div>
   );

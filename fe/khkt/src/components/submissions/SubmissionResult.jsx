@@ -500,11 +500,25 @@ function SubmissionResult({
   assignmentModel = null,
   /** Chế độ chấm tay GV: đề (nếu có) trên full width; bài HS và bài mẫu hai cột cạnh nhau để so sánh. */
   manualGradingCompare = false,
+  /** HS mở từ thông báo nhận xét GV: cuộn tới khối nhận xét sau khi render. */
+  scrollToTeacherReviewOnMount = false,
+  /** Gọi sau khi đã cuộn (để xóa query khỏi URL). */
+  onTeacherReviewScrollConsumed = undefined,
 }) {
   const { renderMath, loading: mathLoading, mathjaxLoaded } = useMathRenderer();
   const [showSolutions, setShowSolutions] = useState({}); // Track which solutions are shown
   const [imageLightbox, setImageLightbox] = useState(null); // { src, alt, title? }
   const containerRef = useRef(null);
+
+  const hasTeacherReviewForScroll = !!(
+    submission?.ai_result &&
+    submission?.teacher_review?.comment
+  );
+  const teacherScrollRanKeyRef = useRef('');
+
+  useEffect(() => {
+    if (!scrollToTeacherReviewOnMount) teacherScrollRanKeyRef.current = '';
+  }, [scrollToTeacherReviewOnMount]);
 
   // Re-render MathJax when content changes
   useEffect(() => {
@@ -521,6 +535,51 @@ function SubmissionResult({
       return () => clearTimeout(timeoutId);
     }
   }, [submission, mathjaxLoaded, showSolutions, assignmentModel]);
+
+  /** Cuộn tới nhận xét GV (mở từ chuông thông báo). Chờ layout + MathJax gần xong. */
+  useEffect(() => {
+    if (
+      !scrollToTeacherReviewOnMount ||
+      !hasTeacherReviewForScroll ||
+      !submission?.id
+    ) {
+      return undefined;
+    }
+    const marker = `${submission.id}:review`;
+    if (teacherScrollRanKeyRef.current === marker) {
+      return undefined;
+    }
+
+    let cancelled = false;
+    let mainTimer;
+    let glowTimer;
+
+    mainTimer = window.setTimeout(() => {
+      if (cancelled) return;
+      const el = document.getElementById('khkt-teacher-review');
+      if (!el || cancelled) return;
+      teacherScrollRanKeyRef.current = marker;
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('teacher-review-section--incoming');
+      glowTimer = window.setTimeout(() => {
+        el.classList.remove('teacher-review-section--incoming');
+      }, 2600);
+      if (typeof onTeacherReviewScrollConsumed === 'function') {
+        onTeacherReviewScrollConsumed();
+      }
+    }, 520);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(mainTimer);
+      window.clearTimeout(glowTimer);
+    };
+  }, [
+    scrollToTeacherReviewOnMount,
+    hasTeacherReviewForScroll,
+    submission?.id,
+    onTeacherReviewScrollConsumed,
+  ]);
 
   if (!submission || !submission.ai_result) {
     return (
@@ -866,8 +925,19 @@ function SubmissionResult({
       )}
 
       {hasTeacherReview && (
-        <div className="result-section teacher-review-section">
-          <h3>📝 Nhận xét của giáo viên</h3>
+        <div
+          id="khkt-teacher-review"
+          className="result-section teacher-review-section teacher-review-section--featured"
+        >
+          <div className="teacher-review-banner">
+            <span className="teacher-review-chip" aria-hidden>
+              Giáo viên
+            </span>
+            <h3 className="teacher-review-title">Nhận xét của giáo viên</h3>
+            <p className="teacher-review-lede">
+              Đây là phần nhận xét trực tiếp của giáo viên về bài làm của bạn.
+            </p>
+          </div>
           <div className="teacher-review-card">
             <div className="teacher-review-text math-content">
               {renderTextWithMath(teacher_review.comment, renderMath)}

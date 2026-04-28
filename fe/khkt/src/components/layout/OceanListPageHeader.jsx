@@ -1,4 +1,5 @@
 import { useLocation } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getAssignmentsNavIcon } from './assignmentsNavIcon';
 import NotificationBell from './NotificationBell';
@@ -21,6 +22,7 @@ export default function OceanListPageHeader({
   teacherToolbar = false,
 }) {
   const location = useLocation();
+  const { isStudent } = useAuth();
   const adminHome = variant === 'adminHome';
   const { theme } = useTheme();
   const assignmentsIcon = getAssignmentsNavIcon(theme);
@@ -175,7 +177,7 @@ export default function OceanListPageHeader({
 
       {isAuthenticated ? (
         <div className="relative hidden shrink-0 flex-wrap items-center gap-3 md:flex md:w-auto md:justify-end">
-          <NotificationBell />
+          {!isStudent ? <NotificationBell /> : null}
           <ThemeToggle />
           {showTeacherBar && (
             <>

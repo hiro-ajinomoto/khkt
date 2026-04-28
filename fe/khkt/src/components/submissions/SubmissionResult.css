@@ -863,37 +863,155 @@ html:not(.dark) .model-solution-compare-label {
   }
 }
 
-/* Khối nhận xét thủ công của giáo viên — palette emerald cho khác AI section. */
-.teacher-review-section h3 {
-  display: flex;
+/* Khối nhận xét GV — làm nổi bật rõ so các mục AI (tóm tắt, lỗi, …). */
+
+#khkt-teacher-review.teacher-review-section {
+  scroll-margin-top: 6rem;
+}
+
+.teacher-review-section--featured {
+  position: relative;
+  margin-top: 0.75rem !important;
+  padding: 1rem 1.2rem !important;
+  border-radius: 1.35rem !important;
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  background: linear-gradient(
+    148deg,
+    rgba(236, 253, 245, 0.95),
+    rgba(209, 250, 229, 0.55),
+    rgba(253, 230, 224, 0.35)
+  );
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.45) inset,
+    0 18px 40px rgba(16, 185, 129, 0.12),
+    0 10px 24px rgba(245, 158, 11, 0.08);
+}
+
+html.dark .teacher-review-section--featured {
+  background: linear-gradient(
+    148deg,
+    rgba(6, 78, 59, 0.5),
+    rgba(15, 23, 42, 0.65),
+    rgba(30, 41, 59, 0.55)
+  );
+  border-color: rgba(52, 211, 153, 0.4);
+  box-shadow:
+    0 0 0 1px rgba(16, 185, 129, 0.12) inset,
+    0 20px 48px rgba(0, 0, 0, 0.45);
+}
+
+.teacher-review-section--incoming {
+  outline: none;
+  animation: khkt-teacher-highlight 2.6s ease-out 1;
+}
+
+@keyframes khkt-teacher-highlight {
+  0% {
+    box-shadow:
+      0 0 0 0 rgba(16, 185, 129, 0.55),
+      0 18px 40px rgba(16, 185, 129, 0.15),
+      0 0 0 6px rgba(251, 191, 36, 0.25);
+    filter: saturate(1.15);
+  }
+  55% {
+    box-shadow:
+      0 0 0 2px rgba(52, 211, 153, 0.35),
+      0 22px 50px rgba(16, 185, 129, 0.2),
+      0 0 0 4px rgba(251, 191, 36, 0.2);
+    filter: saturate(1.05);
+  }
+  100% {
+    filter: saturate(1);
+  }
+}
+
+.teacher-review-banner {
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px dashed rgba(16, 185, 129, 0.45);
+}
+
+.teacher-review-chip {
+  display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  margin-bottom: 0.65rem;
+  padding: 0.22rem 0.72rem;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, #059669, #10b981);
+  color: #ecfdf5;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+
+html.dark .teacher-review-chip {
+  box-shadow: 0 6px 16px rgba(6, 95, 70, 0.55);
+}
+
+.teacher-review-title {
+  margin: 0 0 0.35rem 0 !important;
+  font-size: 1.28rem !important;
+  font-weight: 820 !important;
+  letter-spacing: -0.02em;
+  line-height: 1.35;
+  color: #065f46;
+  text-shadow: 0 2px 20px rgba(16, 185, 129, 0.15);
+}
+
+html.dark .teacher-review-title {
+  color: #bbf7d0;
+  text-shadow: none;
+}
+
+.teacher-review-lede {
+  margin: 0;
+  font-size: 0.88rem !important;
+  line-height: 1.5;
+  color: var(--ocean-text-muted);
+  font-weight: 560;
 }
 
 .teacher-review-card {
   position: relative;
   background: linear-gradient(
-    135deg,
-    rgba(167, 243, 208, 0.18),
-    rgba(110, 231, 183, 0.08)
+    162deg,
+    rgba(255, 255, 255, 0.96),
+    rgba(236, 253, 245, 0.88),
+    rgba(255, 255, 255, 0.92)
   );
-  border: 1px solid rgba(16, 185, 129, 0.32);
-  border-left: 4px solid rgba(16, 185, 129, 0.7);
+  border: 1px solid rgba(16, 185, 129, 0.38);
+  border-left: 6px solid #10b981;
   border-radius: 1rem;
-  padding: 1rem 1.1rem;
-  box-shadow: 0 8px 22px rgba(16, 185, 129, 0.08);
+  padding: 1.25rem 1.3rem !important;
+  box-shadow:
+    0 2px 0 rgba(16, 185, 129, 0.12),
+    0 12px 32px rgba(15, 23, 42, 0.06);
+}
+
+html.dark .teacher-review-card {
+  background: linear-gradient(
+    162deg,
+    rgba(15, 23, 42, 0.94),
+    rgba(6, 78, 59, 0.45)
+  );
+  border-color: rgba(52, 211, 153, 0.38);
 }
 
 .teacher-review-text {
   white-space: pre-wrap;
-  line-height: 1.6;
+  line-height: 1.72;
   color: var(--ocean-text-strong);
-  font-size: 0.95rem;
+  font-size: 1.02rem !important;
+  font-weight: 545;
 }
 
 .teacher-review-meta {
-  margin-top: 0.6rem;
-  font-size: 0.78rem;
+  margin-top: 1rem !important;
+  padding-top: 0.85rem !important;
+  border-top: 1px solid rgba(16, 185, 129, 0.2);
+  font-size: 0.82rem !important;
   font-style: italic;
   color: var(--ocean-text-muted);
   text-align: right;

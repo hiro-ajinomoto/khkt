@@ -1,0 +1,36 @@
+@keyframes notification-bell-shake {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  12% {
+    transform: rotate(-13deg);
+  }
+  24% {
+    transform: rotate(11deg);
+  }
+  36% {
+    transform: rotate(-9deg);
+  }
+  48% {
+    transform: rotate(8deg);
+  }
+  60% {
+    transform: rotate(-4deg);
+  }
+  72% {
+    transform: rotate(2deg);
+  }
+}
+
+.notification-bell__glyph--shake {
+  display: inline-block;
+  animation: notification-bell-shake 0.65s ease-in-out infinite;
+  transform-origin: 50% 0%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notification-bell__glyph--shake {
+    animation: none;
+  }
+}

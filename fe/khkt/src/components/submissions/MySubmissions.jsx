@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -9,7 +9,6 @@ import {
 import { fetchAssignmentById } from '../../api/assignments';
 import SubmissionResult from './SubmissionResult';
 import OceanShell, { OceanPageLoading, OceanPageError } from '../layout/OceanShell';
-import NotificationBell from '../layout/NotificationBell';
 import './MySubmissions.css';
 
 function assignmentModelFromCachedDetail(detail) {
@@ -132,6 +131,7 @@ function MySubmissions() {
       if (searchParams.get('open')) {
         const next = new URLSearchParams(searchParams);
         next.delete('open');
+        next.delete('highlight');
         setSearchParams(next, { replace: true });
       }
       return;
@@ -141,7 +141,16 @@ function MySubmissions() {
     await fetchMergedSubmissionDetail(submission);
   };
 
+  const consumeTeacherReviewHighlight = useCallback(() => {
+    if (searchParams.get('highlight') !== 'teacher_review') return;
+    const next = new URLSearchParams(searchParams);
+    next.delete('highlight');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const openId = searchParams.get('open');
+  const highlightTeacherReview = searchParams.get('highlight') === 'teacher_review';
+
   useEffect(() => {
     if (loading || !openId || submissions.length === 0) return;
     const sub = submissions.find((s) => s.id === openId);
@@ -187,7 +196,6 @@ function MySubmissions() {
           <button type="button" onClick={() => navigate('/assignments')} className="back-button">
             ← Quay lại
           </button>
-          <NotificationBell compact />
         </div>
         <p className="ocean-page-eyebrow">Cuộc thi khoa học kỹ thuật</p>
         <h1>Bài tập đã nộp</h1>
@@ -335,6 +343,10 @@ function MySubmissions() {
                         assignmentModel={assignmentModelFromCachedDetail(
                           detailsById[submission.id],
                         )}
+                        scrollToTeacherReviewOnMount={
+                          openId === submission.id && highlightTeacherReview
+                        }
+                        onTeacherReviewScrollConsumed={consumeTeacherReviewHighlight}
                       />
                     ) : (
                       <p className="submission-detail-loading">
