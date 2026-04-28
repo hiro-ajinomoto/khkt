@@ -655,18 +655,25 @@ router.put("/:id/review", authenticate, requireTeacher, async (req, res) => {
       .collection("users")
       .findOne(
         { _id: reviewerId },
-        { projection: { username: 1, full_name: 1 } },
+        { projection: { username: 1, full_name: 1, name: 1 } },
       );
 
     const now = new Date();
     const existing = submission.teacher_review || null;
+
+    const reviewerDisplayName =
+      reviewerDoc?.full_name ||
+      reviewerDoc?.name ||
+      reviewerDoc?.username ||
+      req.user.username ||
+      "Giáo viên";
 
     const review = {
       comment: validated.value.comment,
       score_override: validated.value.score_override,
       reviewer_id: reviewerId,
       reviewer_username: reviewerDoc?.username || req.user.username || null,
-      reviewer_full_name: reviewerDoc?.full_name || null,
+      reviewer_full_name: reviewerDoc?.full_name || reviewerDoc?.name || null,
       created_at: existing?.created_at || now,
       updated_at: now,
     };
@@ -674,6 +681,47 @@ router.put("/:id/review", authenticate, requireTeacher, async (req, res) => {
     await db
       .collection("submissions")
       .updateOne({ _id: objectId }, { $set: { teacher_review: review } });
+
+    try {
+      if (submission.student_id) {
+        let assignmentTitle = "Bài tập";
+        if (submission.assignment_id) {
+          const aDoc = await db
+            .collection("assignments")
+            .findOne(
+              { _id: submission.assignment_id },
+              { projection: { title: 1 } },
+            );
+          const t = aDoc?.title && String(aDoc.title).trim();
+          if (t) assignmentTitle = t;
+        }
+        const isUpdate = !!existing;
+        await db.collection("notifications").insertOne({
+          type: "teacher_review",
+          title: isUpdate
+            ? "Giáo viên đã cập nhật nhận xét"
+            : "Có nhận xét từ giáo viên",
+          message: isUpdate
+            ? `${reviewerDisplayName} đã cập nhật nhận xét hoặc điểm cho bài «${assignmentTitle}».`
+            : `${reviewerDisplayName} đã nhận xét bài nộp «${assignmentTitle}».`,
+          target_roles: ["student"],
+          recipient_user_id: submission.student_id,
+          submission_id: objectId,
+          assignment_id: submission.assignment_id || null,
+          actor_user_id: reviewerId,
+          actor_username: reviewerDoc?.username || req.user.username || null,
+          actor_name:
+            reviewerDoc?.full_name || reviewerDoc?.name || reviewerDoc?.username || null,
+          read_by: [],
+          created_at: now,
+        });
+      }
+    } catch (notifyErr) {
+      console.error(
+        "Failed to notify student of teacher review:",
+        notifyErr,
+      );
+    }
 
     res.json({ teacher_review: formatTeacherReview(review) });
   } catch (error) {

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   fetchNotifications,
   markAllNotificationsRead,
@@ -30,7 +31,8 @@ function formatRelativeTime(value) {
 }
 
 export default function NotificationBell({ className = '', compact = false }) {
-  const { isAuthenticated, isTeacher, isAdmin, user } = useAuth();
+  const { isAuthenticated, isTeacher, isAdmin, isStudent, user } = useAuth();
+  const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
@@ -40,7 +42,8 @@ export default function NotificationBell({ className = '', compact = false }) {
   const buttonRef = useRef(null);
   const panelRef = useRef(null);
 
-  const canViewNotifications = isAuthenticated && (isTeacher || isAdmin);
+  const canViewNotifications =
+    isAuthenticated && (isTeacher || isAdmin || isStudent);
 
   const loadNotifications = useCallback(
     async ({ showLoading = false } = {}) => {
@@ -136,18 +139,28 @@ export default function NotificationBell({ className = '', compact = false }) {
     }
   }
 
-  async function handleMarkOne(notification) {
-    if (!notification || notification.read) return;
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === notification.id ? { ...item, read: true } : item,
-      ),
-    );
-    setUnreadCount((prev) => Math.max(0, prev - 1));
-    try {
-      await markNotificationRead(notification.id);
-    } catch (_err) {
-      loadNotifications();
+  async function handleActivateNotification(notification) {
+    if (!notification) return;
+    const wasUnread = !notification.read;
+    if (wasUnread) {
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === notification.id ? { ...item, read: true } : item,
+        ),
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+      try {
+        await markNotificationRead(notification.id);
+      } catch (_err) {
+        loadNotifications();
+        return;
+      }
+    }
+    if (isStudent && notification.submission_id) {
+      navigate(
+        `/my-submissions?open=${encodeURIComponent(notification.submission_id)}`,
+      );
+      setOpen(false);
     }
   }
 
@@ -222,7 +235,7 @@ export default function NotificationBell({ className = '', compact = false }) {
               <li key={item.id}>
                 <button
                   type="button"
-                  onClick={() => handleMarkOne(item)}
+                  onClick={() => handleActivateNotification(item)}
                   className={`flex w-full gap-3 px-4 py-3 text-left transition hover:bg-sky-50/80 dark:hover:bg-slate-900 ${
                     item.read ? 'opacity-75' : 'bg-amber-50/70 dark:bg-cyan-500/10'
                   }`}

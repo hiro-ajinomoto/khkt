@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   fetchMySubmissions,
@@ -9,6 +9,7 @@ import {
 import { fetchAssignmentById } from '../../api/assignments';
 import SubmissionResult from './SubmissionResult';
 import OceanShell, { OceanPageLoading, OceanPageError } from '../layout/OceanShell';
+import NotificationBell from '../layout/NotificationBell';
 import './MySubmissions.css';
 
 function assignmentModelFromCachedDetail(detail) {
@@ -35,6 +36,7 @@ function assignmentModelFromCachedDetail(detail) {
 
 function MySubmissions() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { isAuthenticated, isStudent } = useAuth();
   const [submissions, setSubmissions] = useState([]);
   const [stickerStats, setStickerStats] = useState(null);
@@ -46,8 +48,13 @@ function MySubmissions() {
   // chỉ trả về ai_result rút gọn (score) để payload nhỏ; lần đầu bấm xem
   // chi tiết mới gọi /submissions/:id để lấy full summary/mistakes/practiceSets.
   const [detailsById, setDetailsById] = useState({});
+  const detailsRef = useRef({});
   const [loadingDetailId, setLoadingDetailId] = useState(null);
   const [detailErrorById, setDetailErrorById] = useState({});
+
+  useEffect(() => {
+    detailsRef.current = detailsById;
+  }, [detailsById]);
 
   useEffect(() => {
     if (!isAuthenticated || !isStudent) {
@@ -85,15 +92,9 @@ function MySubmissions() {
     }
   };
 
-  const handleToggleDetails = async (submission) => {
-    const isOpen = selectedSubmission?.id === submission.id;
-    if (isOpen) {
-      setSelectedSubmission(null);
-      return;
-    }
-    setSelectedSubmission(submission);
-    // Không cần fetch lại nếu đã có full detail trong cache.
-    if (detailsById[submission.id]) return;
+  /** Tải full chi tiết bài nộp (idempotent khi đã có trong cache). */
+  async function fetchMergedSubmissionDetail(submission) {
+    if (detailsRef.current[submission.id]) return;
     try {
       setLoadingDetailId(submission.id);
       setDetailErrorById((prev) => ({ ...prev, [submission.id]: null }));
@@ -101,28 +102,54 @@ function MySubmissions() {
         fetchSubmissionById(submission.id),
         fetchAssignmentById(submission.assignment_id).catch(() => null),
       ]);
-      setDetailsById((prev) => ({
-        ...prev,
-        [submission.id]: {
-          ...submission,
-          ...full,
-          assignment_title: submission.assignment_title,
-          assignment_subject: submission.assignment_subject,
-          question_image_url: assignment?.question_image_url,
-          model_solution: assignment?.model_solution,
-          model_solution_image_url: assignment?.model_solution_image_url,
-          model_solution_image_urls: assignment?.model_solution_image_urls,
-        },
-      }));
+      const merged = {
+        ...submission,
+        ...full,
+        assignment_title: submission.assignment_title,
+        assignment_subject: submission.assignment_subject,
+        question_image_url: assignment?.question_image_url,
+        model_solution: assignment?.model_solution,
+        model_solution_image_url: assignment?.model_solution_image_url,
+        model_solution_image_urls: assignment?.model_solution_image_urls,
+      };
+      detailsRef.current = { ...detailsRef.current, [submission.id]: merged };
+      setDetailsById((prev) => ({ ...prev, [submission.id]: merged }));
     } catch (err) {
       setDetailErrorById((prev) => ({
         ...prev,
-        [submission.id]: err.message || 'Không tải được chi tiết bài nộp.',
+        [submission.id]:
+          err.message || 'Không tải được chi tiết bài nộp.',
       }));
     } finally {
       setLoadingDetailId((prev) => (prev === submission.id ? null : prev));
     }
+  }
+
+  const handleToggleDetails = async (submission) => {
+    const isOpen = selectedSubmission?.id === submission.id;
+    if (isOpen) {
+      setSelectedSubmission(null);
+      if (searchParams.get('open')) {
+        const next = new URLSearchParams(searchParams);
+        next.delete('open');
+        setSearchParams(next, { replace: true });
+      }
+      return;
+    }
+    setSelectedSubmission(submission);
+    if (detailsRef.current[submission.id]) return;
+    await fetchMergedSubmissionDetail(submission);
   };
+
+  const openId = searchParams.get('open');
+  useEffect(() => {
+    if (loading || !openId || submissions.length === 0) return;
+    const sub = submissions.find((s) => s.id === openId);
+    if (!sub) return;
+    setSelectedSubmission(sub);
+    if (detailsRef.current[sub.id]) return;
+    void fetchMergedSubmissionDetail(sub);
+  }, [loading, openId, submissions]);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -160,6 +187,7 @@ function MySubmissions() {
           <button type="button" onClick={() => navigate('/assignments')} className="back-button">
             ← Quay lại
           </button>
+          <NotificationBell compact />
         </div>
         <p className="ocean-page-eyebrow">Cuộc thi khoa học kỹ thuật</p>
         <h1>Bài tập đã nộp</h1>

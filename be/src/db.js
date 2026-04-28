@@ -67,6 +67,12 @@ async function ensureIndexes(database) {
     database
       .collection('notifications')
       .createIndex({ read_by: 1 }, { name: 'notification_read_by_idx' }),
+    database
+      .collection('notifications')
+      .createIndex(
+        { recipient_user_id: 1, created_at: -1 },
+        { name: 'notification_student_recipient_idx' },
+      ),
 
     ensureClassTeacherIndexes(database),
   ]

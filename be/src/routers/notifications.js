@@ -1,7 +1,7 @@
 import express from 'express';
 import { ObjectId } from 'mongodb';
 import { getDB } from '../db.js';
-import { authenticate, requireTeacher } from '../middleware/auth.js';
+import { authenticate } from '../middleware/auth.js';
 import { listClassNamesForTeacher } from '../classTeacherAssignments.js';
 
 const router = express.Router();
@@ -21,6 +21,12 @@ function serializeNotification(notification, userId) {
     actor_username: notification.actor_username || null,
     actor_name: notification.actor_name || null,
     class_name: notification.class_name || null,
+    submission_id: notification.submission_id
+      ? notification.submission_id.toString()
+      : null,
+    assignment_id: notification.assignment_id
+      ? notification.assignment_id.toString()
+      : null,
     created_at: notification.created_at || null,
     read: isRead,
   };
@@ -49,6 +55,18 @@ async function notificationScopeFilter(db, user) {
   return { ...base, $or: classOr };
 }
 
+/** HS: chỉ thông báo cá nhân có recipient_user_id đúng tài khoản. */
+function studentRecipientScope(userId) {
+  try {
+    return {
+      target_roles: 'student',
+      recipient_user_id: ObjectId.createFromHexString(userId),
+    };
+  } catch (_e) {
+    return { _id: null };
+  }
+}
+
 /**
  * Thông báo "chưa đọc" = userId chưa nằm trong mảng read_by.
  * Không dùng { read_by: { $ne: userId } } vì với read_by là mảng ObjectId, $ne
@@ -66,10 +84,15 @@ function notReadByUserFilter(userId) {
 
 /**
  * GET /notifications
- * List notifications for teacher/admin users.
+ * List notifications for teacher/admin/student users.
  */
-router.get('/', authenticate, requireTeacher, async (req, res) => {
+router.get('/', authenticate, async (req, res) => {
   try {
+    const role = req.user.role;
+    if (role !== 'teacher' && role !== 'admin' && role !== 'student') {
+      return res.status(403).json({ detail: 'Forbidden' });
+    }
+
     const db = getDB();
     const userId = ObjectId.createFromHexString(req.user.id);
     const limit = Math.min(
@@ -78,7 +101,10 @@ router.get('/', authenticate, requireTeacher, async (req, res) => {
     );
     const unreadOnly = String(req.query.unread_only || '') === 'true';
 
-    const base = await notificationScopeFilter(db, req.user);
+    const base =
+      role === 'student'
+        ? studentRecipientScope(req.user.id)
+        : await notificationScopeFilter(db, req.user);
     const filter = unreadOnly
       ? { ...base, ...notReadByUserFilter(userId) }
       : base;
@@ -91,7 +117,7 @@ router.get('/', authenticate, requireTeacher, async (req, res) => {
       .toArray();
 
     const unread_count = await db.collection('notifications').countDocuments({
-      ...(await notificationScopeFilter(db, req.user)),
+      ...base,
       ...notReadByUserFilter(userId),
     });
 
@@ -107,10 +133,15 @@ router.get('/', authenticate, requireTeacher, async (req, res) => {
 
 /**
  * POST /notifications/:id/read
- * Mark one notification as read for current teacher/admin.
+ * Mark one notification as read for current user.
  */
-router.post('/:id/read', authenticate, requireTeacher, async (req, res) => {
+router.post('/:id/read', authenticate, async (req, res) => {
   try {
+    const role = req.user.role;
+    if (role !== 'teacher' && role !== 'admin' && role !== 'student') {
+      return res.status(403).json({ detail: 'Forbidden' });
+    }
+
     let notificationId;
     try {
       notificationId = ObjectId.createFromHexString(req.params.id);
@@ -120,7 +151,10 @@ router.post('/:id/read', authenticate, requireTeacher, async (req, res) => {
 
     const db = getDB();
     const userId = ObjectId.createFromHexString(req.user.id);
-    const scope = await notificationScopeFilter(db, req.user);
+    const scope =
+      role === 'student'
+        ? studentRecipientScope(req.user.id)
+        : await notificationScopeFilter(db, req.user);
     const result = await db.collection('notifications').updateOne(
       {
         _id: notificationId,
@@ -142,13 +176,21 @@ router.post('/:id/read', authenticate, requireTeacher, async (req, res) => {
 
 /**
  * POST /notifications/read-all
- * Mark every visible notification as read for current teacher/admin.
+ * Mark every visible notification as read for current user.
  */
-router.post('/read-all', authenticate, requireTeacher, async (req, res) => {
+router.post('/read-all', authenticate, async (req, res) => {
   try {
+    const role = req.user.role;
+    if (role !== 'teacher' && role !== 'admin' && role !== 'student') {
+      return res.status(403).json({ detail: 'Forbidden' });
+    }
+
     const db = getDB();
     const userId = ObjectId.createFromHexString(req.user.id);
-    const scope = await notificationScopeFilter(db, req.user);
+    const scope =
+      role === 'student'
+        ? studentRecipientScope(req.user.id)
+        : await notificationScopeFilter(db, req.user);
     await db.collection('notifications').updateMany(scope, {
       $addToSet: { read_by: userId },
     });
