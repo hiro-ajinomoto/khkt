@@ -1,0 +1,127 @@
+.image-lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: env(safe-area-inset-top, 12px) 12px 12px;
+}
+
+.image-lightbox-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.88);
+  backdrop-filter: blur(6px);
+}
+
+.image-lightbox-panel {
+  position: relative;
+  z-index: 1;
+  width: min(96vw, 1100px);
+  max-height: min(94vh, 900px);
+  display: flex;
+  flex-direction: column;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(103, 232, 249, 0.25);
+  border-radius: 1rem;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+}
+
+.image-lightbox-title {
+  padding: 0.65rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  border-bottom: 1px solid rgba(103, 232, 249, 0.12);
+}
+
+.image-lightbox-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.65rem;
+  border-bottom: 1px solid rgba(103, 232, 249, 0.12);
+}
+
+.image-lightbox-tool {
+  padding: 0.45rem 0.65rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(30, 41, 59, 0.9);
+  color: #e2e8f0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.image-lightbox-tool:hover {
+  border-color: rgba(103, 232, 249, 0.55);
+  background: rgba(51, 65, 85, 0.95);
+}
+
+.image-lightbox-tool[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.image-lightbox-zoom-label {
+  min-width: 4.5rem;
+  text-align: center;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+}
+
+.image-lightbox-close {
+  margin-left: auto;
+  padding: 0.45rem 0.85rem;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.image-lightbox-stage {
+  position: relative;
+  flex: 1;
+  min-height: min(72vh, 720px);
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  overscroll-behavior: contain;
+  touch-action: none;
+}
+
+.image-lightbox-transform-wrap {
+  display: inline-block;
+  transform-origin: center center;
+  cursor: grab;
+}
+
+.image-lightbox-stage img {
+  display: block;
+  max-width: none;
+  user-select: none;
+  pointer-events: none;
+}
+
+.image-lightbox-hint {
+  margin: 0;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.74rem;
+  color: #94a3b8;
+  border-top: 1px solid rgba(103, 232, 249, 0.12);
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .image-lightbox-zoom-label {
+    width: 100%;
+    margin-top: 0.25rem;
+  }
+}

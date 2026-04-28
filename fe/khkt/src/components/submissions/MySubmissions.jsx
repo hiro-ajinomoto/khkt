@@ -12,8 +12,15 @@ import OceanShell, { OceanPageLoading, OceanPageError } from '../layout/OceanShe
 import './MySubmissions.css';
 
 function assignmentModelFromCachedDetail(detail) {
-  if (!detail?.model_solution && !detail?.model_solution_image_url) return null;
+  if (
+    !detail?.model_solution &&
+    !detail?.model_solution_image_url &&
+    !detail?.question_image_url
+  ) {
+    return null;
+  }
   return {
+    question_image_url: detail.question_image_url,
     model_solution: detail.model_solution,
     model_solution_image_url: detail.model_solution_image_url,
   };
@@ -94,6 +101,7 @@ function MySubmissions() {
           ...full,
           assignment_title: submission.assignment_title,
           assignment_subject: submission.assignment_subject,
+          question_image_url: assignment?.question_image_url,
           model_solution: assignment?.model_solution,
           model_solution_image_url: assignment?.model_solution_image_url,
         },

@@ -5,6 +5,7 @@ import {
   upsertSubmissionReview,
   deleteSubmissionReview,
 } from '../../api/submissions';
+import { fetchAssignmentById } from '../../api/assignments';
 import { useAuth } from '../../contexts/AuthContext';
 import OceanShell, { OceanPageLoading, OceanPageError } from '../layout/OceanShell';
 import OceanListPageHeader from '../layout/OceanListPageHeader';
@@ -29,6 +30,7 @@ export default function TeacherSubmissionReview() {
   const { user, isAuthenticated, isAdmin, isTeacher, logout } = useAuth();
 
   const [submission, setSubmission] = useState(null);
+  const [assignment, setAssignment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -54,6 +56,16 @@ export default function TeacherSubmissionReview() {
             ? String(data.teacher_review.score_override)
             : '',
         );
+        if (data?.assignment_id) {
+          try {
+            const asn = await fetchAssignmentById(data.assignment_id);
+            if (!cancelled) setAssignment(asn);
+          } catch {
+            if (!cancelled) setAssignment(null);
+          }
+        } else {
+          setAssignment(null);
+        }
       } catch (err) {
         if (!cancelled) setError(err.message || 'Không tải được bài nộp.');
       } finally {
@@ -174,14 +186,26 @@ export default function TeacherSubmissionReview() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.4fr_1fr]">
-        {/* Left: bài nộp & AI result */}
-        <div className="rounded-3xl border border-sky-200/60 bg-white/85 p-4 shadow-sm backdrop-blur-xl dark:border-cyan-300/15 dark:bg-white/5 md:p-6">
-          <SubmissionResult submission={submission} />
-        </div>
+      <div className="flex flex-col gap-6 lg:gap-8">
+        {/* Toàn chiều ngang: đối chiếu 50/50 desktop nằm trong SubmissionResult */}
+        <section className="rounded-3xl border border-sky-200/60 bg-white/85 p-4 shadow-sm backdrop-blur-xl dark:border-cyan-300/15 dark:bg-white/5 md:p-6">
+          <SubmissionResult
+            submission={submission}
+            manualGradingCompare
+            assignmentModel={
+              assignment
+                ? {
+                    question_image_url: assignment.question_image_url,
+                    model_solution: assignment.model_solution,
+                    model_solution_image_url: assignment.model_solution_image_url,
+                  }
+                : null
+            }
+          />
+        </section>
 
-        {/* Right: form nhận xét */}
-        <aside className="lg:sticky lg:top-4 lg:self-start">
+        {/* Nhận xét thủ công — full width phía dưới (không kẹp cạnh ảnh) */}
+        <section className="w-full">
           <form
             onSubmit={handleSave}
             className="flex flex-col gap-4 rounded-3xl border border-emerald-200/60 bg-white/90 p-4 shadow-sm backdrop-blur-xl dark:border-emerald-300/20 dark:bg-white/5 md:p-6"
@@ -286,7 +310,7 @@ export default function TeacherSubmissionReview() {
               ) : null}
             </div>
           </form>
-        </aside>
+        </section>
       </div>
     </OceanShell>
   );

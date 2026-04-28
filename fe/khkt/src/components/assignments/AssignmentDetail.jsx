@@ -16,6 +16,7 @@ import {
 } from '../../utils/submissionLimits';
 import SubmissionResult from '../submissions/SubmissionResult';
 import OceanShell, { OceanPageLoading } from '../layout/OceanShell';
+import ImageLightbox from '../ui/ImageLightbox';
 import './AssignmentDetail.css';
 
 function AssignmentDetail() {
@@ -31,6 +32,9 @@ function AssignmentDetail() {
   const [submission, setSubmission] = useState(null);
   const [error, setError] = useState(null);
   const [showResult, setShowResult] = useState(false);
+  const [imageLightbox, setImageLightbox] = useState(null);
+
+  const closeImageLightbox = () => setImageLightbox(null);
 
   const loadAssignment = useCallback(async () => {
     if (!id) return;
@@ -132,6 +136,18 @@ function AssignmentDetail() {
   const studentCanSeeModelSolution =
     !isStudent || (assignment?.my_submission_count ?? 0) > 0;
 
+  const assignmentModelForSubmissionResult =
+    assignment &&
+    ({
+      question_image_url: assignment.question_image_url,
+      ...(studentCanSeeModelSolution || !isStudent
+        ? {
+            model_solution: assignment.model_solution,
+            model_solution_image_url: assignment.model_solution_image_url,
+          }
+        : {}),
+    });
+
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
@@ -220,21 +236,34 @@ function AssignmentDetail() {
         {assignment.question_image_url && (
           <div className="image-container">
             <label>Hình ảnh câu hỏi:</label>
-            <img
-              src={assignment.question_image_url}
-              alt="Câu hỏi"
-              className="assignment-image"
-              onError={(e) => {
-                e.target.style.display = 'none';
-                const errorDiv = e.target.nextSibling;
-                if (errorDiv) {
-                  errorDiv.style.display = 'block';
-                }
-              }}
-            />
-            <div className="image-error" style={{ display: 'none' }}>
-              Không thể tải hình ảnh
-            </div>
+            <button
+              type="button"
+              className="assignment-image-enlarge"
+              onClick={() =>
+                setImageLightbox({
+                  src: assignment.question_image_url,
+                  title: 'Hình ảnh câu hỏi',
+                })
+              }
+              aria-label="Xem phóng to hình ảnh câu hỏi (xoay, zoom)"
+            >
+              <img
+                src={assignment.question_image_url}
+                alt="Câu hỏi"
+                className="assignment-image"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  const errorDiv = e.target.nextSibling;
+                  if (errorDiv) {
+                    errorDiv.style.display = 'block';
+                  }
+                }}
+              />
+              <div className="image-error" style={{ display: 'none' }}>
+                Không thể tải hình ảnh
+              </div>
+            </button>
+            <p className="assignment-image-hint">Bấm vào ảnh để xoay / phóng to.</p>
           </div>
         )}
 
@@ -255,6 +284,39 @@ function AssignmentDetail() {
             <p>{assignment.model_solution}</p>
           </div>
         )}
+
+        {assignment.model_solution_image_url && studentCanSeeModelSolution && (
+          <div className="image-container">
+            <label>Hình ảnh bài giải mẫu:</label>
+            <button
+              type="button"
+              className="assignment-image-enlarge"
+              onClick={() =>
+                setImageLightbox({
+                  src: assignment.model_solution_image_url,
+                  title: 'Bài giải mẫu',
+                })
+              }
+              aria-label="Xem phóng to hình ảnh bài giải mẫu (xoay, zoom)"
+            >
+              <img
+                src={assignment.model_solution_image_url}
+                alt="Bài giải mẫu"
+                className="assignment-image"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  const errorDiv = e.target.nextSibling;
+                  if (errorDiv) errorDiv.style.display = 'block';
+                }}
+              />
+              <div className="image-error" style={{ display: 'none' }}>
+                Không thể tải hình ảnh
+              </div>
+            </button>
+            <p className="assignment-image-hint">Bấm vào ảnh để xoay / phóng to.</p>
+          </div>
+        )}
+
       </div>
 
       {/* Submission Form */}
@@ -304,7 +366,14 @@ function AssignmentDetail() {
                         <img
                           src={previewUrls[index]}
                           alt={`Preview ${index + 1}`}
-                          className="preview-image"
+                          className="preview-image preview-image--zoomable"
+                          role="presentation"
+                          onClick={() =>
+                            setImageLightbox({
+                              src: previewUrls[index],
+                              title: `Ảnh xem trước ${index + 1}`,
+                            })
+                          }
                           onError={(e) => {
                             e.target.style.display = 'none';
                             const errorDiv = e.target.nextSibling;
@@ -396,19 +465,19 @@ function AssignmentDetail() {
           {showResult && (
             <SubmissionResult
               submission={submission}
-              assignmentModel={
-                isStudent && assignment
-                  ? {
-                      model_solution: assignment.model_solution,
-                      model_solution_image_url: assignment.model_solution_image_url,
-                    }
-                  : null
-              }
+              assignmentModel={assignmentModelForSubmissionResult || null}
             />
           )}
         </div>
       )}
       </div>
+
+      <ImageLightbox
+        open={Boolean(imageLightbox?.src)}
+        onClose={closeImageLightbox}
+        src={imageLightbox?.src}
+        title={imageLightbox?.title}
+      />
     </OceanShell>
   );
 }

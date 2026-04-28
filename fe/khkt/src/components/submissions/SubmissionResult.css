@@ -887,3 +887,152 @@ html:not(.dark) .model-solution-compare-label {
   color: var(--ocean-text-muted);
   text-align: right;
 }
+
+.submission-compare-strip-heading {
+  margin-bottom: 0.35rem;
+}
+
+.submission-zoom-hint--strip {
+  margin-bottom: 0.85rem;
+}
+
+.submission-compare-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.submission-compare-cell {
+  margin: 0;
+  padding: 0;
+  border: 1px solid rgba(103, 232, 249, 0.2);
+  border-radius: 0.85rem;
+  padding: 0.65rem;
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.submission-compare-cell--student {
+  grid-column: span 1;
+}
+
+.submission-compare-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ocean-text-muted);
+  margin-bottom: 0.45rem;
+}
+
+.submission-compare-student-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.submission-compare-thumb {
+  width: 100%;
+  max-height: 220px;
+}
+
+.submission-compare-thumb-img {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+  border-radius: 0.5rem;
+}
+
+@media (min-width: 1024px) {
+  .submission-compare-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Chấm tay GV trong SubmissionResult — đề rồi hai cột; desktop 50/50 (1fr–1fr), ô có cuộn. */
+.submission-result--manual-grading .submission-compare-strip-section--manual-grading {
+  isolation: isolate;
+  position: relative;
+  z-index: 2;
+}
+
+.submission-result--manual-grading .submission-compare-de-fullwidth {
+  margin-bottom: 1rem;
+  max-height: none;
+  overflow: visible;
+  border-radius: 0.85rem;
+}
+
+.submission-result--manual-grading
+  .submission-compare-strip-section--manual-grading
+  .submission-compare-cell {
+  min-width: 0;
+}
+
+.submission-result--manual-grading
+  .submission-compare-strip-section--manual-grading
+  .submission-compare-cell--question-wide {
+  width: 100%;
+}
+
+.submission-result--manual-grading .submission-compare-student-stack,
+.submission-result--manual-grading .submission-result-image-zoom-trigger {
+  max-width: 100%;
+}
+
+.submission-compare-grid--hs-model-pair {
+  display: grid;
+  gap: 1rem;
+  align-items: start;
+  grid-template-columns: 1fr;
+}
+
+.submission-compare-grid--hs-model-pair--two-cols {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+/* Desktop/tablet ngang: đúng tỉ lệ 5:5 (hai cột bằng nhau). */
+@media (min-width: 768px) {
+  .submission-result--manual-grading .submission-compare-grid--hs-model-pair--two-cols {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem 1.5rem;
+  }
+}
+
+@media (max-width: 639px) {
+  .submission-compare-grid--hs-model-pair--two-cols {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Hai cột HS / mẫu: cao theo nội dung — hiện trọn ảnh, không cắt trong khung cuộn */
+.submission-result--manual-grading
+  .submission-compare-grid--hs-model-pair--two-cols
+  > .submission-compare-cell {
+  max-height: none;
+  overflow: visible;
+}
+
+/* Ảnh trong dải chấm tay: không giới hạn 220px; nút/co bọc bung theo chiều cao ảnh */
+.submission-result--manual-grading
+  .submission-compare-strip-section--manual-grading
+  .submission-compare-thumb {
+  max-height: none;
+}
+
+.submission-result--manual-grading
+  .submission-compare-strip-section--manual-grading
+  .submission-compare-thumb-img {
+  max-height: none;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.submission-result--manual-grading
+  .submission-compare-strip-section--manual-grading
+  .submission-compare-student-stack {
+  gap: 0.65rem;
+}

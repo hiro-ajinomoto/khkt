@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
+import ImageLightbox from '../ui/ImageLightbox';
 import './SubmissionResult.css';
 
 const CIRCLED_NUMS = [
@@ -495,25 +495,16 @@ function renderTextWithMath(text, renderMathFn) {
   return <span className="math-content">{processedText}</span>;
 }
 
-function SubmissionResult({ submission, assignmentModel = null }) {
+function SubmissionResult({
+  submission,
+  assignmentModel = null,
+  /** Chế độ chấm tay GV: đề (nếu có) trên full width; bài HS và bài mẫu hai cột cạnh nhau để so sánh. */
+  manualGradingCompare = false,
+}) {
   const { renderMath, loading: mathLoading, mathjaxLoaded } = useMathRenderer();
   const [showSolutions, setShowSolutions] = useState({}); // Track which solutions are shown
-  const [imageLightbox, setImageLightbox] = useState(null); // { src, alt }
+  const [imageLightbox, setImageLightbox] = useState(null); // { src, alt, title? }
   const containerRef = useRef(null);
-
-  useEffect(() => {
-    if (!imageLightbox) return;
-    const onKey = (e) => {
-      if (e.key === 'Escape') setImageLightbox(null);
-    };
-    window.addEventListener('keydown', onKey);
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prevOverflow;
-    };
-  }, [imageLightbox]);
 
   // Re-render MathJax when content changes
   useEffect(() => {
@@ -578,10 +569,36 @@ function SubmissionResult({ submission, assignmentModel = null }) {
 
   const hasModelCompare =
     assignmentModel &&
-    (assignmentModel.model_solution || assignmentModel.model_solution_image_url);
+    (assignmentModel.model_solution ||
+      assignmentModel.model_solution_image_url ||
+      assignmentModel.question_image_url);
+
+  const imgPathsLen = Array.isArray(image_paths) ? image_paths.length : 0;
+  const qUrl = assignmentModel?.question_image_url;
+  const msImgUrl = assignmentModel?.model_solution_image_url;
+
+  const showComparisonStrip =
+    !!assignmentModel && !!((qUrl || msImgUrl || imgPathsLen > 0));
+
+  /** Ảnh lớp học đã hiển thị trong dải so sánh → không hiện khối lặp cuối trang */
+  const studentPhotosInGallery = !!assignmentModel && imgPathsLen > 0;
+
+  /** Ảnh mẫu đã nằm trong strip → không lặp ảnh lớn phía dưới (tránh đè lên lưới đối chiếu khi chấm tay). */
+  const showStandaloneModelAnswerImage =
+    !!assignmentModel?.model_solution_image_url &&
+    !(msImgUrl && (showComparisonStrip || manualGradingCompare));
+
+  const showModelAnswerCompareSection =
+    hasModelCompare &&
+    (!manualGradingCompare ||
+      !!assignmentModel?.model_solution ||
+      showStandaloneModelAnswerImage);
 
   return (
-    <div className="submission-result" ref={containerRef}>
+    <div
+      className={`submission-result${manualGradingCompare ? ' submission-result--manual-grading' : ''}`}
+      ref={containerRef}
+    >
       <div className="score-section">
         <div className="score-card" style={{ '--score-accent': scoreAccent }}>
           <p className="score-eyebrow">{scoreEyebrow}</p>
@@ -603,10 +620,177 @@ function SubmissionResult({ submission, assignmentModel = null }) {
         </div>
       </div>
 
-      {hasModelCompare && (
+      {showComparisonStrip && (
+        <div
+          className={`result-section submission-compare-strip-section${
+            manualGradingCompare ? ' submission-compare-strip-section--manual-grading' : ''
+          }`}
+        >
+          <h3 className="submission-compare-strip-heading">Đối chiếu hình ảnh</h3>
+          <p className="submission-zoom-hint submission-zoom-hint--strip">
+            {manualGradingCompare ? (
+              <>Bấm ảnh để phóng to, xoay, zoom.</>
+            ) : (
+              <>
+                Bấm vào từng ảnh để phóng to, xoay và zoom (xuất hiện trên học sinh và
+                giáo viên).
+              </>
+            )}
+          </p>
+          {manualGradingCompare ? (
+            <>
+              {qUrl ? (
+                <div className="submission-compare-de-fullwidth">
+                  <figure className="submission-compare-cell submission-compare-cell--question-wide">
+                    <figcaption className="submission-compare-label">Đề bài</figcaption>
+                    <button
+                      type="button"
+                      className="submission-result-image-zoom-trigger submission-compare-thumb"
+                      onClick={() =>
+                        setImageLightbox({
+                          src: qUrl,
+                          alt: 'Đề bài — xem và chỉnh hướng',
+                          title: 'Đề bài',
+                        })
+                      }
+                      aria-label="Xem đề bài — phóng to"
+                    >
+                      <img src={qUrl} alt="" className="submission-compare-thumb-img" />
+                    </button>
+                  </figure>
+                </div>
+              ) : null}
+              {imgPathsLen > 0 || msImgUrl ? (
+              <div
+                className={`submission-compare-grid submission-compare-grid--hs-model-pair${
+                  imgPathsLen > 0 && msImgUrl
+                    ? ' submission-compare-grid--hs-model-pair--two-cols'
+                    : ''
+                }`}
+              >
+                {imgPathsLen > 0 ? (
+                  <figure className="submission-compare-cell submission-compare-cell--student">
+                    <figcaption className="submission-compare-label">
+                      Bài làm của học sinh
+                    </figcaption>
+                    <div className="submission-compare-student-stack">
+                      {image_paths.map((imgUrl, index) => (
+                        <button
+                          key={`cmp-stu-${index}`}
+                          type="button"
+                          className="submission-result-image-zoom-trigger submission-compare-thumb"
+                          onClick={() =>
+                            setImageLightbox({
+                              src: imgUrl,
+                              alt: `Bài làm ${index + 1}`,
+                              title: `Bài làm — ảnh ${index + 1}`,
+                            })
+                          }
+                          aria-label={`Xem ảnh bài làm ${index + 1} phóng to`}
+                        >
+                          <img src={imgUrl} alt="" className="submission-compare-thumb-img" />
+                        </button>
+                      ))}
+                    </div>
+                  </figure>
+                ) : null}
+                {msImgUrl ? (
+                  <figure className="submission-compare-cell">
+                    <figcaption className="submission-compare-label">Bài giải mẫu</figcaption>
+                    <button
+                      type="button"
+                      className="submission-result-image-zoom-trigger submission-compare-thumb"
+                      onClick={() =>
+                        setImageLightbox({
+                          src: msImgUrl,
+                          alt: 'Bài giải mẫu',
+                          title: 'Bài giải mẫu',
+                        })
+                      }
+                      aria-label="Xem ảnh bài giải mẫu phóng to"
+                    >
+                      <img src={msImgUrl} alt="" className="submission-compare-thumb-img" />
+                    </button>
+                  </figure>
+                ) : null}
+              </div>
+              ) : null}
+            </>
+          ) : (
+            <div className="submission-compare-grid">
+              {qUrl ? (
+                <figure className="submission-compare-cell">
+                  <figcaption className="submission-compare-label">Đề bài</figcaption>
+                  <button
+                    type="button"
+                    className="submission-result-image-zoom-trigger submission-compare-thumb"
+                    onClick={() =>
+                      setImageLightbox({
+                        src: qUrl,
+                        alt: 'Đề bài — xem và chỉnh hướng',
+                        title: 'Đề bài',
+                      })
+                    }
+                    aria-label="Xem đề bài — phóng to"
+                  >
+                    <img src={qUrl} alt="" className="submission-compare-thumb-img" />
+                  </button>
+                </figure>
+              ) : null}
+
+              {imgPathsLen > 0 ? (
+                <figure className="submission-compare-cell submission-compare-cell--student">
+                  <figcaption className="submission-compare-label">Bài làm của học sinh</figcaption>
+                  <div className="submission-compare-student-stack">
+                    {image_paths.map((imgUrl, index) => (
+                      <button
+                        key={`cmp-stu-${index}`}
+                        type="button"
+                        className="submission-result-image-zoom-trigger submission-compare-thumb"
+                        onClick={() =>
+                          setImageLightbox({
+                            src: imgUrl,
+                            alt: `Bài làm ${index + 1}`,
+                            title: `Bài làm — ảnh ${index + 1}`,
+                          })
+                        }
+                        aria-label={`Xem ảnh bài làm ${index + 1} phóng to`}
+                      >
+                        <img src={imgUrl} alt="" className="submission-compare-thumb-img" />
+                      </button>
+                    ))}
+                  </div>
+                </figure>
+              ) : null}
+
+              {msImgUrl ? (
+                <figure className="submission-compare-cell">
+                  <figcaption className="submission-compare-label">Bài giải mẫu</figcaption>
+                  <button
+                    type="button"
+                    className="submission-result-image-zoom-trigger submission-compare-thumb"
+                    onClick={() =>
+                      setImageLightbox({
+                        src: msImgUrl,
+                        alt: 'Bài giải mẫu',
+                        title: 'Bài giải mẫu',
+                      })
+                    }
+                    aria-label="Xem ảnh bài giải mẫu phóng to"
+                  >
+                    <img src={msImgUrl} alt="" className="submission-compare-thumb-img" />
+                  </button>
+                </figure>
+              ) : null}
+            </div>
+          )}
+        </div>
+      )}
+
+      {showModelAnswerCompareSection && (
         <div className="result-section model-solution-compare-section">
           <h3>Bài giải mẫu (đối chiếu)</h3>
-          {assignmentModel.model_solution_image_url && (
+          {showStandaloneModelAnswerImage && (
             <div className="model-solution-compare-image-wrap model-solution-compare-image-wrap--lead">
               <span className="model-solution-compare-label">Hình ảnh bài mẫu</span>
               <p className="submission-zoom-hint">Bấm vào ảnh để xem phóng to.</p>
@@ -617,6 +801,7 @@ function SubmissionResult({ submission, assignmentModel = null }) {
                   setImageLightbox({
                     src: assignmentModel.model_solution_image_url,
                     alt: 'Bài giải mẫu — xem phóng to',
+                    title: 'Bài giải mẫu',
                   })
                 }
                 aria-label="Xem ảnh bài giải mẫu phóng to"
@@ -640,16 +825,16 @@ function SubmissionResult({ submission, assignmentModel = null }) {
               </div>
             </div>
           )}
-          {assignmentModel.model_solution_image_url && (
+          {assignmentModel.model_solution_image_url && showStandaloneModelAnswerImage ? (
             <p className="model-solution-compare-hint">
-              {image_paths && image_paths.length > 0
+              {!manualGradingCompare && !studentPhotosInGallery && image_paths && image_paths.length > 0
                 ? 'So sánh với hình bài làm của bạn trong mục «Hình ảnh bài làm của bạn» phía dưới trang.'
-                : 'Tham khảo cách trình bày và hướng giải.'}
-              {assignmentModel.model_solution
-                ? ' Lời giải chữ (nếu có) nằm ngay dưới đây.'
-                : ''}
+                : !manualGradingCompare && showComparisonStrip
+                  ? 'Các ảnh đề, bài làm và bài giải mẫu nằm trong ô «Đối chiếu hình ảnh» phía trên.'
+                  : 'Tham khảo cách trình bày và hướng giải.'}
+              {assignmentModel.model_solution ? ' Lời giải chữ (nếu có) nằm ngay dưới đây.' : ''}
             </p>
-          )}
+          ) : null}
           {assignmentModel.model_solution && (
             <div className="model-solution-compare-text math-content">
               <span className="model-solution-compare-label">Lời giải mẫu</span>
@@ -716,8 +901,8 @@ function SubmissionResult({ submission, assignmentModel = null }) {
         </div>
       )}
 
-      {/* Practice Sets — Flashcard / Accordion */}
-      {ai_result.practiceSets && (
+      {/* Practice Sets — ẩn khi chấm tay GV (tiết kiệm thời gian) */}
+      {!manualGradingCompare && ai_result.practiceSets && (
         <div className="practice-sets-section">
           {ai_result.practiceSets.similar &&
             ai_result.practiceSets.similar.length > 0 && (
@@ -753,12 +938,12 @@ function SubmissionResult({ submission, assignmentModel = null }) {
         </div>
       )}
 
-      {/* Student Images */}
-      {image_paths && image_paths.length > 0 && (
+      {/* Student Images — chỉ khi chưa gom trong dải đối chiếu */}
+      {image_paths && image_paths.length > 0 && !studentPhotosInGallery && (
         <div className="result-section">
           <h3>Hình ảnh bài làm của bạn</h3>
           <p className="submission-zoom-hint submission-zoom-hint--inline">
-            Bấm vào từng ảnh để xem phóng to.
+            Bấm vào từng ảnh để phóng to, xoay và thu phóng.
           </p>
           <div className="student-images">
             {image_paths.map((imageUrl, index) => (
@@ -769,7 +954,8 @@ function SubmissionResult({ submission, assignmentModel = null }) {
                   onClick={() =>
                     setImageLightbox({
                       src: imageUrl,
-                      alt: `Bài làm ${index + 1} — xem phóng to`,
+                      alt: `Bài làm ${index + 1} — xem và chỉnh hướng`,
+                      title: `Bài làm — ảnh ${index + 1}`,
                     })
                   }
                   aria-label={`Xem ảnh bài làm ${index + 1} phóng to`}
@@ -801,33 +987,13 @@ function SubmissionResult({ submission, assignmentModel = null }) {
         <small>Nộp bài lúc: {formatDate(created_at)}</small>
       </div>
 
-      {imageLightbox &&
-        createPortal(
-          <div
-            className="submission-image-lightbox"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Ảnh phóng to"
-            onClick={() => setImageLightbox(null)}
-          >
-            <button
-              type="button"
-              className="submission-image-lightbox-close"
-              onClick={() => setImageLightbox(null)}
-              aria-label="Đóng"
-            >
-              ×
-            </button>
-            <div
-              className="submission-image-lightbox-inner"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <img src={imageLightbox.src} alt={imageLightbox.alt} />
-            </div>
-            <p className="submission-image-lightbox-hint">Bấm ra ngoài ảnh hoặc phím Esc để đóng</p>
-          </div>,
-          document.body,
-        )}
+      <ImageLightbox
+        open={Boolean(imageLightbox)}
+        onClose={() => setImageLightbox(null)}
+        src={imageLightbox?.src}
+        alt={imageLightbox?.alt ?? ''}
+        title={imageLightbox?.title}
+      />
     </div>
   );
 }
