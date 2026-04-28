@@ -24,7 +24,7 @@ const emptyFormData = () => ({
   grade_level: '',
   /** YYYY-MM-DD — để trống = hiển thị cho HS ngay */
   available_from_date: '',
-  /** YYYY-MM-DD — để trống = không giới hạn; mặc định: cuối ngày mai (VN) */
+  /** YYYY-MM-DD — để trống = không giới hạn; mặc định: cuối cùng ngày (VN) */
   due_date: defaultDueDateForNewAssignment(),
   /** 2 | 3 | 5 | 10 | 0 (không giới hạn); mặc định 2 */
   max_submissions_per_student: '2',
@@ -80,7 +80,7 @@ function CreateAssignmentForm() {
     };
   }, []);
 
-  /** Đảm bảo hạn nộp không sớm hơn ngày mở bài (khi mặc định due = ngày mai). */
+  /** Đảm bảo hạn nộp không sớm hơn ngày mở bài (nếu mở bài sau hôm nay thì kéo due theo). */
   useEffect(() => {
     const a = formData.available_from_date;
     if (!a) return;
@@ -476,9 +476,9 @@ function CreateAssignmentForm() {
             min={formData.available_from_date || undefined}
           />
           <p className="form-hint">
-            Mặc định là ngày mai: học sinh được nộp đến hết 24 giờ cuối ngày đó
-            (23:59, giờ Việt Nam). Để trống: không giới hạn ngày nộp. Phải sau
-            hoặc cùng ngày mở bài (nếu có).
+            Mặc định là hôm nay: học sinh nộp đến hết ngày đó (23:59, giờ Việt
+            Nam). Để trống: không giới hạn ngày nộp. Phải sau hoặc cùng ngày mở
+            bài (nếu có).
           </p>
         </div>
 

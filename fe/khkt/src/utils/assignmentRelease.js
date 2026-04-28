@@ -6,6 +6,20 @@ export function todayStrHoChiMinh() {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
+
+/** Cuối ngày hạn nộp (23:59:59.999) theo Asia/Ho_Chi_Minh — khớp hạn nộp “hết ngày” trên form. */
+export function endOfDueDateHoChiMinh(ymd) {
+  const d = String(ymd);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return null;
+  return new Date(`${d}T23:59:59.999+07:00`);
+}
+
+function hoursLeftUntilEndOfDueDate(ymd) {
+  const end = endOfDueDateHoChiMinh(ymd);
+  if (!end) return null;
+  return Math.ceil((end.getTime() - Date.now()) / HOUR_MS);
+}
 
 /** Cộng/trừ số ngày trên lịch VN (timezone Asia/Ho_Chi_Minh). */
 export function addCalendarDaysVN(fromYmd, deltaDays) {
@@ -20,9 +34,9 @@ export function addCalendarDaysVN(fromYmd, deltaDays) {
   });
 }
 
-/** Hạn nộp mặc định khi tạo bài: cuối ngày kế tiếp (VN). */
+/** Hạn nộp mặc định khi tạo bài: cùng ngày (VN) — nộp đến hết ngày hôm nay (23:59). */
 export function defaultDueDateForNewAssignment() {
-  return addCalendarDaysVN(todayStrHoChiMinh(), 1);
+  return todayStrHoChiMinh();
 }
 
 /** Bài đã đến ngày mở cho học sinh (client, đồng bộ logic backend) */
@@ -48,27 +62,34 @@ export function formatVNDateFromYMD(ymd) {
   });
 }
 
-/** Đã quá hạn nộp (sau ngày due_date) */
+/** Đã quá hạn nộp (sau 23:59:59 ngày due_date, giờ Việt Nam). */
 export function isPastDueClient(dueDate) {
   if (!dueDate) return false;
-  return todayStrHoChiMinh() > String(dueDate);
+  const end = endOfDueDateHoChiMinh(dueDate);
+  if (!end) return todayStrHoChiMinh() > String(dueDate);
+  return Date.now() > end.getTime();
 }
 
 /**
  * Nhắc hạn nộp cho HS: { tone, label }
  * tone: 'upcoming' | 'today' | 'overdue'
+ * Thời gian còn lại tính theo giờ đến hết ngày hạn (23:59:59, giờ VN).
  */
 export function deadlineReminderClient(dueDate) {
   if (!dueDate) return null;
-  const today = todayStrHoChiMinh();
   const d = String(dueDate);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return null;
-  if (today > d) return { tone: 'overdue', label: 'Quá hạn nộp' };
-  if (today === d) return { tone: 'today', label: 'Hết hạn hôm nay' };
-  const [y1, m1, day1] = today.split('-').map(Number);
-  const [y2, m2, day2] = d.split('-').map(Number);
-  const t0 = new Date(y1, m1 - 1, day1);
-  const t1 = new Date(y2, m2 - 1, day2);
-  const diff = Math.round((t1 - t0) / 86400000);
-  return { tone: 'upcoming', days: diff, label: `Còn ${diff} ngày` };
+
+  const hoursLeft = hoursLeftUntilEndOfDueDate(d);
+  if (hoursLeft === null) return null;
+  if (hoursLeft <= 0) {
+    return { tone: 'overdue', label: 'Quá hạn nộp' };
+  }
+
+  const today = todayStrHoChiMinh();
+  const label = `Còn ${hoursLeft} giờ`;
+  if (today === d) {
+    return { tone: 'today', hours: hoursLeft, label };
+  }
+  return { tone: 'upcoming', hours: hoursLeft, label };
 }

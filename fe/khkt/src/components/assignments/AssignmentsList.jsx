@@ -1245,13 +1245,13 @@ function AssignmentCard({
             if (!r) return null;
             const cls =
               r.tone === 'overdue'
-                ? 'border-rose-400/45 bg-rose-600/25 text-rose-100 dark:border-rose-500/55 dark:bg-rose-950/80 dark:text-rose-100'
+                ? 'border-rose-300/60 bg-rose-100/80 text-rose-900 dark:border-rose-500/55 dark:bg-rose-950/80 dark:text-rose-100'
                 : r.tone === 'today'
-                  ? 'border-orange-400/50 bg-orange-500/30 text-orange-50 dark:border-orange-500/55 dark:bg-orange-950/75 dark:text-orange-100'
-                  : 'border-emerald-400/40 bg-emerald-600/20 text-emerald-100 dark:border-emerald-500/50 dark:bg-emerald-950/75 dark:text-emerald-100';
+                  ? 'border-orange-300/60 bg-orange-100/80 text-orange-900 dark:border-orange-500/55 dark:bg-orange-950/75 dark:text-orange-100'
+                  : 'border-emerald-300/60 bg-emerald-100/80 text-emerald-900 dark:border-emerald-400/40 dark:bg-emerald-950/55 dark:text-emerald-100';
             return (
               <span
-                className={`rounded-xl border px-3 py-2 text-xs font-medium ${cls}`}
+                className={`rounded-xl border px-3 py-2 text-xs font-semibold ${cls}`}
               >
                 {r.label}
               </span>
