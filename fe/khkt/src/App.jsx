@@ -16,6 +16,8 @@ import TeacherClassCodesPage from './components/teacher/TeacherClassCodesPage'
 import TeacherClassesHomePage from './components/teacher/TeacherClassesHomePage'
 import TeacherClassAssignmentsPage from './components/teacher/TeacherClassAssignmentsPage'
 import TeacherClassStudentsPage from './components/teacher/TeacherClassStudentsPage'
+import TeacherClassActivityPage from './components/teacher/TeacherClassActivityPage'
+import TeacherClassActivityDayPage from './components/teacher/TeacherClassActivityDayPage'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import { OceanPageLoading } from './components/layout/OceanShell'
 import StudentStickerDock from './components/submissions/StudentStickerDock'
@@ -142,6 +144,22 @@ function AppRoutes() {
         element={
           <ProtectedRoute requiredRole="teacher">
             <TeacherClassStudentsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/teacher/classes/:className/activity/day/:dayYmd"
+        element={
+          <ProtectedRoute requiredRole="teacher">
+            <TeacherClassActivityDayPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/teacher/classes/:className/activity"
+        element={
+          <ProtectedRoute requiredRole="teacher">
+            <TeacherClassActivityPage />
           </ProtectedRoute>
         }
       />

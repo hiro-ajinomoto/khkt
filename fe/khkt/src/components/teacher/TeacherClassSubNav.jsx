@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { encodeClassNameForPath } from '../../api/teacherWorkspace';
 
 /**
- * @param {{ className: string, active: 'assignments' | 'students' }} props
+ * @param {{ className: string, active: 'assignments' | 'students' | 'activity' }} props
  */
 export default function TeacherClassSubNav({ className, active }) {
   const enc = encodeClassNameForPath(className);
@@ -28,6 +28,12 @@ export default function TeacherClassSubNav({ className, active }) {
       </Link>
       <Link to={`${base}/students`} className={tabClass(active === 'students')}>
         Học sinh
+      </Link>
+      <Link
+        to={`${base}/activity`}
+        className={tabClass(active === 'activity')}
+      >
+        Theo ngày
       </Link>
       <Link
         to="/teacher/classes"

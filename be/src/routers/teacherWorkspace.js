@@ -4,9 +4,15 @@ import { getDB } from '../db.js';
 import { authenticate, requireTeacher } from '../middleware/auth.js';
 import { listClassNamesForTeacher } from '../classTeacherAssignments.js';
 import { listClassNames, validateClassNameFormat } from '../schoolClasses.js';
+import {
+  buildClassSubmissionActivityByDay,
+  buildClassSubmissionActivityDayDetail,
+  defaultVnRangeYmd,
+} from '../utils/teacherSubmissionActivity.js';
+
+const YMD_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 const router = express.Router();
-
 router.use(authenticate, requireTeacher);
 
 async function classNamesForViewer(db, user) {
@@ -198,6 +204,82 @@ router.get('/classes/:className/assignments', async (req, res) => {
     }
     console.error('GET /teacher/classes/.../assignments:', error);
     res.status(500).json({ detail: 'Không tải được bài tập của lớp.' });
+  }
+});
+
+/**
+ * GET /teacher/classes/:className/submission-activity?from=YYYY-MM-DD&to=YYYY-MM-DD
+ * Tổng quan nộp bài của lớp theo ngày (giờ VN): số lượt nộp, HS có nộp, điểm TB (ưu tiên điểm GV nếu có).
+ * Mặc định: 14 ngày gần nhất (bao gồm hôm nay).
+ */
+router.get('/classes/:className/submission-activity', async (req, res) => {
+  try {
+    const db = getDB();
+    const className = await assertClassInScope(db, req.user, req.params.className);
+
+    let fromYmd = typeof req.query.from === 'string' ? req.query.from.trim() : '';
+    let toYmd = typeof req.query.to === 'string' ? req.query.to.trim() : '';
+    if (!fromYmd || !toYmd) {
+      const d = defaultVnRangeYmd(14);
+      fromYmd = d.fromYmd;
+      toYmd = d.toYmd;
+    }
+    if (!YMD_RE.test(fromYmd) || !YMD_RE.test(toYmd)) {
+      return res.status(400).json({ detail: 'Tham số from/to phải là YYYY-MM-DD.' });
+    }
+    if (fromYmd > toYmd) {
+      return res.status(400).json({ detail: 'from không được sau to.' });
+    }
+
+    const daySpan =
+      Math.round(
+        (new Date(`${toYmd}T12:00:00+07:00`) - new Date(`${fromYmd}T12:00:00+07:00`)) /
+          (24 * 60 * 60 * 1000),
+      ) + 1;
+    if (daySpan > 120) {
+      return res.status(400).json({ detail: 'Khoảng thời gian tối đa 120 ngày.' });
+    }
+
+    const payload = await buildClassSubmissionActivityByDay(db, className, fromYmd, toYmd);
+
+    /** Gợi ý hiển thị: mỗi lượt nộp = một lần "làm bài" (bài tập có thể nhiều câu trên một ảnh). */
+    payload.label = {
+      submission_unit:
+        'Mỗi lượt nộp tính 1 (có thể gồm nhiều ảnh/câu trong cùng bài tập).',
+      score_note: 'Điểm TB chỉ trên các lượt đã có điểm (ưu tiên điểm giáo viên nếu có).',
+    };
+
+    res.json(payload);
+  } catch (error) {
+    if (error.status === 400 || error.status === 403) {
+      return res.status(error.status).json({ detail: error.message });
+    }
+    console.error('GET /teacher/classes/.../submission-activity:', error);
+    res.status(500).json({ detail: 'Không tải được tổng quan hoạt động.' });
+  }
+});
+
+/**
+ * GET /teacher/classes/:className/submission-activity/day/:dayYmd (YYYY-MM-DD)
+ * Chi tiết một ngày: từng học sinh có nộp — điểm TB trong ngày, lượt nộp, bài có nộp / tổng bài lớp.
+ */
+router.get('/classes/:className/submission-activity/day/:dayYmd', async (req, res) => {
+  try {
+    const db = getDB();
+    const className = await assertClassInScope(db, req.user, req.params.className);
+    const dayYmd =
+      typeof req.params.dayYmd === 'string' ? req.params.dayYmd.trim() : '';
+    if (!YMD_RE.test(dayYmd)) {
+      return res.status(400).json({ detail: 'Đường dẫn ngày phải là YYYY-MM-DD.' });
+    }
+    const payload = await buildClassSubmissionActivityDayDetail(db, className, dayYmd);
+    res.json(payload);
+  } catch (error) {
+    if (error.status === 400 || error.status === 403) {
+      return res.status(error.status).json({ detail: error.message });
+    }
+    console.error('GET /teacher/classes/.../submission-activity/day/...:', error);
+    res.status(500).json({ detail: 'Không tải được chi tiết ngày.' });
   }
 });
 
