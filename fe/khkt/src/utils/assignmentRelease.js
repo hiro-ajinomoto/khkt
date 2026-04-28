@@ -5,6 +5,26 @@ export function todayStrHoChiMinh() {
   });
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Cộng/trừ số ngày trên lịch VN (timezone Asia/Ho_Chi_Minh). */
+export function addCalendarDaysVN(fromYmd, deltaDays) {
+  const ms =
+    new Date(`${fromYmd}T12:00:00+07:00`).getTime() +
+    deltaDays * DAY_MS;
+  return new Date(ms).toLocaleDateString('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+}
+
+/** Hạn nộp mặc định khi tạo bài: cuối ngày kế tiếp (VN). */
+export function defaultDueDateForNewAssignment() {
+  return addCalendarDaysVN(todayStrHoChiMinh(), 1);
+}
+
 /** Bài đã đến ngày mở cho học sinh (client, đồng bộ logic backend) */
 export function isAssignmentReleasedClient(availableFromDate) {
   if (

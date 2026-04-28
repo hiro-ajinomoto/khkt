@@ -4,6 +4,9 @@ import { createAssignment } from '../../api/assignments';
 import { fetchSchoolClasses, groupClassesByGrade } from '../../api/classes';
 import OceanShell from '../layout/OceanShell';
 import './CreateAssignmentForm.css';
+import {
+  defaultDueDateForNewAssignment,
+} from '../../utils/assignmentRelease';
 
 const GRADE_LEVELS = [
   'Lớp 6',
@@ -21,8 +24,8 @@ const emptyFormData = () => ({
   grade_level: '',
   /** YYYY-MM-DD — để trống = hiển thị cho HS ngay */
   available_from_date: '',
-  /** YYYY-MM-DD — để trống = không giới hạn hạn nộp */
-  due_date: '',
+  /** YYYY-MM-DD — để trống = không giới hạn; mặc định: cuối ngày mai (VN) */
+  due_date: defaultDueDateForNewAssignment(),
   /** 2 | 3 | 5 | 10 | 0 (không giới hạn); mặc định 2 */
   max_submissions_per_student: '2',
   question_image: null,
@@ -74,6 +77,17 @@ function CreateAssignmentForm() {
       cancelled = true;
     };
   }, []);
+
+  /** Đảm bảo hạn nộp không sớm hơn ngày mở bài (khi mặc định due = ngày mai). */
+  useEffect(() => {
+    const a = formData.available_from_date;
+    if (!a) return;
+    setFormData((prev) => {
+      const d = prev.due_date;
+      if (!d || a <= d) return prev;
+      return { ...prev, due_date: a };
+    });
+  }, [formData.available_from_date]);
 
   const handleClassToggle = (className) => {
     setSelectedClasses((prev) =>
@@ -417,9 +431,9 @@ function CreateAssignmentForm() {
             min={formData.available_from_date || undefined}
           />
           <p className="form-hint">
-            Để trống: không giới hạn ngày nộp. Chọn ngày: học sinh chỉ được nộp
-            đến hết ngày đó (giờ Việt Nam). Phải sau hoặc cùng ngày mở bài (nếu
-            có).
+            Mặc định là ngày mai: học sinh được nộp đến hết 24 giờ cuối ngày đó
+            (23:59, giờ Việt Nam). Để trống: không giới hạn ngày nộp. Phải sau
+            hoặc cùng ngày mở bài (nếu có).
           </p>
         </div>
 
