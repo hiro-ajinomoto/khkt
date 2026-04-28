@@ -84,11 +84,103 @@ const upload = multer({
   },
 });
 
+/** Đồng thời tối đa 3 ảnh đáp án mẫu */
+const MAX_MODEL_SOLUTION_IMAGES = 3;
+
 /**
- * Normalize S3 URL - if it's a presigned URL, extract the base S3 URL
- * @param {string} url - S3 URL (presigned or base)
- * @returns {string} Base S3 URL
+ * URLs đáp án mẫu lưu trong DB (ưu tiên mảng, tương thích bản cũ một URL).
+ * @param {object} item
+ * @returns {string[]}
  */
+function storedModelSolutionUrlsFromDoc(item) {
+  if (!item) return [];
+  const arr = item.model_solution_image_urls;
+  if (Array.isArray(arr) && arr.length > 0) {
+    return arr
+      .map((u) => String(u).trim())
+      .filter(Boolean)
+      .slice(0, MAX_MODEL_SOLUTION_IMAGES);
+  }
+  const one = item.model_solution_image_url;
+  return one && String(one).trim() ? [String(one).trim()] : [];
+}
+
+/**
+ * @param {import("express").Request["body"]} body
+ * @returns {string[] | null} null = field không gửi
+ */
+function parseModelSolutionImageUrlsFromBody(body) {
+  if (body.model_solution_image_urls === undefined) {
+    return null;
+  }
+  const raw = body.model_solution_image_urls;
+  if (raw === null || raw === "") {
+    return [];
+  }
+  if (Array.isArray(raw)) {
+    return raw
+      .map((u) => String(u).trim())
+      .filter(Boolean)
+      .slice(0, MAX_MODEL_SOLUTION_IMAGES);
+  }
+  if (typeof raw === "string") {
+    const s = raw.trim();
+    if (!s) return [];
+    try {
+      const parsed = JSON.parse(s);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .map((u) => String(u).trim())
+          .filter(Boolean)
+          .slice(0, MAX_MODEL_SOLUTION_IMAGES);
+      }
+    } catch {
+      return [s];
+    }
+  }
+  return null;
+}
+
+async function uploadModelSolutionFilesToS3(files) {
+  const urls = [];
+  for (const file of files) {
+    const ext = path.extname(file.originalname) || ".png";
+    const s3Key = `assignments/solution/${uuidv4()}${ext}`;
+    const contentType = file.mimetype || "image/png";
+    try {
+      const s3Url = await uploadFileToS3(file.path, s3Key, contentType);
+      urls.push(s3Url);
+      fs.unlinkSync(file.path);
+    } catch (error) {
+      console.error("Failed to upload solution image to S3:", error);
+      urls.push(file.path);
+    }
+  }
+  return urls;
+}
+
+/** Xóa mọi ảnh đáp án mẫu đang lưu (S3) trước khi thay bằng bộ mới */
+async function deleteStoredModelSolutionImagesFromS3(assignment) {
+  const urls = storedModelSolutionUrlsFromDoc(assignment);
+  const seen = new Set();
+  for (const raw of urls) {
+    const normalizedUrl = normalizeS3Url(raw) || raw;
+    const key = extractS3Key(normalizedUrl);
+    if (key && !seen.has(key)) {
+      seen.add(key);
+      try {
+        await deleteFileFromS3(key);
+        console.log(`Deleted old solution image from S3: ${key}`);
+      } catch (error) {
+        console.error(
+          `Failed to delete old solution image from S3: ${key}`,
+          error,
+        );
+      }
+    }
+  }
+}
+
 function normalizeS3Url(url) {
   if (!url) return null;
 
@@ -256,12 +348,24 @@ async function mapAssignmentDocToApi(item, creatorMap, listCtx = null, opts = {}
   // request S3 khi render danh sách dài. Detail/create/update vẫn presign
   // bình thường.
   const listMode = Boolean(opts.listMode);
-  const [questionImageUrl, modelSolutionImageUrl] = await Promise.all([
-    convertToAccessibleUrl(item.question_image_url),
-    listMode
-      ? Promise.resolve(item.model_solution_image_url || null)
-      : convertToAccessibleUrl(item.model_solution_image_url),
-  ]);
+  const rawModelUrls = storedModelSolutionUrlsFromDoc(item);
+  const questionImageUrl = await convertToAccessibleUrl(item.question_image_url);
+
+  let modelSolutionImageUrls = [];
+  let modelSolutionImageUrl = null;
+  if (listMode) {
+    modelSolutionImageUrls = rawModelUrls.slice();
+    modelSolutionImageUrl = rawModelUrls[0] || null;
+  } else if (rawModelUrls.length === 0) {
+    modelSolutionImageUrls = [];
+    modelSolutionImageUrl = null;
+  } else {
+    modelSolutionImageUrls = await Promise.all(
+      rawModelUrls.map((u) => convertToAccessibleUrl(u)),
+    );
+    modelSolutionImageUrl = modelSolutionImageUrls[0] || null;
+  }
+
   const base = {
     id: item._id.toString(),
     title: item.title,
@@ -271,6 +375,7 @@ async function mapAssignmentDocToApi(item, creatorMap, listCtx = null, opts = {}
     model_solution: item.model_solution,
     question_image_url: questionImageUrl,
     model_solution_image_url: modelSolutionImageUrl,
+    model_solution_image_urls: modelSolutionImageUrls,
     created_at: item.created_at || null,
     updated_at: item.updated_at || null,
     available_from_date: item.available_from_date ?? null,
@@ -862,7 +967,7 @@ router.post(
       const questionImageFile = files.find(
         (f) => f.fieldname === "question_image",
       );
-      const solutionImageFile = files.find(
+      const solutionImageFiles = files.filter(
         (f) => f.fieldname === "model_solution_image",
       );
 
@@ -873,9 +978,34 @@ router.post(
         });
       }
 
+      if (solutionImageFiles.length > MAX_MODEL_SOLUTION_IMAGES) {
+        return res.status(400).json({
+          detail: `Tối đa ${MAX_MODEL_SOLUTION_IMAGES} ảnh bài giải mẫu.`,
+        });
+      }
+
       // Validation - images are required
       const hasQuestionImage = questionImageFile || question_image_url;
-      const hasSolutionImage = solutionImageFile || model_solution_image_url;
+
+      let finalSolutionUrls = [];
+      if (solutionImageFiles.length > 0) {
+        finalSolutionUrls = await uploadModelSolutionFilesToS3(solutionImageFiles);
+      } else {
+        const arrUrls = parseModelSolutionImageUrlsFromBody(req.body);
+        if (arrUrls !== null && arrUrls.length > 0) {
+          finalSolutionUrls = arrUrls.map((u) => normalizeS3Url(u) || u);
+        } else if (
+          model_solution_image_url &&
+          String(model_solution_image_url).trim()
+        ) {
+          finalSolutionUrls = [
+            normalizeS3Url(model_solution_image_url) ||
+              model_solution_image_url,
+          ];
+        }
+      }
+
+      const hasSolutionImage = finalSolutionUrls.length > 0;
 
       if (!hasQuestionImage) {
         return res.status(400).json({
@@ -887,14 +1017,12 @@ router.post(
       if (!hasSolutionImage) {
         return res.status(400).json({
           detail:
-            "Missing required field: model_solution_image (file upload or model_solution_image_url) is required",
+            "Missing required field: model_solution_image (tối đa 3 file) hoặc model_solution_image_url / model_solution_image_urls là bắt buộc",
         });
       }
 
-      // Determine image URLs - upload to S3 if files provided
-      // Priority: uploaded files (upload to S3) > URLs from body
+      // Determine question image URL - upload to S3 if file provided
       let finalQuestionImageUrl = null;
-      let finalSolutionImageUrl = null;
 
       if (questionImageFile) {
         // Upload to S3
@@ -919,29 +1047,6 @@ router.post(
         finalQuestionImageUrl = question_image_url;
       }
 
-      if (solutionImageFile) {
-        // Upload to S3
-        const file = solutionImageFile;
-        const ext = path.extname(file.originalname) || ".png";
-        const s3Key = `assignments/solution/${uuidv4()}${ext}`;
-        const contentType = file.mimetype || "image/png";
-
-        try {
-          const s3Url = await uploadFileToS3(file.path, s3Key, contentType);
-          finalSolutionImageUrl = s3Url;
-
-          // Clean up local file after upload
-          fs.unlinkSync(file.path);
-        } catch (error) {
-          console.error("Failed to upload solution image to S3:", error);
-          // Fallback to local path if S3 upload fails
-          finalSolutionImageUrl = file.path;
-        }
-      } else if (model_solution_image_url) {
-        // Use provided URL
-        finalSolutionImageUrl = model_solution_image_url;
-      }
-
       const db = getDB();
       const assignment = {
         title,
@@ -951,7 +1056,8 @@ router.post(
         question: null, // No longer required, can be extracted from image
         model_solution: null, // No longer required, can be extracted from image
         question_image_url: finalQuestionImageUrl,
-        model_solution_image_url: finalSolutionImageUrl,
+        model_solution_image_urls: finalSolutionUrls,
+        model_solution_image_url: finalSolutionUrls[0] ?? null,
         created_at: new Date(),
         available_from_date: parsedDate.value,
         due_date: parsedDue.value,
@@ -1044,7 +1150,7 @@ router.patch(
       const questionImageFile = files.find(
         (f) => f.fieldname === "question_image",
       );
-      const solutionImageFile = files.find(
+      const solutionImageFiles = files.filter(
         (f) => f.fieldname === "model_solution_image",
       );
 
@@ -1194,67 +1300,37 @@ router.patch(
         }
       }
 
-      // Handle solution image update
-      if (solutionImageFile) {
-        // Upload new image to S3
-        const file = solutionImageFile;
-        const ext = path.extname(file.originalname) || ".png";
-        const s3Key = `assignments/solution/${uuidv4()}${ext}`;
-        const contentType = file.mimetype || "image/png";
+      // Handle solution image(s) update (tối đa 3 ảnh; thay thế toàn bộ nếu tải file mới)
+      if (solutionImageFiles.length > MAX_MODEL_SOLUTION_IMAGES) {
+        return res.status(400).json({
+          detail: `Tối đa ${MAX_MODEL_SOLUTION_IMAGES} ảnh bài giải mẫu.`,
+        });
+      }
 
-        try {
-          const s3Url = await uploadFileToS3(file.path, s3Key, contentType);
-          updateData.model_solution_image_url = s3Url;
-
-          // Clean up local file after upload
-          fs.unlinkSync(file.path);
-
-          // Delete old image from S3 if it exists
-          if (assignment.model_solution_image_url) {
-            const oldS3Key = extractS3Key(assignment.model_solution_image_url);
-            if (oldS3Key) {
-              try {
-                await deleteFileFromS3(oldS3Key);
-                console.log(`Deleted old solution image from S3: ${oldS3Key}`);
-              } catch (error) {
-                console.error(
-                  `Failed to delete old solution image from S3: ${oldS3Key}`,
-                  error,
-                );
-                // Continue even if deletion fails
-              }
-            }
-          }
-        } catch (error) {
-          console.error("Failed to upload solution image to S3:", error);
-          // Fallback to local path if S3 upload fails
-          updateData.model_solution_image_url = file.path;
+      if (solutionImageFiles.length > 0) {
+        await deleteStoredModelSolutionImagesFromS3(assignment);
+        const urls = await uploadModelSolutionFilesToS3(solutionImageFiles);
+        updateData.model_solution_image_urls = urls;
+        updateData.model_solution_image_url = urls[0] ?? null;
+      } else if (req.body.model_solution_image_urls !== undefined) {
+        const arr = parseModelSolutionImageUrlsFromBody(req.body);
+        if (arr !== null) {
+          await deleteStoredModelSolutionImagesFromS3(assignment);
+          const normalizedList = arr
+            .map((u) => normalizeS3Url(u) || u)
+            .filter(Boolean)
+            .slice(0, MAX_MODEL_SOLUTION_IMAGES);
+          updateData.model_solution_image_urls = normalizedList;
+          updateData.model_solution_image_url = normalizedList[0] ?? null;
         }
       } else if (model_solution_image_url !== undefined) {
-        // Normalize URL - if it's a presigned URL, extract base S3 URL
         const normalizedUrl =
           normalizeS3Url(model_solution_image_url) || model_solution_image_url;
+        await deleteStoredModelSolutionImagesFromS3(assignment);
         updateData.model_solution_image_url = normalizedUrl || null;
-
-        // Delete old image from S3 if it exists and new URL is different
-        const oldNormalizedUrl =
-          normalizeS3Url(assignment.model_solution_image_url) ||
-          assignment.model_solution_image_url;
-        if (oldNormalizedUrl && oldNormalizedUrl !== normalizedUrl) {
-          const oldS3Key = extractS3Key(oldNormalizedUrl);
-          if (oldS3Key) {
-            try {
-              await deleteFileFromS3(oldS3Key);
-              console.log(`Deleted old solution image from S3: ${oldS3Key}`);
-            } catch (error) {
-              console.error(
-                `Failed to delete old solution image from S3: ${oldS3Key}`,
-                error,
-              );
-              // Continue even if deletion fails
-            }
-          }
-        }
+        updateData.model_solution_image_urls = normalizedUrl
+          ? [normalizedUrl]
+          : [];
       }
 
       const nextAvailable =
@@ -1371,10 +1447,11 @@ router.delete("/", authenticate, requireTeacher, async (req, res) => {
           imagesToDelete.push(s3Key);
         }
       }
-      if (assignment.model_solution_image_url) {
-        const s3Key = extractS3Key(assignment.model_solution_image_url);
-        if (s3Key) {
-          imagesToDelete.push(s3Key);
+      for (const raw of storedModelSolutionUrlsFromDoc(assignment)) {
+        const normalizedUrl = normalizeS3Url(raw) || raw;
+        const key = extractS3Key(normalizedUrl);
+        if (key) {
+          imagesToDelete.push(key);
         }
       }
     }
@@ -1456,7 +1533,6 @@ router.delete("/:id", authenticate, requireTeacher, async (req, res) => {
     const imagesToDelete = [];
 
     if (assignment.question_image_url) {
-      // Normalize URL before extracting key (handle presigned URLs)
       const normalizedUrl =
         normalizeS3Url(assignment.question_image_url) ||
         assignment.question_image_url;
@@ -1466,11 +1542,8 @@ router.delete("/:id", authenticate, requireTeacher, async (req, res) => {
       }
     }
 
-    if (assignment.model_solution_image_url) {
-      // Normalize URL before extracting key (handle presigned URLs)
-      const normalizedUrl =
-        normalizeS3Url(assignment.model_solution_image_url) ||
-        assignment.model_solution_image_url;
+    for (const raw of storedModelSolutionUrlsFromDoc(assignment)) {
+      const normalizedUrl = normalizeS3Url(raw) || raw;
       const s3Key = extractS3Key(normalizedUrl);
       if (s3Key) {
         imagesToDelete.push(s3Key);

@@ -61,6 +61,19 @@ const upload = multer({
   },
 });
 
+/** @param {object} assignment */
+function assignmentStoredSolutionImageUrls(assignment) {
+  if (
+    Array.isArray(assignment.model_solution_image_urls) &&
+    assignment.model_solution_image_urls.length > 0
+  ) {
+    return assignment.model_solution_image_urls.filter(Boolean);
+  }
+  return assignment.model_solution_image_url
+    ? [assignment.model_solution_image_url]
+    : [];
+}
+
 /**
  * Convert local file path to accessible URL
  * @param {string} filePath - Local file path
@@ -868,7 +881,8 @@ router.post("/", authenticate, upload.array("files"), async (req, res) => {
     // 2. question AND model_solution (text only)
     // 3. Or combination of both
     const hasQuestionImage = !!assignment.question_image_url;
-    const hasSolutionImage = !!assignment.model_solution_image_url;
+    const hasSolutionImage =
+      assignmentStoredSolutionImageUrls(assignment).length > 0;
     const hasQuestionText = !!assignment.question;
     const hasSolutionText = !!assignment.model_solution;
 
@@ -932,9 +946,7 @@ router.post("/", authenticate, upload.array("files"), async (req, res) => {
       const questionImageUrls = assignment.question_image_url
         ? [assignment.question_image_url].filter(Boolean)
         : [];
-      const solutionImageUrls = assignment.model_solution_image_url
-        ? [assignment.model_solution_image_url].filter(Boolean)
-        : [];
+      const solutionImageUrls = assignmentStoredSolutionImageUrls(assignment);
 
       aiResult = await gradeSubmissionWithAI(
         imageUrls, // Use S3 URLs instead of local paths

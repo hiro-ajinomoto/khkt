@@ -198,6 +198,16 @@ export default function TeacherSubmissionReview() {
                     question_image_url: assignment.question_image_url,
                     model_solution: assignment.model_solution,
                     model_solution_image_url: assignment.model_solution_image_url,
+                    ...(Array.isArray(assignment.model_solution_image_urls) &&
+                    assignment.model_solution_image_urls.length > 0
+                      ? { model_solution_image_urls: assignment.model_solution_image_urls }
+                      : assignment.model_solution_image_url
+                        ? {
+                            model_solution_image_urls: [
+                              assignment.model_solution_image_url,
+                            ],
+                          }
+                        : {}),
                   }
                 : null
             }

@@ -29,7 +29,8 @@ const emptyFormData = () => ({
   /** 2 | 3 | 5 | 10 | 0 (không giới hạn); mặc định 2 */
   max_submissions_per_student: '2',
   question_image: null,
-  model_solution_image: null,
+  /** Tối đa 3 ảnh — cùng field multer model_solution_image */
+  model_solution_images: [],
   question_image_url: '',
   model_solution_image_url: '',
 });
@@ -40,7 +41,8 @@ function CreateAssignmentForm() {
 
   const [previewUrls, setPreviewUrls] = useState({
     question: null,
-    solution: null,
+    /** Blob URLs của tối đa 3 ảnh bài mẫu */
+    solutions: [],
   });
 
   /** Tăng sau mỗi lần tạo xong để reset input file (trình duyệt không bind lại tên file cũ). */
@@ -122,9 +124,40 @@ function CreateAssignmentForm() {
     setSuccessMessage(null);
   };
 
+  const revokeSolutionPreviews = () => {
+    (previewUrls.solutions || []).forEach((u) => {
+      if (u && u.startsWith?.('blob:')) URL.revokeObjectURL(u);
+    });
+  };
+
   const handleFileChange = (e) => {
     const { name, files } = e.target;
-    const file = files[0];
+
+    if (name === 'model_solution_image') {
+      const picked = Array.from(files || [])
+        .filter((f) => f.type.startsWith('image/'))
+        .slice(0, 3);
+      if (!picked.length) return;
+      setSuccessMessage(null);
+      setFormData((prev) => ({
+        ...prev,
+        model_solution_images: picked,
+        model_solution_image_url: '',
+      }));
+      setPreviewUrls((prev) => {
+        (prev.solutions || []).forEach((u) => {
+          if (u && u.startsWith?.('blob:')) URL.revokeObjectURL(u);
+        });
+        return {
+          ...prev,
+          solutions: picked.map((f) => URL.createObjectURL(f)),
+        };
+      });
+      setError(null);
+      return;
+    }
+
+    const file = files?.[0];
 
     if (file) {
       setSuccessMessage(null);
@@ -138,8 +171,6 @@ function CreateAssignmentForm() {
       const previewUrl = URL.createObjectURL(file);
       if (name === 'question_image') {
         setPreviewUrls((prev) => ({ ...prev, question: previewUrl }));
-      } else if (name === 'model_solution_image') {
-        setPreviewUrls((prev) => ({ ...prev, solution: previewUrl }));
       }
     }
   };
@@ -147,11 +178,26 @@ function CreateAssignmentForm() {
   const handleUrlChange = (e) => {
     const { name, value } = e.target;
     setSuccessMessage(null);
+    if (name === 'model_solution_image_url') {
+      revokeSolutionPreviews();
+      setPreviewUrls((prev) => ({ ...prev, solutions: [] }));
+    }
     setFormData((prev) => ({
       ...prev,
       [name]: value,
-      [name.replace('_url', '')]: null, // Clear file if URL is provided
+      ...(name === 'question_image_url' ? { question_image: null } : {}),
+      ...(name === 'model_solution_image_url' ? { model_solution_images: [] } : {}),
     }));
+    if (name === 'question_image_url') {
+      setPreviewUrls((prev) => ({ ...prev, question: value || null }));
+    }
+    if (name === 'model_solution_image_url') {
+      const v = String(value || '').trim();
+      setPreviewUrls((prev) => ({
+        ...prev,
+        solutions: v ? [v] : [],
+      }));
+    }
     setError(null);
   };
 
@@ -169,7 +215,8 @@ function CreateAssignmentForm() {
     const hasQuestionImage =
       formData.question_image || formData.question_image_url;
     const hasSolutionImage =
-      formData.model_solution_image || formData.model_solution_image_url;
+      (formData.model_solution_images && formData.model_solution_images.length > 0) ||
+      !!formData.model_solution_image_url?.trim();
 
     if (!hasQuestionImage) {
       setError('Vui lòng chọn hình ảnh câu hỏi hoặc nhập URL');
@@ -216,26 +263,25 @@ function CreateAssignmentForm() {
         formDataToSend.append('question_image_url', formData.question_image_url);
       }
 
-      if (formData.model_solution_image) {
-        formDataToSend.append(
-          'model_solution_image',
-          formData.model_solution_image
+      if (formData.model_solution_images && formData.model_solution_images.length > 0) {
+        formData.model_solution_images.forEach((file) =>
+          formDataToSend.append('model_solution_image', file),
         );
-      } else if (formData.model_solution_image_url) {
+      } else if (formData.model_solution_image_url?.trim()) {
         formDataToSend.append(
           'model_solution_image_url',
-          formData.model_solution_image_url
+          formData.model_solution_image_url,
         );
       }
 
       await createAssignment(formDataToSend);
 
       if (previewUrls.question) URL.revokeObjectURL(previewUrls.question);
-      if (previewUrls.solution) URL.revokeObjectURL(previewUrls.solution);
+      revokeSolutionPreviews();
 
       setFormData(emptyFormData());
       setSelectedClasses([]);
-      setPreviewUrls({ question: null, solution: null });
+      setPreviewUrls({ question: null, solutions: [] });
       setFileInputKey((k) => k + 1);
       setSuccessMessage(
         'Đã tạo bài tập thành công. Bạn có thể nhập bài tiếp theo bên dưới.'
@@ -249,9 +295,8 @@ function CreateAssignmentForm() {
   };
 
   const handleCancel = () => {
-    // Cleanup preview URLs
     if (previewUrls.question) URL.revokeObjectURL(previewUrls.question);
-    if (previewUrls.solution) URL.revokeObjectURL(previewUrls.solution);
+    revokeSolutionPreviews();
 
     navigate('/assignments', { replace: true });
   };
@@ -507,11 +552,15 @@ function CreateAssignmentForm() {
           )}
         </div>
 
-        {/* Solution Image */}
+        {/* Solution images — tối đa 3 */}
         <div className="form-group">
-          <label htmlFor="model_solution_image">
+          <label htmlFor="solution_image_file">
             Hình ảnh bài giải mẫu <span className="required">*</span>
           </label>
+          <p className="form-hint">
+            Có thể chọn <strong>2 hoặc 3 ảnh</strong> (ví dụ từng bước hoặc trang
+            tiếp theo). Tối đa 3 ảnh.
+          </p>
           <div className="image-input-section">
             <div className="file-upload-section">
               <label
@@ -519,9 +568,9 @@ function CreateAssignmentForm() {
                 className="file-upload-label"
               >
                 <span className="file-upload-text">
-                  {formData.model_solution_image
-                    ? formData.model_solution_image.name
-                    : 'Chọn file hình ảnh'}
+                  {formData.model_solution_images?.length
+                    ? `${formData.model_solution_images.length} ảnh đã chọn`
+                    : 'Chọn một hoặc nhiều ảnh'}
                 </span>
                 <input
                   key={`solution-${fileInputKey}`}
@@ -529,8 +578,9 @@ function CreateAssignmentForm() {
                   type="file"
                   name="model_solution_image"
                   accept="image/*"
+                  multiple
                   onChange={handleFileChange}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !!formData.model_solution_image_url?.trim()}
                   className="file-input"
                 />
               </label>
@@ -541,18 +591,24 @@ function CreateAssignmentForm() {
               name="model_solution_image_url"
               value={formData.model_solution_image_url}
               onChange={handleUrlChange}
-              placeholder="Nhập URL hình ảnh bài giải mẫu"
-              disabled={isSubmitting || !!formData.model_solution_image}
+              placeholder="Hoặc một URL ảnh đáp án mẫu"
+              disabled={
+                isSubmitting ||
+                !!(formData.model_solution_images && formData.model_solution_images.length)
+              }
               className="url-input"
             />
           </div>
-          {previewUrls.solution && (
-            <div className="image-preview">
-              <img
-                src={previewUrls.solution}
-                alt="Preview solution"
-                className="preview-image"
-              />
+          {previewUrls.solutions && previewUrls.solutions.length > 0 && (
+            <div className="image-preview image-preview--multi">
+              {previewUrls.solutions.map((src, idx) => (
+                <img
+                  key={`${src}-${idx}`}
+                  src={src}
+                  alt={`Bài mẫu ${idx + 1}`}
+                  className="preview-image preview-image--small"
+                />
+              ))}
             </div>
           )}
         </div>

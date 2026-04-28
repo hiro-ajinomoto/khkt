@@ -673,6 +673,17 @@ html.dark .practice-toggle:hover {
   margin-bottom: 1.25rem;
 }
 
+.model-solution-standalone-images {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.model-solution-standalone-images .submission-result-image-zoom-trigger {
+  display: block;
+  width: 100%;
+}
+
 .model-solution-compare-image {
   width: 100%;
   max-height: 420px;

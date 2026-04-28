@@ -12,9 +12,15 @@ import OceanShell, { OceanPageLoading, OceanPageError } from '../layout/OceanShe
 import './MySubmissions.css';
 
 function assignmentModelFromCachedDetail(detail) {
+  const modelUrls =
+    detail?.model_solution_image_urls?.length > 0
+      ? detail.model_solution_image_urls
+      : detail?.model_solution_image_url
+        ? [detail.model_solution_image_url]
+        : [];
   if (
     !detail?.model_solution &&
-    !detail?.model_solution_image_url &&
+    modelUrls.length === 0 &&
     !detail?.question_image_url
   ) {
     return null;
@@ -23,6 +29,7 @@ function assignmentModelFromCachedDetail(detail) {
     question_image_url: detail.question_image_url,
     model_solution: detail.model_solution,
     model_solution_image_url: detail.model_solution_image_url,
+    ...(modelUrls.length > 0 ? { model_solution_image_urls: modelUrls } : {}),
   };
 }
 
@@ -104,6 +111,7 @@ function MySubmissions() {
           question_image_url: assignment?.question_image_url,
           model_solution: assignment?.model_solution,
           model_solution_image_url: assignment?.model_solution_image_url,
+          model_solution_image_urls: assignment?.model_solution_image_urls,
         },
       }));
     } catch (err) {

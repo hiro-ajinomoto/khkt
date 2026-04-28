@@ -571,22 +571,31 @@ function SubmissionResult({
     assignmentModel &&
     (assignmentModel.model_solution ||
       assignmentModel.model_solution_image_url ||
+      (Array.isArray(assignmentModel.model_solution_image_urls) &&
+        assignmentModel.model_solution_image_urls.length > 0) ||
       assignmentModel.question_image_url);
 
   const imgPathsLen = Array.isArray(image_paths) ? image_paths.length : 0;
   const qUrl = assignmentModel?.question_image_url;
   const msImgUrl = assignmentModel?.model_solution_image_url;
+  const modelSolutionUrls =
+    Array.isArray(assignmentModel?.model_solution_image_urls) &&
+    assignmentModel.model_solution_image_urls.length > 0
+      ? assignmentModel.model_solution_image_urls.filter(Boolean)
+      : msImgUrl
+        ? [msImgUrl]
+        : [];
+  const hasMsImages = modelSolutionUrls.length > 0;
 
   const showComparisonStrip =
-    !!assignmentModel && !!((qUrl || msImgUrl || imgPathsLen > 0));
+    !!assignmentModel && !!((qUrl || hasMsImages || imgPathsLen > 0));
 
   /** Ảnh lớp học đã hiển thị trong dải so sánh → không hiện khối lặp cuối trang */
   const studentPhotosInGallery = !!assignmentModel && imgPathsLen > 0;
 
   /** Ảnh mẫu đã nằm trong strip → không lặp ảnh lớn phía dưới (tránh đè lên lưới đối chiếu khi chấm tay). */
   const showStandaloneModelAnswerImage =
-    !!assignmentModel?.model_solution_image_url &&
-    !(msImgUrl && (showComparisonStrip || manualGradingCompare));
+    hasMsImages && !(showComparisonStrip || manualGradingCompare);
 
   const showModelAnswerCompareSection =
     hasModelCompare &&
@@ -660,10 +669,10 @@ function SubmissionResult({
                   </figure>
                 </div>
               ) : null}
-              {imgPathsLen > 0 || msImgUrl ? (
+              {imgPathsLen > 0 || hasMsImages ? (
               <div
                 className={`submission-compare-grid submission-compare-grid--hs-model-pair${
-                  imgPathsLen > 0 && msImgUrl
+                  imgPathsLen > 0 && hasMsImages
                     ? ' submission-compare-grid--hs-model-pair--two-cols'
                     : ''
                 }`}
@@ -694,23 +703,28 @@ function SubmissionResult({
                     </div>
                   </figure>
                 ) : null}
-                {msImgUrl ? (
+                {hasMsImages ? (
                   <figure className="submission-compare-cell">
                     <figcaption className="submission-compare-label">Bài giải mẫu</figcaption>
-                    <button
-                      type="button"
-                      className="submission-result-image-zoom-trigger submission-compare-thumb"
-                      onClick={() =>
-                        setImageLightbox({
-                          src: msImgUrl,
-                          alt: 'Bài giải mẫu',
-                          title: 'Bài giải mẫu',
-                        })
-                      }
-                      aria-label="Xem ảnh bài giải mẫu phóng to"
-                    >
-                      <img src={msImgUrl} alt="" className="submission-compare-thumb-img" />
-                    </button>
+                    <div className="submission-compare-student-stack">
+                      {modelSolutionUrls.map((solUrl, idx) => (
+                        <button
+                          key={`cmp-ms-${idx}-${solUrl.slice(-12)}`}
+                          type="button"
+                          className="submission-result-image-zoom-trigger submission-compare-thumb"
+                          onClick={() =>
+                            setImageLightbox({
+                              src: solUrl,
+                              alt: `Bài giải mẫu ${idx + 1}`,
+                              title: `Bài giải mẫu — ảnh ${idx + 1}`,
+                            })
+                          }
+                          aria-label={`Xem ảnh bài giải mẫu ${idx + 1} phóng to`}
+                        >
+                          <img src={solUrl} alt="" className="submission-compare-thumb-img" />
+                        </button>
+                      ))}
+                    </div>
                   </figure>
                 ) : null}
               </div>
@@ -763,23 +777,28 @@ function SubmissionResult({
                 </figure>
               ) : null}
 
-              {msImgUrl ? (
+              {hasMsImages ? (
                 <figure className="submission-compare-cell">
                   <figcaption className="submission-compare-label">Bài giải mẫu</figcaption>
-                  <button
-                    type="button"
-                    className="submission-result-image-zoom-trigger submission-compare-thumb"
-                    onClick={() =>
-                      setImageLightbox({
-                        src: msImgUrl,
-                        alt: 'Bài giải mẫu',
-                        title: 'Bài giải mẫu',
-                      })
-                    }
-                    aria-label="Xem ảnh bài giải mẫu phóng to"
-                  >
-                    <img src={msImgUrl} alt="" className="submission-compare-thumb-img" />
-                  </button>
+                  <div className="submission-compare-student-stack">
+                    {modelSolutionUrls.map((solUrl, idx) => (
+                      <button
+                        key={`cmp-ms-def-${idx}`}
+                        type="button"
+                        className="submission-result-image-zoom-trigger submission-compare-thumb"
+                        onClick={() =>
+                          setImageLightbox({
+                            src: solUrl,
+                            alt: `Bài giải mẫu ${idx + 1}`,
+                            title: `Bài giải mẫu — ảnh ${idx + 1}`,
+                          })
+                        }
+                        aria-label={`Xem ảnh bài giải mẫu ${idx + 1} phóng to`}
+                      >
+                        <img src={solUrl} alt="" className="submission-compare-thumb-img" />
+                      </button>
+                    ))}
+                  </div>
                 </figure>
               ) : null}
             </div>
@@ -794,38 +813,40 @@ function SubmissionResult({
             <div className="model-solution-compare-image-wrap model-solution-compare-image-wrap--lead">
               <span className="model-solution-compare-label">Hình ảnh bài mẫu</span>
               <p className="submission-zoom-hint">Bấm vào ảnh để xem phóng to.</p>
-              <button
-                type="button"
-                className="submission-result-image-zoom-trigger"
-                onClick={() =>
-                  setImageLightbox({
-                    src: assignmentModel.model_solution_image_url,
-                    alt: 'Bài giải mẫu — xem phóng to',
-                    title: 'Bài giải mẫu',
-                  })
-                }
-                aria-label="Xem ảnh bài giải mẫu phóng to"
-              >
-                <img
-                  src={assignmentModel.model_solution_image_url}
-                  alt=""
-                  className="model-solution-compare-image"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    const wrap = e.target.closest('.submission-result-image-zoom-trigger');
-                    if (wrap) wrap.style.display = 'none';
-                    const wrapParent = e.target.closest('.model-solution-compare-image-wrap');
-                    const err = wrapParent?.querySelector('.model-solution-compare-image-error');
-                    if (err) err.style.display = 'block';
-                  }}
-                />
-              </button>
+              <div className="model-solution-standalone-images">
+                {modelSolutionUrls.map((u, idx) => (
+                  <button
+                    key={`standalone-ms-${idx}`}
+                    type="button"
+                    className="submission-result-image-zoom-trigger"
+                    onClick={() =>
+                      setImageLightbox({
+                        src: u,
+                        alt: `Bài giải mẫu — xem phóng to (${idx + 1})`,
+                        title: `Bài giải mẫu — ảnh ${idx + 1}`,
+                      })
+                    }
+                    aria-label={`Xem ảnh bài giải mẫu ${idx + 1} phóng to`}
+                  >
+                    <img
+                      src={u}
+                      alt=""
+                      className="model-solution-compare-image"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        const wrap = e.target.closest('.submission-result-image-zoom-trigger');
+                        if (wrap) wrap.style.display = 'none';
+                      }}
+                    />
+                  </button>
+                ))}
+              </div>
               <div className="image-error model-solution-compare-image-error" style={{ display: 'none' }}>
                 Không thể tải hình ảnh
               </div>
             </div>
           )}
-          {assignmentModel.model_solution_image_url && showStandaloneModelAnswerImage ? (
+          {hasMsImages && showStandaloneModelAnswerImage ? (
             <p className="model-solution-compare-hint">
               {!manualGradingCompare && !studentPhotosInGallery && image_paths && image_paths.length > 0
                 ? 'So sánh với hình bài làm của bạn trong mục «Hình ảnh bài làm của bạn» phía dưới trang.'

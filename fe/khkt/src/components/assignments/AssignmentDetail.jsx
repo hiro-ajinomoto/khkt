@@ -136,6 +136,13 @@ function AssignmentDetail() {
   const studentCanSeeModelSolution =
     !isStudent || (assignment?.my_submission_count ?? 0) > 0;
 
+  const modelSolutionUrls =
+    assignment?.model_solution_image_urls?.length > 0
+      ? assignment.model_solution_image_urls
+      : assignment?.model_solution_image_url
+        ? [assignment.model_solution_image_url]
+        : [];
+
   const assignmentModelForSubmissionResult =
     assignment &&
     ({
@@ -144,6 +151,9 @@ function AssignmentDetail() {
         ? {
             model_solution: assignment.model_solution,
             model_solution_image_url: assignment.model_solution_image_url,
+            ...(modelSolutionUrls.length > 0
+              ? { model_solution_image_urls: modelSolutionUrls }
+              : {}),
           }
         : {}),
     });
@@ -267,7 +277,8 @@ function AssignmentDetail() {
           </div>
         )}
 
-        {isStudent && !studentCanSeeModelSolution && (assignment.model_solution_image_url || assignment.model_solution) && (
+        {isStudent && !studentCanSeeModelSolution &&
+          (modelSolutionUrls.length > 0 || assignment.model_solution) && (
           <div className="model-solution-text model-solution-text--locked" role="note">
             <label>Đáp án mẫu</label>
             <p>
@@ -285,35 +296,41 @@ function AssignmentDetail() {
           </div>
         )}
 
-        {assignment.model_solution_image_url && studentCanSeeModelSolution && (
+        {modelSolutionUrls.length > 0 && studentCanSeeModelSolution && (
           <div className="image-container">
-            <label>Hình ảnh bài giải mẫu:</label>
-            <button
-              type="button"
-              className="assignment-image-enlarge"
-              onClick={() =>
-                setImageLightbox({
-                  src: assignment.model_solution_image_url,
-                  title: 'Bài giải mẫu',
-                })
-              }
-              aria-label="Xem phóng to hình ảnh bài giải mẫu (xoay, zoom)"
-            >
-              <img
-                src={assignment.model_solution_image_url}
-                alt="Bài giải mẫu"
-                className="assignment-image"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  const errorDiv = e.target.nextSibling;
-                  if (errorDiv) errorDiv.style.display = 'block';
-                }}
-              />
-              <div className="image-error" style={{ display: 'none' }}>
-                Không thể tải hình ảnh
-              </div>
-            </button>
-            <p className="assignment-image-hint">Bấm vào ảnh để xoay / phóng to.</p>
+            <label>Hình ảnh bài giải mẫu ({modelSolutionUrls.length} ảnh)</label>
+            <div className="assignment-model-images-row">
+              {modelSolutionUrls.map((imgUrl, idx) => (
+                <div key={`model-sol-${idx}`} className="assignment-model-image-item">
+                  <button
+                    type="button"
+                    className="assignment-image-enlarge"
+                    onClick={() =>
+                      setImageLightbox({
+                        src: imgUrl,
+                        title: `Bài giải mẫu — ảnh ${idx + 1}`,
+                      })
+                    }
+                    aria-label="Xem phóng to"
+                  >
+                    <img
+                      src={imgUrl}
+                      alt=""
+                      className="assignment-image"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        const errorDiv = e.target.nextSibling;
+                        if (errorDiv) errorDiv.style.display = 'block';
+                      }}
+                    />
+                    <div className="image-error" style={{ display: 'none' }}>
+                      Không thể tải hình ảnh
+                    </div>
+                  </button>
+                  <p className="assignment-image-hint">Ảnh {idx + 1} — bấm để xoay / phóng to.</p>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

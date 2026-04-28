@@ -272,6 +272,22 @@ html:not(.dark) .submission-sticker-note {
   color: #64748b;
 }
 
+.assignment-model-images-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.assignment-model-image-item {
+  flex: 1 1 220px;
+  min-width: min(100%, 200px);
+  max-width: 100%;
+}
+
+.assignment-model-image-item .assignment-image {
+  max-height: 380px;
+}
+
 html.dark .assignment-detail .assignment-image-hint {
   color: #94a3b8;
 }

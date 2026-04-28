@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { fetchAssignmentById, updateAssignment } from '../../api/assignments';
 import OceanShell, { OceanPageLoading } from '../layout/OceanShell';
@@ -25,14 +25,16 @@ function EditAssignmentForm() {
     due_date: '',
     max_submissions_per_student: '2',
     question_image: null,
-    model_solution_image: null,
+    model_solution_images: [],
     question_image_url: '',
     model_solution_image_url: '',
   });
 
+  const initialModelSolutionUrlRef = useRef(null);
+
   const [previewUrls, setPreviewUrls] = useState({
     question: null,
-    solution: null,
+    solutions: [],
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,6 +49,14 @@ function EditAssignmentForm() {
         setError(null);
         const assignment = await fetchAssignmentById(id);
         
+        const solList =
+          Array.isArray(assignment.model_solution_image_urls) &&
+          assignment.model_solution_image_urls.length > 0
+            ? assignment.model_solution_image_urls
+            : assignment.model_solution_image_url
+              ? [assignment.model_solution_image_url]
+              : [];
+
         setFormData({
           title: assignment.title || '',
           description: assignment.description || '',
@@ -57,24 +67,24 @@ function EditAssignmentForm() {
             assignment.max_submissions_per_student ?? 2
           ),
           question_image: null,
-          model_solution_image: null,
+          model_solution_images: [],
           question_image_url: assignment.question_image_url || '',
           model_solution_image_url: assignment.model_solution_image_url || '',
         });
 
-        // Set preview URLs for existing images
+        initialModelSolutionUrlRef.current =
+          assignment.model_solution_image_url || '';
+
         if (assignment.question_image_url) {
           setPreviewUrls((prev) => ({
             ...prev,
             question: assignment.question_image_url,
           }));
         }
-        if (assignment.model_solution_image_url) {
-          setPreviewUrls((prev) => ({
-            ...prev,
-            solution: assignment.model_solution_image_url,
-          }));
-        }
+        setPreviewUrls((prev) => ({
+          ...prev,
+          solutions: solList,
+        }));
       } catch (err) {
         setError(err.message || 'Không thể tải thông tin bài tập');
         console.error('Error loading assignment:', err);
@@ -97,42 +107,77 @@ function EditAssignmentForm() {
     setError(null);
   };
 
+  const revokeSolutionPreviews = () => {
+    (previewUrls.solutions || []).forEach((u) => {
+      if (u && u.startsWith?.('blob:')) URL.revokeObjectURL(u);
+    });
+  };
+
   const handleFileChange = (e) => {
     const { name, files } = e.target;
-    const file = files[0];
+
+    if (name === 'model_solution_image') {
+      const picked = Array.from(files || [])
+        .filter((f) => f.type.startsWith('image/'))
+        .slice(0, 3);
+      if (!picked.length) return;
+      setFormData((prev) => ({
+        ...prev,
+        model_solution_images: picked,
+        model_solution_image_url: '',
+      }));
+      setPreviewUrls((prev) => {
+        (prev.solutions || []).forEach((u) => {
+          if (u && u.startsWith?.('blob:')) URL.revokeObjectURL(u);
+        });
+        return {
+          ...prev,
+          solutions: picked.map((f) => URL.createObjectURL(f)),
+        };
+      });
+      return;
+    }
+
+    const file = files?.[0];
 
     if (file) {
       setFormData((prev) => ({
         ...prev,
         [name]: file,
-        [`${name}_url`]: '', // Clear URL if file is selected
+        [`${name}_url`]: '',
       }));
 
-      // Create preview URL
       const previewUrl = URL.createObjectURL(file);
       if (name === 'question_image') {
         setPreviewUrls((prev) => ({ ...prev, question: previewUrl }));
-      } else if (name === 'model_solution_image') {
-        setPreviewUrls((prev) => ({ ...prev, solution: previewUrl }));
       }
     }
   };
 
   const handleUrlChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'model_solution_image_url') {
+      revokeSolutionPreviews();
+      setPreviewUrls((prev) => ({ ...prev, solutions: [] }));
+    }
     setFormData((prev) => ({
       ...prev,
       [name]: value,
-      [name.replace('_url', '')]: null, // Clear file if URL is provided
+      ...(name === 'question_image_url' ? { question_image: null } : {}),
+      ...(name === 'model_solution_image_url' ? { model_solution_images: [] } : {}),
     }));
-    
-    // Update preview if URL is provided
+
     if (name === 'question_image_url') {
       setPreviewUrls((prev) => ({ ...prev, question: value || null }));
-    } else if (name === 'model_solution_image_url') {
-      setPreviewUrls((prev) => ({ ...prev, solution: value || null }));
     }
-    
+    if (name === 'model_solution_image_url') {
+      const v = String(value || '').trim();
+      setPreviewUrls((prev) => ({
+        ...prev,
+        solutions: v ? [v] : [],
+      }));
+    }
+
     setError(null);
   };
 
@@ -149,7 +194,8 @@ function EditAssignmentForm() {
     const hasQuestionImage =
       formData.question_image || formData.question_image_url;
     const hasSolutionImage =
-      formData.model_solution_image || formData.model_solution_image_url;
+      (formData.model_solution_images && formData.model_solution_images.length > 0) ||
+      !!formData.model_solution_image_url?.trim();
 
     if (!hasQuestionImage) {
       setError('Vui lòng chọn hình ảnh câu hỏi hoặc nhập URL');
@@ -157,7 +203,7 @@ function EditAssignmentForm() {
     }
 
     if (!hasSolutionImage) {
-      setError('Vui lòng chọn hình ảnh bài giải mẫu hoặc nhập URL');
+      setError('Vui lòng có ít nhất một ảnh bài giải mẫu hoặc URL');
       return;
     }
 
@@ -188,27 +234,28 @@ function EditAssignmentForm() {
         formDataToSend.append('question_image_url', formData.question_image_url);
       }
 
-      if (formData.model_solution_image) {
-        formDataToSend.append(
-          'model_solution_image',
-          formData.model_solution_image
+      const newModelFiles =
+        formData.model_solution_images && formData.model_solution_images.length > 0;
+      const urlNow =
+        formData.model_solution_image_url?.trim() || '';
+
+      if (newModelFiles) {
+        formData.model_solution_images.forEach((file) =>
+          formDataToSend.append('model_solution_image', file),
         );
-      } else if (formData.model_solution_image_url) {
-        formDataToSend.append(
-          'model_solution_image_url',
-          formData.model_solution_image_url
-        );
+      } else if (
+        urlNow !== (initialModelSolutionUrlRef.current || '')
+      ) {
+        formDataToSend.append('model_solution_image_url', urlNow);
       }
 
       await updateAssignment(id, formDataToSend);
 
-      // Cleanup preview URLs
+      // Cleanup blob previews
       if (previewUrls.question && previewUrls.question.startsWith('blob:')) {
         URL.revokeObjectURL(previewUrls.question);
       }
-      if (previewUrls.solution && previewUrls.solution.startsWith('blob:')) {
-        URL.revokeObjectURL(previewUrls.solution);
-      }
+      revokeSolutionPreviews();
 
       // Navigate back to assignment detail
       navigate(`/assignments/${id}`);
@@ -221,13 +268,10 @@ function EditAssignmentForm() {
   };
 
   const handleCancel = () => {
-    // Cleanup preview URLs
     if (previewUrls.question && previewUrls.question.startsWith('blob:')) {
       URL.revokeObjectURL(previewUrls.question);
     }
-    if (previewUrls.solution && previewUrls.solution.startsWith('blob:')) {
-      URL.revokeObjectURL(previewUrls.solution);
-    }
+    revokeSolutionPreviews();
 
     // Navigate back to assignment detail
     navigate(`/assignments/${id}`);
@@ -404,29 +448,37 @@ function EditAssignmentForm() {
           )}
         </div>
 
-        {/* Solution Image */}
+        {/* Solution images — có thể tải đến 3 ảnh mới để thay thế */}
         <div className="form-group">
-          <label htmlFor="model_solution_image">
+          <label htmlFor="solution_image_file_edit">
             Hình ảnh bài giải mẫu <span className="required">*</span>
           </label>
+          <p className="form-hint">
+            Để thay đáp án: chọn tối đa 3 ảnh mới (ghi đè cả bộ đang có). Hoặc sửa ô
+            URL dưới đây. Để nguyên: giữ nguyên các ảnh hiện tại và chỉ sửa mục
+            khác.
+          </p>
           <div className="image-input-section">
             <div className="file-upload-section">
               <label
-                htmlFor="solution_image_file"
+                htmlFor="solution_image_file_edit"
                 className="file-upload-label"
               >
                 <span className="file-upload-text">
-                  {formData.model_solution_image
-                    ? formData.model_solution_image.name
-                    : 'Chọn file hình ảnh mới (hoặc giữ nguyên hình hiện tại)'}
+                  {formData.model_solution_images?.length
+                    ? `${formData.model_solution_images.length} ảnh mới`
+                    : 'Chọn ảnh mới (tuỳ chọn — thay cả bộ)'}
                 </span>
                 <input
-                  id="solution_image_file"
+                  id="solution_image_file_edit"
                   type="file"
                   name="model_solution_image"
                   accept="image/*"
+                  multiple
                   onChange={handleFileChange}
-                  disabled={isSubmitting}
+                  disabled={
+                    isSubmitting || !!formData.model_solution_image_url?.trim()
+                  }
                   className="file-input"
                 />
               </label>
@@ -437,18 +489,24 @@ function EditAssignmentForm() {
               name="model_solution_image_url"
               value={formData.model_solution_image_url}
               onChange={handleUrlChange}
-              placeholder="Nhập URL hình ảnh bài giải mẫu"
-              disabled={isSubmitting || !!formData.model_solution_image}
+              placeholder="Một URL ảnh đáp án"
+              disabled={
+                isSubmitting ||
+                !!(formData.model_solution_images && formData.model_solution_images.length)
+              }
               className="url-input"
             />
           </div>
-          {previewUrls.solution && (
-            <div className="image-preview">
-              <img
-                src={previewUrls.solution}
-                alt="Preview solution"
-                className="preview-image"
-              />
+          {previewUrls.solutions && previewUrls.solutions.length > 0 && (
+            <div className="image-preview image-preview--multi">
+              {previewUrls.solutions.map((src, idx) => (
+                <img
+                  key={`${src}-${idx}`}
+                  src={src}
+                  alt={`Đáp án ${idx + 1}`}
+                  className="preview-image preview-image--small"
+                />
+              ))}
             </div>
           )}
         </div>
