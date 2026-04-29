@@ -56,7 +56,7 @@ export async function fetchTeacherClassesOverview() {
 }
 
 /**
- * @returns {Promise<{ class_name: string, students: Array<{ id: string, username: string, name: string, created_at: string|null }> }>}
+ * @returns {Promise<{ class_name: string, students: Array<{ id: string, username: string, name: string, created_at: string|null, streak_current: number, streak_longest: number, streak_last_activity_ymd: string|null }> }>}
  */
 export async function fetchTeacherClassStudents(className) {
   try {
@@ -78,6 +78,34 @@ export async function fetchTeacherClassStudents(className) {
     return response.json();
   } catch (error) {
     console.error('fetchTeacherClassStudents:', error);
+    rethrowNetwork(error);
+  }
+}
+
+/**
+ * Xếp hạng điểm TB trong lớp (ngày / tuần / tháng — giờ VN).
+ * @returns {Promise<object>}
+ */
+export async function fetchTeacherClassRanking(className) {
+  try {
+    const authHeader = getAuthHeader();
+    if (!authHeader) throw new Error('Cần đăng nhập.');
+    const response = await fetch(
+      `${API_BASE_URL}/teacher/classes/${encodeURIComponent(className)}/ranking`,
+      {
+        headers: { Authorization: authHeader },
+        cache: 'no-store',
+      },
+    );
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        describeApiFailure(response, errorData, 'Không tải được xếp hạng lớp.'),
+      );
+    }
+    return response.json();
+  } catch (error) {
+    console.error('fetchTeacherClassRanking:', error);
     rethrowNetwork(error);
   }
 }

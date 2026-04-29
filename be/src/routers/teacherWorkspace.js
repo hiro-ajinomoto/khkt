@@ -11,6 +11,8 @@ import {
   resolveClassAssignmentIdsForTeacherView,
 } from '../utils/teacherSubmissionActivity.js';
 import { canTeacherManageAssignmentDb, getTeacherScopedClassSet } from '../utils/teacherClassScope.js';
+import { buildStudentClassRanking } from '../utils/studentClassRanking.js';
+import { streakSnapshotForViewer } from '../utils/studentStreak.js';
 
 const YMD_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -82,17 +84,30 @@ router.get('/classes/:className/students', async (req, res) => {
     const students = await db
       .collection('users')
       .find({ role: 'student', class_name: className })
-      .project({ username: 1, name: 1, created_at: 1 })
+      .project({
+        username: 1,
+        name: 1,
+        created_at: 1,
+        streak_current: 1,
+        streak_longest: 1,
+        streak_last_activity_ymd: 1,
+      })
       .sort({ username: 1 })
       .toArray();
     res.json({
       class_name: className,
-      students: students.map((u) => ({
-        id: u._id.toString(),
-        username: u.username,
-        name: (u.name && String(u.name).trim()) || u.username,
-        created_at: u.created_at || null,
-      })),
+      students: students.map((u) => {
+        const snap = streakSnapshotForViewer(u);
+        return {
+          id: u._id.toString(),
+          username: u.username,
+          name: (u.name && String(u.name).trim()) || u.username,
+          created_at: u.created_at || null,
+          streak_current: snap.streak_current,
+          streak_longest: snap.streak_longest,
+          streak_last_activity_ymd: snap.streak_last_activity_ymd,
+        };
+      }),
     });
   } catch (error) {
     if (error.status === 400 || error.status === 403) {
@@ -100,6 +115,25 @@ router.get('/classes/:className/students', async (req, res) => {
     }
     console.error('GET /teacher/classes/.../students:', error);
     res.status(500).json({ detail: 'Không tải được danh sách học sinh.' });
+  }
+});
+
+/**
+ * GET /teacher/classes/:className/ranking
+ * Xếp hạng điểm TB trong lớp (ngày / tuần / tháng, giờ VN) — cùng logic học sinh xem /submissions/class-ranking.
+ */
+router.get('/classes/:className/ranking', async (req, res) => {
+  try {
+    const db = getDB();
+    const className = await assertClassInScope(db, req.user, req.params.className);
+    const payload = await buildStudentClassRanking(db, className);
+    res.json(payload);
+  } catch (error) {
+    if (error.status === 400 || error.status === 403) {
+      return res.status(error.status).json({ detail: error.message });
+    }
+    console.error('GET /teacher/classes/.../ranking:', error);
+    res.status(500).json({ detail: 'Không tải được xếp hạng lớp.' });
   }
 });
 

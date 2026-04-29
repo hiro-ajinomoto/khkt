@@ -114,3 +114,33 @@ export async function normalizeStreakForCalendar(db, studentObjectId) {
   }
   return null;
 }
+
+/**
+ * Hiển thị streak trên giao diện (GV/Admin) mà không ghi DB — đồng bộ quy tắc
+ * "bỏ quá 1 ngày VN thì streak hiện tại = 0" như normalizeStreakForCalendar.
+ * @param {{ streak_current?: number, streak_longest?: number, streak_last_activity_ymd?: string|null }} user
+ */
+export function streakSnapshotForViewer(user) {
+  if (!user) {
+    return {
+      streak_current: 0,
+      streak_longest: 0,
+      streak_last_activity_ymd: null,
+    };
+  }
+  const today = vietnamTodayYmd();
+  const yesterday = shiftVietnamYmd(today, -1);
+  const last = user.streak_last_activity_ymd
+    ? String(user.streak_last_activity_ymd).trim()
+    : null;
+  let current = Number.isFinite(user.streak_current) ? user.streak_current : 0;
+  const longest = Number.isFinite(user.streak_longest) ? user.streak_longest : 0;
+  if (last && last < yesterday && current > 0) {
+    current = 0;
+  }
+  return {
+    streak_current: current,
+    streak_longest: longest,
+    streak_last_activity_ymd: last || null,
+  };
+}
