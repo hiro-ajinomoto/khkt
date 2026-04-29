@@ -17,6 +17,7 @@ import {
 import SubmissionResult from '../submissions/SubmissionResult';
 import OceanShell, { OceanPageLoading } from '../layout/OceanShell';
 import ImageLightbox from '../ui/ImageLightbox';
+import ImageCropModal from '../ui/ImageCropModal';
 import './AssignmentDetail.css';
 
 function AssignmentDetail() {
@@ -33,6 +34,8 @@ function AssignmentDetail() {
   const [error, setError] = useState(null);
   const [showResult, setShowResult] = useState(false);
   const [imageLightbox, setImageLightbox] = useState(null);
+  /** Hàng chờ crop sau khi HS chọn file: { queue, results } — mỗi ảnh qua modal một lượt. */
+  const [cropSession, setCropSession] = useState(null);
 
   const closeImageLightbox = () => setImageLightbox(null);
 
@@ -65,13 +68,57 @@ function AssignmentDetail() {
   }, [previewUrls]);
 
   const handleFileChange = (e) => {
-    const files = Array.from(e.target.files);
-    setSelectedFiles(files);
+    const files = Array.from(e.target.files || []).filter((f) =>
+      f.type.startsWith('image/'),
+    );
+    e.target.value = '';
+    if (files.length === 0) {
+      setError('Vui lòng chỉ chọn file ảnh.');
+      return;
+    }
     setError(null);
+    previewUrls.forEach((url) => {
+      if (url) URL.revokeObjectURL(url);
+    });
+    setSelectedFiles([]);
+    setPreviewUrls([]);
+    setCropSession({ queue: files, results: [] });
+  };
 
-    // Create preview URLs for selected files
-    const urls = files.map((file) => URL.createObjectURL(file));
-    setPreviewUrls(urls);
+  const flushCroppedSelection = (finalFiles) => {
+    setCropSession(null);
+    setSelectedFiles(finalFiles);
+    setPreviewUrls(finalFiles.map((f) => URL.createObjectURL(f)));
+  };
+
+  const handleCropConfirm = (croppedFile) => {
+    setCropSession((prev) => {
+      if (!prev) return null;
+      const [, ...rest] = prev.queue;
+      const results = [...prev.results, croppedFile];
+      if (rest.length === 0) {
+        queueMicrotask(() => flushCroppedSelection(results));
+        return null;
+      }
+      return { queue: rest, results };
+    });
+  };
+
+  const handleCropUseOriginal = () => {
+    setCropSession((prev) => {
+      if (!prev) return null;
+      const [first, ...rest] = prev.queue;
+      const results = [...prev.results, first];
+      if (rest.length === 0) {
+        queueMicrotask(() => flushCroppedSelection(results));
+        return null;
+      }
+      return { queue: rest, results };
+    });
+  };
+
+  const handleCropAbort = () => {
+    setCropSession(null);
   };
 
   const handleSubmit = async (e) => {
@@ -356,9 +403,11 @@ function AssignmentDetail() {
           <div className="file-upload-area">
             <label htmlFor="file-input" className="file-label">
               <span className="file-label-text">
-                {selectedFiles.length > 0
-                  ? `${selectedFiles.length} file(s) đã chọn`
-                  : 'Chọn hình ảnh bài làm (có thể chọn nhiều)'}
+                {cropSession
+                  ? `Đang cắt ảnh… (${cropSession.results.length + 1}/${cropSession.results.length + cropSession.queue.length})`
+                  : selectedFiles.length > 0
+                    ? `${selectedFiles.length} ảnh đã chọn (sau khi cắt)`
+                    : 'Chọn hình ảnh bài làm — sẽ cắt từng ảnh trước khi nộp'}
               </span>
               <input
                 id="file-input"
@@ -366,7 +415,9 @@ function AssignmentDetail() {
                 accept="image/*"
                 multiple
                 onChange={handleFileChange}
-                disabled={isSubmitting || submissionBlocked}
+                disabled={
+                  isSubmitting || submissionBlocked || !!cropSession
+                }
                 className="file-input"
               />
             </label>
@@ -425,7 +476,8 @@ function AssignmentDetail() {
             disabled={
               isSubmitting ||
               selectedFiles.length === 0 ||
-              submissionBlocked
+              submissionBlocked ||
+              !!cropSession
             }
             className="submit-button"
           >
@@ -495,6 +547,16 @@ function AssignmentDetail() {
         src={imageLightbox?.src}
         title={imageLightbox?.title}
       />
+      {cropSession?.queue?.length ? (
+        <ImageCropModal
+          file={cropSession.queue[0]}
+          indexOneBased={cropSession.results.length + 1}
+          total={cropSession.results.length + cropSession.queue.length}
+          onConfirm={handleCropConfirm}
+          onUseOriginal={handleCropUseOriginal}
+          onAbort={handleCropAbort}
+        />
+      ) : null}
     </OceanShell>
   );
 }
