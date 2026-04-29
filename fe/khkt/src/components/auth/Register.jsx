@@ -17,16 +17,25 @@ function digitsOnly4(value) {
     .slice(0, 4);
 }
 
+function sanitizeTeacherInviteInput(value) {
+  return String(value ?? '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, 10);
+}
+
 function Register() {
   const navigate = useNavigate();
   const { setAuthSession } = useAuth();
 
+  const [registrationKind, setRegistrationKind] = useState('student');
   const [formData, setFormData] = useState({
     username: '',
     password: '',
     confirmPassword: '',
     name: '',
     class_code: '',
+    teacher_invite_code: '',
   });
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -36,10 +45,16 @@ function Register() {
     let next = value;
     if (name === 'class_code') next = digitsOnly4(value);
     else if (name === 'username') next = sanitizeLoginUsernameInput(value);
+    else if (name === 'teacher_invite_code') next = sanitizeTeacherInviteInput(value);
     setFormData((prev) => ({
       ...prev,
       [name]: next,
     }));
+    setError(null);
+  };
+
+  const handleRegistrationKindChange = (kind) => {
+    setRegistrationKind(kind);
     setError(null);
   };
 
@@ -72,20 +87,27 @@ function Register() {
       return;
     }
     const code = digitsOnly4(formData.class_code);
-    if (code.length !== 4) {
-      setError('Nhập đủ mã lớp 4 chữ số do giáo viên cung cấp.');
+    const teacherCode = sanitizeTeacherInviteInput(formData.teacher_invite_code);
+
+    if (registrationKind === 'student') {
+      if (code.length !== 4) {
+        setError('Nhập đủ mã lớp 4 chữ số do giáo viên cung cấp.');
+        return;
+      }
+    } else if (teacherCode.length !== 10) {
+      setError('Nhập đủ mã đăng ký giáo viên (10 ký tự do quản trị cấp).');
       return;
     }
 
     try {
       setIsSubmitting(true);
-      const result = await registerAPI(
+      const result = await registerAPI({
         username,
-        formData.password,
-        'student',
-        formData.name?.trim() || username,
-        code
-      );
+        password: formData.password,
+        name: formData.name?.trim() || username,
+        class_code: registrationKind === 'student' ? code : null,
+        teacher_invite_code: registrationKind === 'teacher' ? teacherCode : null,
+      });
 
       if (result.token && result.user) {
         setAuthSession(result.token, result.user);
@@ -118,6 +140,34 @@ function Register() {
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
+          <div className="form-group register-role-field">
+            <span className="register-role-label-text">Bạn đăng ký với tư cách</span>
+            <div className="register-role-options">
+              <label>
+                <input
+                  type="radio"
+                  name="registration_kind"
+                  value="student"
+                  checked={registrationKind === 'student'}
+                  onChange={() => handleRegistrationKindChange('student')}
+                  disabled={isSubmitting}
+                />
+                Học sinh
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="registration_kind"
+                  value="teacher"
+                  checked={registrationKind === 'teacher'}
+                  onChange={() => handleRegistrationKindChange('teacher')}
+                  disabled={isSubmitting}
+                />
+                Giáo viên
+              </label>
+            </div>
+          </div>
+
           <div className="form-group">
             <label htmlFor="username">Tên đăng nhập</label>
             <input
@@ -151,28 +201,51 @@ function Register() {
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="class_code">Mã lớp (4 số)</label>
-            <input
-              id="class_code"
-              type="text"
-              name="class_code"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              autoComplete="off"
-              maxLength={4}
-              value={formData.class_code}
-              onChange={handleInputChange}
-              placeholder="Ví dụ: 4829"
-              disabled={isSubmitting}
-              className="font-mono tracking-[0.35em]"
-              required
-            />
-            <p className="field-hint">
-              Giáo viên chủ nhiệm hoặc quản trị cung cấp mã để vào đúng lớp. Nếu lớp đổi mã, chỉ
-              học sinh mới đăng ký cần mã mới.
-            </p>
-          </div>
+          {registrationKind === 'student' ? (
+            <div className="form-group">
+              <label htmlFor="class_code">Mã lớp (4 số)</label>
+              <input
+                id="class_code"
+                type="text"
+                name="class_code"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                autoComplete="off"
+                maxLength={4}
+                value={formData.class_code}
+                onChange={handleInputChange}
+                placeholder="Ví dụ: 4829"
+                disabled={isSubmitting}
+                className="font-mono tracking-[0.35em]"
+                required
+              />
+              <p className="field-hint">
+                Giáo viên chủ nhiệm hoặc quản trị cung cấp mã để vào đúng lớp. Nếu lớp đổi mã, chỉ học sinh
+                mới đăng ký cần mã mới.
+              </p>
+            </div>
+          ) : (
+            <div className="form-group">
+              <label htmlFor="teacher_invite_code">Mã đăng ký giáo viên</label>
+              <input
+                id="teacher_invite_code"
+                type="text"
+                name="teacher_invite_code"
+                autoComplete="off"
+                maxLength={10}
+                value={formData.teacher_invite_code}
+                onChange={handleInputChange}
+                placeholder="10 ký tự do quản trị cấp"
+                disabled={isSubmitting}
+                className="font-mono tracking-[0.2em] uppercase"
+                required
+              />
+              <p className="field-hint">
+                Quản trị tạo mã ở mục Quản trị → Giáo viên. Mã không thay thế mã lớp; sau khi đăng ký, quản
+                trị gán lớp ở mục &quot;GV — lớp&quot;.
+              </p>
+            </div>
+          )}
 
           <div className="form-group">
             <label htmlFor="password">Mật khẩu</label>
@@ -226,7 +299,7 @@ function Register() {
             </Link>
           </p>
           <p className="help-text help-text-register-note">
-            Tài khoản mới sẽ được tạo với quyền học sinh. Để trở thành giáo viên, vui lòng liên hệ quản trị viên.
+            Học sinh cần mã lớp 4 số. Giáo viên cần mã do quản trị phát (trang Quản trị → Giáo viên).
           </p>
         </div>
       </div>

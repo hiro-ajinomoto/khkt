@@ -1,4 +1,8 @@
-import { getNetworkErrorMessage, isLikelyNetworkError } from './fetchErrors';
+import {
+  getNetworkErrorMessage,
+  isLikelyNetworkError,
+  messageForHttpStatus,
+} from './fetchErrors';
 
 /**
  * Chuẩn hóa `detail` từ API (Express string hoặc mảng validation kiểu FastAPI).
@@ -19,6 +23,25 @@ export function parseApiDetail(detail) {
   }
   if (typeof detail === 'object' && detail.msg != null) return String(detail.msg);
   return String(detail);
+}
+
+/**
+ * Gom thông báo lỗi từ nhiều dạng JSON phổ biến (Express, v.v.).
+ */
+export function parseApiErrorPayload(errorData, httpStatus, statusText) {
+  const d = parseApiDetail(errorData?.detail);
+  if (d) return d;
+  const m = parseApiDetail(errorData?.message);
+  if (m) return m;
+  if (typeof errorData?.error === 'string' && errorData.error.trim()) {
+    return errorData.error.trim();
+  }
+  if (httpStatus != null) {
+    const fb = messageForHttpStatus(httpStatus);
+    if (fb) return fb;
+  }
+  const st = typeof statusText === 'string' ? statusText.trim() : '';
+  return st;
 }
 
 const PATTERNS_VI = [

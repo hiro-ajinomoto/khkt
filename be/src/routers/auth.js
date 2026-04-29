@@ -9,6 +9,11 @@ import { listClassNames, resolveClassNameFromEnrollmentCode } from '../schoolCla
 import { listClassNamesForTeacher } from '../classTeacherAssignments.js';
 import { validateNewLoginUsername } from '../utils/loginUsername.js';
 import { normalizeStreakForCalendar } from '../utils/studentStreak.js';
+import {
+  consumeTeacherInviteCodeIfValid,
+  normalizeTeacherInviteCode,
+  rollbackTeacherInviteConsumption,
+} from '../utils/teacherInviteCodes.js';
 
 /** Trường streak trên users (chỉ HS). */
 function streakFieldsForApiStudent(user) {
@@ -113,9 +118,6 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Only allow student role for new registrations (admin/teacher must be assigned)
-    const userRole = 'student';
-
     const db = getDB();
 
     // Check if username already exists
@@ -124,6 +126,83 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ detail: 'Tên đăng nhập đã được sử dụng.' });
     }
 
+    const teacherInviteRaw =
+      req.body.teacher_invite_code ?? req.body.teacherInviteCode;
+    const teacherInviteNorm = normalizeTeacherInviteCode(teacherInviteRaw);
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const displayName = name || username;
+
+    if (teacherInviteNorm) {
+      const inviteDoc = await consumeTeacherInviteCodeIfValid(db, teacherInviteNorm);
+      if (!inviteDoc) {
+        return res.status(400).json({
+          detail:
+            'Mã đăng ký giáo viên không đúng, đã hết lượt, hết hạn hoặc đã bị thu hồi. Liên hệ quản trị để cấp mã mới.',
+        });
+      }
+
+      const newUser = {
+        username,
+        password: hashedPassword,
+        role: 'teacher',
+        name: displayName,
+        created_at: new Date(),
+      };
+
+      let result;
+      try {
+        result = await db.collection('users').insertOne(newUser);
+      } catch (insertErr) {
+        await rollbackTeacherInviteConsumption(db, teacherInviteNorm);
+        throw insertErr;
+      }
+
+      try {
+        await db.collection('notifications').insertOne({
+          type: 'teacher_registered',
+          title: 'Giáo viên mới đăng ký',
+          message: `${newUser.name} vừa đăng ký tài khoản giáo viên (mã mời).`,
+          target_roles: ['admin'],
+          actor_user_id: result.insertedId,
+          actor_username: username,
+          actor_name: newUser.name,
+          read_by: [],
+          created_at: new Date(),
+        });
+      } catch (notifyErr) {
+        console.error('Failed to create teacher registration notification:', notifyErr);
+      }
+
+      const token = jwt.sign(
+        { userId: result.insertedId.toString(), username, role: 'teacher' },
+        config.jwt.secret,
+        { expiresIn: config.jwt.expiresIn }
+      );
+
+      let assigned_class_names = [];
+      try {
+        assigned_class_names = await listClassNamesForTeacher(
+          db,
+          result.insertedId.toString()
+        );
+      } catch (e) {
+        console.error('listClassNamesForTeacher after register:', e);
+      }
+
+      return res.status(201).json({
+        token,
+        user: {
+          id: result.insertedId.toString(),
+          username,
+          role: 'teacher',
+          name: newUser.name,
+          assigned_class_names,
+        },
+      });
+    }
+
+    const userRole = 'student';
     const rawCode = req.body.class_code ?? req.body.classCode;
     if (rawCode == null || String(rawCode).trim() === '') {
       return res.status(400).json({
@@ -139,15 +218,11 @@ router.post('/register', async (req, res) => {
     }
     const class_name = resolved.class_name;
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create user
     const newUser = {
       username,
       password: hashedPassword,
       role: userRole,
-      name: name || username,
+      name: displayName,
       class_name,
       created_at: new Date(),
     };
@@ -173,7 +248,6 @@ router.post('/register', async (req, res) => {
       }
     }
 
-    // Generate JWT token
     const token = jwt.sign(
       { userId: result.insertedId.toString(), username, role: userRole },
       config.jwt.secret,

@@ -20,6 +20,11 @@ import {
   setTeachersForClass,
   removeAllForTeacher,
 } from '../classTeacherAssignments.js';
+import {
+  createTeacherInviteCode,
+  listTeacherInviteCodes,
+  revokeTeacherInviteCode,
+} from '../utils/teacherInviteCodes.js';
 
 const router = express.Router();
 
@@ -571,6 +576,69 @@ router.post('/sticker-redeem', async (req, res) => {
   } catch (error) {
     console.error('Error creating sticker redemption:', error);
     res.status(500).json({ detail: 'Failed to record redemption' });
+  }
+});
+
+/**
+ * GET /admin/teacher-invite-codes
+ */
+router.get('/teacher-invite-codes', async (req, res) => {
+  try {
+    const db = getDB();
+    const codes = await listTeacherInviteCodes(db);
+    res.json({ codes });
+  } catch (error) {
+    console.error('Error listing teacher invite codes:', error);
+    res.status(500).json({ detail: 'Không tải được danh sách mã.' });
+  }
+});
+
+/**
+ * POST /admin/teacher-invite-codes
+ * Body: { max_uses?: number, expires_in_days?: number }
+ */
+router.post('/teacher-invite-codes', async (req, res) => {
+  try {
+    const db = getDB();
+    const max_uses = req.body?.max_uses;
+    const expires_in_days = req.body?.expires_in_days;
+    const created = await createTeacherInviteCode(db, {
+      createdByUserId: req.user.id,
+      maxUses: max_uses,
+      expiresInDays: expires_in_days,
+    });
+    res.status(201).json({ code: created });
+  } catch (error) {
+    console.error('Error creating teacher invite code:', error);
+    res.status(500).json({ detail: 'Không tạo được mã.' });
+  }
+});
+
+/**
+ * POST /admin/teacher-invite-codes/:id/revoke
+ */
+router.post('/teacher-invite-codes/:id/revoke', async (req, res) => {
+  try {
+    const db = getDB();
+    const updated = await revokeTeacherInviteCode(db, req.params.id);
+    if (!updated) {
+      return res.status(404).json({ detail: 'Mã không tồn tại hoặc đã thu hồi.' });
+    }
+    res.json({
+      code: {
+        id: updated._id.toString(),
+        code: updated.code,
+        max_uses: updated.max_uses,
+        use_count: updated.use_count,
+        expires_at: updated.expires_at,
+        revoked_at: updated.revoked_at,
+        created_at: updated.created_at,
+        uses_remaining: Math.max(0, updated.max_uses - updated.use_count),
+      },
+    });
+  } catch (error) {
+    console.error('Error revoking teacher invite code:', error);
+    res.status(500).json({ detail: 'Không thu hồi được mã.' });
   }
 });
 

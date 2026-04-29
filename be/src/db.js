@@ -1,6 +1,7 @@
 import { MongoClient } from 'mongodb'
 import { config } from './config.js'
 import { ensureClassTeacherIndexes } from './classTeacherAssignments.js'
+import { ensureTeacherInviteCodeIndexes } from './utils/teacherInviteCodes.js'
 
 let client = null
 let db = null
@@ -75,6 +76,7 @@ async function ensureIndexes(database) {
       ),
 
     ensureClassTeacherIndexes(database),
+    ensureTeacherInviteCodeIndexes(database),
   ]
 
   const results = await Promise.allSettled(jobs)

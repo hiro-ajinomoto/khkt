@@ -440,7 +440,7 @@ function AssignClassesDialog({
 }
 
 export default function AdminClassTeachersPage() {
-  const { teachers, schoolClassesByGrade, loadData } = useAdminWorkspace();
+  const { users, schoolClassesByGrade, loadData } = useAdminWorkspace();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [draft, setDraft] = useState(() => new Map());
@@ -477,9 +477,13 @@ export default function AdminClassTeachersPage() {
     };
   }, [refreshMappings]);
 
+  /** Toàn bộ GV từ API — không lọc theo `userFilter` của tab Khác (tránh mất GV mới khi còn text tìm kiếm ở tab Giáo viên). */
   const teacherList = useMemo(
-    () => [...teachers].sort((a, b) => a.username.localeCompare(b.username, 'vi')),
-    [teachers]
+    () =>
+      [...users]
+        .filter((u) => u.role === 'teacher')
+        .sort((a, b) => a.username.localeCompare(b.username, 'vi')),
+    [users]
   );
 
   const allClassNames = useMemo(
@@ -553,7 +557,11 @@ export default function AdminClassTeachersPage() {
         <button
           type="button"
           className="refresh-button"
-          onClick={() => refreshMappings().catch((e) => setError(e.message))}
+          onClick={() =>
+            Promise.all([loadData(), refreshMappings()]).catch((e) =>
+              setError(e.message || 'Không tải lại được')
+            )
+          }
         >
           🔄 Làm mới
         </button>

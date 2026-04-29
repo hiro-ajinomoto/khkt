@@ -294,3 +294,76 @@ export async function fetchStats() {
     throw error;
   }
 }
+
+/** @returns {Promise<Array>} */
+export async function fetchTeacherInviteCodes() {
+  const authHeader = getAuthHeader();
+  if (!authHeader) throw new Error('Authentication required');
+
+  const response = await fetch(`${API_BASE_URL}/admin/teacher-invite-codes`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: authHeader,
+    },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Không tải được mã đăng ký giáo viên.');
+  }
+
+  const data = await response.json();
+  return data.codes || [];
+}
+
+/**
+ * @param {{ max_uses?: number, expires_in_days?: number }} [opts]
+ */
+export async function createTeacherInviteCode(opts = {}) {
+  const authHeader = getAuthHeader();
+  if (!authHeader) throw new Error('Authentication required');
+
+  const response = await fetch(`${API_BASE_URL}/admin/teacher-invite-codes`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: authHeader,
+    },
+    body: JSON.stringify({
+      max_uses: opts.max_uses,
+      expires_in_days: opts.expires_in_days,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Không tạo được mã.');
+  }
+
+  return response.json();
+}
+
+export async function revokeTeacherInviteCode(id) {
+  const authHeader = getAuthHeader();
+  if (!authHeader) throw new Error('Authentication required');
+
+  const response = await fetch(
+    `${API_BASE_URL}/admin/teacher-invite-codes/${encodeURIComponent(id)}/revoke`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: authHeader,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Không thu hồi được mã.');
+  }
+
+  return response.json();
+}

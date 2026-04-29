@@ -1359,6 +1359,74 @@ html.dark .admin-dashboard .admin-ct-modal-search {
   border-color: rgba(148, 163, 184, 0.35);
 }
 
+/* Mã đăng ký giáo viên (trang Giáo viên) */
+.teacher-invite-section .teacher-invite-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.teacher-invite-section .teacher-invite-create {
+  border-color: rgba(34, 211, 238, 0.45);
+}
+
+.teacher-invite-intro {
+  margin: 0 0 1rem 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.teacher-invite-error {
+  margin: 0 0 0.75rem 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.65rem;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  color: #fecaca;
+  font-size: 0.88rem;
+}
+
+.teacher-invite-table code.teacher-invite-code {
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  background: rgba(15, 23, 42, 0.45);
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.35rem;
+}
+
+.teacher-invite-status {
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.teacher-invite-status--ok {
+  background: rgba(34, 197, 94, 0.2);
+  color: #86efac;
+}
+
+.teacher-invite-status--revoked,
+.teacher-invite-status--expired,
+.teacher-invite-status--depleted {
+  background: rgba(148, 163, 184, 0.2);
+  color: #cbd5e1;
+}
+
+html:not(.dark) .teacher-invite-status--ok {
+  background: rgba(22, 163, 74, 0.15);
+  color: #166534;
+}
+
+html:not(.dark) .teacher-invite-status--revoked,
+html:not(.dark) .teacher-invite-status--expired,
+html:not(.dark) .teacher-invite-status--depleted {
+  background: rgba(100, 116, 139, 0.15);
+  color: #475569;
+}
+
 /* Hide sub-route compact bar from ~431px up. Placed last so it wins over .admin-header { display: flex }. */
 @media (min-width: 431px) {
   .admin-dashboard .admin-header.admin-header--compact.admin-layout-compact-header--subroute-mobile {
