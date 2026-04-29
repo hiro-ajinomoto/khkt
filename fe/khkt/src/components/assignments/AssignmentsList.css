@@ -860,3 +860,24 @@
     transform: none;
   }
 }
+
+/* Học sinh: bài tạm khóa thao tác — giữ chuyển động nhẹ để thẻ không “chết”. */
+@keyframes assignments-student-locked-breathe {
+  0%,
+  100% {
+    box-shadow: 0 10px 28px rgba(86, 132, 214, 0.08);
+  }
+  50% {
+    box-shadow: 0 14px 34px rgba(100, 116, 139, 0.22);
+  }
+}
+
+.assignments-student-card--locked {
+  animation: assignments-student-locked-breathe 2.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .assignments-student-card--locked {
+    animation: none;
+  }
+}

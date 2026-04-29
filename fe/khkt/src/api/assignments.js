@@ -196,6 +196,91 @@ export async function deleteAssignments(ids) {
 }
 
 /**
+ * Cập nhật `student_visible` hàng loạt.
+ * `student_visible`: false = khóa thao tác HS trên hệ thống (vẫn thấy bài); true/mặc định = bình thường.
+ * @param {string[]} ids
+ * @param {boolean} visible
+ */
+export async function patchAssignmentsStudentVisibleBulk(ids, visible) {
+  try {
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    const authHeader = getAuthHeader();
+    if (authHeader) {
+      headers['Authorization'] = authHeader;
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/assignments/bulk-student-visible`,
+      {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ ids, visible }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        describeApiFailure(
+          response,
+          errorData,
+          'Không cập nhật được trạng thái hiển thị cho học sinh.'
+        )
+      );
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error('Error patching student_visible (bulk):', error);
+    rethrowNetwork(error);
+  }
+}
+
+/**
+ * @param {string} id
+ * @param {boolean} visible
+ * @returns {Promise<Object>} Assignment sau khi cập nhật (cùng shape GET một bài)
+ */
+export async function patchAssignmentStudentVisible(id, visible) {
+  try {
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    const authHeader = getAuthHeader();
+    if (authHeader) {
+      headers['Authorization'] = authHeader;
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/assignments/${id}/student-visible`,
+      {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ visible }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        describeApiFailure(
+          response,
+          errorData,
+          'Không cập nhật được trạng thái hiển thị cho học sinh.'
+        )
+      );
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error('Error patching student_visible:', error);
+    rethrowNetwork(error);
+  }
+}
+
+/**
  * Create a new assignment
  * @param {FormData} formData - Form data containing assignment details
  * @returns {Promise<Object>} Created assignment object

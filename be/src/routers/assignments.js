@@ -22,6 +22,8 @@ import {
   todayStrHoChiMinh,
   isAssignmentReleased,
 } from "../utils/assignmentRelease.js";
+import { isClassAssignmentActiveForStudent } from "../utils/assignmentClassLink.js";
+import { isAssignmentVisibleToStudentsGlobally } from "../utils/assignmentStudentVisible.js";
 import {
   parseMaxSubmissionsRaw,
   storedMaxSubmissionsForApi,
@@ -384,6 +386,7 @@ async function mapAssignmentDocToApi(item, creatorMap, listCtx = null, opts = {}
     created_by: cid,
     created_by_name: cr ? cr.name : null,
     created_by_username: cr ? cr.username : null,
+    student_visible: item.student_visible !== false,
   };
   if (listCtx) {
     if (listCtx.viewerRole === "teacher" || listCtx.viewerRole === "admin") {
@@ -399,6 +402,152 @@ async function mapAssignmentDocToApi(item, creatorMap, listCtx = null, opts = {}
   }
   return base;
 }
+
+/**
+ * PATCH /assignments/bulk-student-visible
+ * Khóa/mở thao tác của học sinh globally (`student_visible`: HS vẫn thấy bài trên danh sách khi khóa).
+ */
+router.patch(
+  "/bulk-student-visible",
+  authenticate,
+  requireTeacher,
+  async (req, res) => {
+    try {
+      const { ids, visible } = req.body;
+
+      if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({
+          detail: "Missing or invalid 'ids' array in request body",
+        });
+      }
+
+      if (typeof visible !== "boolean") {
+        return res.status(400).json({
+          detail: "Field 'visible' must be a boolean",
+        });
+      }
+
+      const objectIds = [];
+      const invalidIds = [];
+
+      for (const id of ids) {
+        try {
+          objectIds.push(ObjectId.createFromHexString(id));
+        } catch {
+          invalidIds.push(id);
+        }
+      }
+
+      if (invalidIds.length > 0) {
+        return res.status(400).json({
+          detail: `Invalid assignment ids: ${invalidIds.join(", ")}`,
+        });
+      }
+
+      const db = getDB();
+
+      if (req.user.role === "teacher") {
+        const scoped = await getTeacherScopedClassSet(db, req.user);
+        for (const oid of objectIds) {
+          const ok = await canTeacherManageAssignmentDb(
+            db,
+            req.user,
+            oid,
+            scoped,
+          );
+          if (!ok) {
+            return res.status(403).json({
+              detail:
+                "Bạn không có quyền thao tác một hoặc nhiều bài tập trong danh sách.",
+            });
+          }
+        }
+      }
+
+      const now = new Date();
+      const result = await db.collection("assignments").updateMany(
+        { _id: { $in: objectIds } },
+        { $set: { student_visible: visible, updated_at: now } },
+      );
+
+      res.json({
+        success: true,
+        matched_count: result.matchedCount,
+        modified_count: result.modifiedCount,
+      });
+    } catch (error) {
+      console.error("Error bulk-updating student_visible:", error);
+      res.status(500).json({ detail: "Failed to update assignments" });
+    }
+  },
+);
+
+/**
+ * PATCH /assignments/:id/student-visible
+ * Body: { visible: boolean }
+ */
+router.patch(
+  "/:id/student-visible",
+  authenticate,
+  requireTeacher,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { visible } = req.body;
+
+      if (typeof visible !== "boolean") {
+        return res.status(400).json({
+          detail: "Field 'visible' must be a boolean",
+        });
+      }
+
+      let objectId;
+      try {
+        objectId = ObjectId.createFromHexString(id);
+      } catch {
+        return res.status(400).json({ detail: "Invalid assignment id" });
+      }
+
+      const db = getDB();
+      const assignment = await db.collection("assignments").findOne({
+        _id: objectId,
+      });
+
+      if (!assignment) {
+        return res.status(404).json({ detail: "Assignment not found" });
+      }
+
+      if (req.user.role === "teacher") {
+        const scoped = await getTeacherScopedClassSet(db, req.user);
+        const ok = await canTeacherManageAssignmentDb(
+          db,
+          req.user,
+          objectId,
+          scoped,
+        );
+        if (!ok) {
+          return res.status(404).json({ detail: "Assignment not found" });
+        }
+      }
+
+      const now = new Date();
+      await db.collection("assignments").updateOne(
+        { _id: objectId },
+        { $set: { student_visible: visible, updated_at: now } },
+      );
+
+      const updated = await db.collection("assignments").findOne({
+        _id: objectId,
+      });
+      const creatorMap = await loadCreatorMapForAssignments(db, [updated]);
+      const body = await mapAssignmentDocToApi(updated, creatorMap);
+      res.json(body);
+    } catch (error) {
+      console.error("Error updating student_visible:", error);
+      res.status(500).json({ detail: "Failed to update assignment" });
+    }
+  },
+);
 
 /**
  * GET /assignments
@@ -440,6 +589,7 @@ router.get("/", optionalAuthenticate, async (req, res) => {
           .toArray();
 
         assignmentIds = assignmentClasses
+          .filter((ac) => isClassAssignmentActiveForStudent(ac))
           .map((ac) => ac.assignment_id)
           .filter(Boolean)
           .map((id) => {
@@ -724,7 +874,11 @@ router.get("/:id", optionalAuthenticate, async (req, res) => {
         assignment_id: objectId,
         class_name: student.class_name,
       });
-      if (!assigned || !isAssignmentReleased(assignment)) {
+      if (
+        !assigned ||
+        !isClassAssignmentActiveForStudent(assigned) ||
+        !isAssignmentReleased(assignment)
+      ) {
         return res.status(404).json({
           detail:
             "Không tìm thấy bài tập hoặc bài chưa đến ngày mở cho học sinh",
@@ -812,6 +966,10 @@ router.post("/:id/report-problem", authenticate, async (req, res) => {
       });
     }
 
+    if (!isAssignmentVisibleToStudentsGlobally(assignment)) {
+      return res.status(403).json({ detail: "Bài tập hiện không mở cho học sinh." });
+    }
+
     const studentId = ObjectId.createFromHexString(req.user.id);
     const student = await db.collection("users").findOne({ _id: studentId });
     if (!student?.class_name) {
@@ -825,6 +983,11 @@ router.post("/:id/report-problem", authenticate, async (req, res) => {
     if (!assigned) {
       return res.status(403).json({
         detail: "Bài tập không được gán cho lớp của bạn.",
+      });
+    }
+    if (!isClassAssignmentActiveForStudent(assigned)) {
+      return res.status(403).json({
+        detail: "Bài tập hiện không mở cho lớp của bạn.",
       });
     }
 

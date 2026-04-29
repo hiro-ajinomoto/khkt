@@ -10,6 +10,7 @@ import {
   defaultVnRangeYmd,
   resolveClassAssignmentIdsForTeacherView,
 } from '../utils/teacherSubmissionActivity.js';
+import { canTeacherManageAssignmentDb, getTeacherScopedClassSet } from '../utils/teacherClassScope.js';
 
 const YMD_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -162,6 +163,14 @@ router.get('/classes/:className/assignments', async (req, res) => {
     if (oids.length === 0) {
       return res.json({ class_name: className, assignments: [] });
     }
+    const links = await db
+      .collection('assignment_classes')
+      .find({ class_name: className, assignment_id: { $in: oids } })
+      .project({ assignment_id: 1, class_active: 1 })
+      .toArray();
+    const activeByAssignmentId = new Map(
+      links.map((r) => [r.assignment_id.toString(), r.class_active !== false]),
+    );
     const assignments = await db
       .collection('assignments')
       .find({ _id: { $in: oids } })
@@ -182,6 +191,7 @@ router.get('/classes/:className/assignments', async (req, res) => {
         available_from_date: a.available_from_date ?? null,
         due_date: a.due_date ?? null,
         grade_level: a.grade_level || null,
+        class_active_for_students: activeByAssignmentId.get(a._id.toString()) !== false,
       })),
     });
   } catch (error) {
@@ -190,6 +200,55 @@ router.get('/classes/:className/assignments', async (req, res) => {
     }
     console.error('GET /teacher/classes/.../assignments:', error);
     res.status(500).json({ detail: 'Không tải được bài tập của lớp.' });
+  }
+});
+
+/**
+ * PATCH /teacher/classes/:className/assignments/:assignmentId/class-active
+ * Body: { active: boolean } — false = tạm ẩn bài với lớp này (HS không thấy / không nộp); true = mở lại.
+ */
+router.patch('/classes/:className/assignments/:assignmentId/class-active', async (req, res) => {
+  try {
+    const db = getDB();
+    const className = await assertClassInScope(db, req.user, req.params.className);
+    const active = req.body?.active;
+    if (typeof active !== 'boolean') {
+      return res.status(400).json({ detail: 'Gửi JSON { "active": true } hoặc { "active": false }.' });
+    }
+    let assignmentOid;
+    try {
+      assignmentOid = ObjectId.createFromHexString(req.params.assignmentId);
+    } catch {
+      return res.status(400).json({ detail: 'Mã bài tập không hợp lệ.' });
+    }
+    const scoped = await getTeacherScopedClassSet(db, req.user);
+    const canManage = await canTeacherManageAssignmentDb(db, req.user, assignmentOid, scoped);
+    if (!canManage) {
+      return res.status(403).json({ detail: 'Bạn không được phép thao tác với bài này.' });
+    }
+    const link = await db.collection('assignment_classes').findOne({
+      class_name: className,
+      assignment_id: assignmentOid,
+    });
+    if (!link) {
+      return res.status(404).json({ detail: 'Bài tập không được gán cho lớp này.' });
+    }
+    await db.collection('assignment_classes').updateOne(
+      { _id: link._id },
+      { $set: { class_active: active } },
+    );
+    res.json({
+      ok: true,
+      class_name: className,
+      assignment_id: assignmentOid.toString(),
+      class_active_for_students: active,
+    });
+  } catch (error) {
+    if (error.status === 400 || error.status === 403) {
+      return res.status(error.status).json({ detail: error.message });
+    }
+    console.error('PATCH /teacher/classes/.../class-active:', error);
+    res.status(500).json({ detail: 'Không cập nhật được trạng thái bài cho lớp.' });
   }
 });
 

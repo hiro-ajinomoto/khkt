@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import {
   fetchTeacherClassAssignments,
   decodeClassRouteParam,
+  patchTeacherClassAssignmentActive,
 } from '../../api/teacherWorkspace';
 import { deleteAssignment } from '../../api/assignments';
 import OceanShell, { OceanPageLoading, OceanPageError } from '../layout/OceanShell';
@@ -41,6 +42,7 @@ export default function TeacherClassAssignmentsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [togglingActiveId, setTogglingActiveId] = useState(null);
   const [actionError, setActionError] = useState(null);
 
   useEffect(() => {
@@ -118,9 +120,10 @@ export default function TeacherClassAssignmentsPage() {
           Bài tập · {className}
         </h2>
         <p className="mb-4 text-sm text-slate-600 dark:text-slate-300">
-          Sắp xếp theo hoạt động mới nhất (tạo hoặc cập nhật). Dùng <strong>Chi tiết</strong> để
-          xem đề, <strong>Sửa</strong> để cập nhật nội dung, <strong>Xóa</strong> để gỡ bài khỏi hệ
-          thống (kể cả mọi lớp đã gán).
+          Sắp xếp theo hoạt động mới nhất (tạo hoặc cập nhật). Dùng <strong>Chi tiết</strong> để xem
+          đề, <strong>Sửa</strong> để cập nhật nội dung, <strong>Ẩn với HS</strong> để tạm ẩn bài chỉ
+          với lớp này (học sinh không thấy và không nộp được; không xóa bài),{' '}
+          <strong>Xóa</strong> để gỡ bài khỏi hệ thống (kể cả mọi lớp đã gán).
         </p>
         <TeacherClassSubNav className={className} active="assignments" />
 
@@ -143,7 +146,9 @@ export default function TeacherClassAssignmentsPage() {
           </p>
         ) : (
           <ul className="flex flex-col gap-3">
-            {assignments.map((a, idx) => (
+            {assignments.map((a, idx) => {
+              const visibleToStudents = a.class_active_for_students !== false;
+              return (
               <li
                 key={a.id}
                 className="rounded-2xl border border-sky-200/60 bg-white/85 px-4 py-4 dark:border-cyan-500/20 dark:bg-slate-900/60"
@@ -156,7 +161,14 @@ export default function TeacherClassAssignmentsPage() {
                     {idx + 1}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="font-medium text-slate-900 dark:text-white">{a.title}</div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="font-medium text-slate-900 dark:text-white">{a.title}</div>
+                      {!visibleToStudents ? (
+                        <span className="rounded-lg bg-amber-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-950 dark:bg-amber-950/80 dark:text-amber-100">
+                          Ẩn với HS
+                        </span>
+                      ) : null}
+                    </div>
                     <div className="mt-1 space-y-0.5 text-xs text-slate-600 dark:text-slate-400">
                       {a.grade_level ? (
                         <div>
@@ -206,7 +218,46 @@ export default function TeacherClassAssignmentsPage() {
                       </button>
                       <button
                         type="button"
-                        disabled={deletingId === a.id}
+                        disabled={togglingActiveId === a.id || deletingId === a.id}
+                        onClick={async () => {
+                          const nextActive = !visibleToStudents;
+                          if (!nextActive) {
+                            if (
+                              !window.confirm(
+                                'Ẩn bài này đối với học sinh lớp?\n\nHọc sinh sẽ không còn thấy bài trong danh sách và không nộp được cho đến khi bạn mở lại. Bài không bị xóa khỏi hệ thống.',
+                              )
+                            ) {
+                              return;
+                            }
+                          }
+                          setActionError(null);
+                          setTogglingActiveId(a.id);
+                          try {
+                            await patchTeacherClassAssignmentActive(className, a.id, nextActive);
+                            setAssignments((prev) =>
+                              prev.map((x) =>
+                                x.id === a.id
+                                  ? { ...x, class_active_for_students: nextActive }
+                                  : x,
+                              ),
+                            );
+                          } catch (e) {
+                            setActionError(e.message || 'Không đổi được trạng thái bài.');
+                          } finally {
+                            setTogglingActiveId(null);
+                          }
+                        }}
+                        className="rounded-xl border border-amber-300/80 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-amber-500/40 dark:bg-amber-950/50 dark:text-amber-100 dark:hover:bg-amber-950/80"
+                      >
+                        {togglingActiveId === a.id
+                          ? 'Đang lưu…'
+                          : visibleToStudents
+                            ? 'Ẩn với HS'
+                            : 'Mở cho HS'}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={deletingId === a.id || togglingActiveId === a.id}
                         onClick={async () => {
                           if (
                             !window.confirm(
@@ -234,7 +285,8 @@ export default function TeacherClassAssignmentsPage() {
                   </div>
                 </div>
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </div>

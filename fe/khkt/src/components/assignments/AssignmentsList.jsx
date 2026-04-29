@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchAssignments, fetchAssignmentsByDate, fetchAssignmentsByMonth, deleteAssignment, deleteAssignments, assignAssignmentsToClasses, getAssignmentClasses, reportAssignmentProblem } from '../../api/assignments';
+import { fetchAssignments, deleteAssignment, deleteAssignments, assignAssignmentsToClasses, getAssignmentClasses, reportAssignmentProblem, patchAssignmentStudentVisible, patchAssignmentsStudentVisibleBulk } from '../../api/assignments';
 import { fetchSchoolClasses, groupClassesByGrade } from '../../api/classes';
 import { fetchMySubmissionCounts } from '../../api/submissions';
 import { useAuth } from '../../contexts/AuthContext';
@@ -62,6 +62,8 @@ function AssignmentsList() {
   /** Danh sách id bài tập đang mở trong modal gán lớp (một hoặc nhiều bài). */
   const [assignModalAssignmentIds, setAssignModalAssignmentIds] = useState(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkStudentVisibleBusy, setBulkStudentVisibleBusy] = useState(false);
+  const canManageAssignments = isTeacher || isAdmin;
   const [reportingAssignmentId, setReportingAssignmentId] = useState(null);
   /** Học sinh: modal báo lỗi đề — { mode:'confirm', assignmentId } | { mode:'result', tone, message } */
   const [reportDialog, setReportDialog] = useState(null);
@@ -431,6 +433,52 @@ function AssignmentsList() {
       console.error('Error bulk deleting assignments:', err);
     } finally {
       setBulkDeleting(false);
+    }
+  };
+
+  const handleSetStudentVisible = async (id, visible) => {
+    try {
+      const updated = await patchAssignmentStudentVisible(id, visible);
+      setAllAssignments((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, ...updated } : a))
+      );
+    } catch (err) {
+      alert(
+        'Không cập nhật hiển thị cho học sinh: ' +
+          (err.message || 'Lỗi không xác định')
+      );
+      console.error('Error setting student_visible:', err);
+    }
+  };
+
+  const handleBulkSetStudentVisible = async (visible) => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    if (!visible) {
+      if (
+        !window.confirm(
+        `Tạm khóa thao tác của học sinh cho ${ids.length} bài đã chọn (mọi lớp)? Học sinh vẫn thấy bài trên danh sách nhưng không thể nộp, báo lỗi đề hay mở chi tiết từ thẻ.`
+        )
+      ) {
+        return;
+      }
+    }
+    try {
+      setBulkStudentVisibleBusy(true);
+      await patchAssignmentsStudentVisibleBulk(ids, visible);
+      setAllAssignments((prev) =>
+        prev.map((a) =>
+          ids.includes(a.id) ? { ...a, student_visible: visible } : a
+        )
+      );
+    } catch (err) {
+      alert(
+        'Không cập nhật hiển thị cho học sinh: ' +
+          (err.message || 'Lỗi không xác định')
+      );
+      console.error('Error bulk student_visible:', err);
+    } finally {
+      setBulkStudentVisibleBusy(false);
     }
   };
 
@@ -871,7 +919,7 @@ function AssignmentsList() {
                   </span>
                 )}
               </span>
-              {isTeacher && selectedIds.size > 0 && (
+              {canManageAssignments && selectedIds.size > 0 && (
                 <span className="rounded-full border border-sky-200/80 bg-sky-50 px-3 py-1.5 text-sm font-semibold text-sky-900 dark:border-cyan-300/30 dark:bg-cyan-500/15 dark:text-cyan-100">
                   Đã chọn: {selectedIds.size}
                 </span>
@@ -902,7 +950,7 @@ function AssignmentsList() {
                             </span>
                           )}
                         </p>
-                        {isTeacher && dayIds.length > 0 && (
+                        {canManageAssignments && dayIds.length > 0 && (
                           <label
                             className={`inline-flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition hover:-translate-y-0.5 ${
                               allSelectedInDay
@@ -955,6 +1003,7 @@ function AssignmentsList() {
                             onEdit={(id) => navigate(`/assignments/${id}/edit`)}
                             onView={(id) => navigate(`/assignments/${id}`)}
                             onAssign={handleAssign}
+                            onSetStudentVisible={handleSetStudentVisible}
                             onReportProblem={handleReportProblem}
                             reportingAssignmentId={reportingAssignmentId}
                           />
@@ -1006,7 +1055,7 @@ function AssignmentsList() {
           </>
         )}
 
-        {isTeacher && (
+        {canManageAssignments && (
           <div
             className={`assignments-bulk-bar-spacer pointer-events-none w-full shrink-0 ${
               selectedIds.size > 0 ? 'assignments-bulk-bar-spacer--visible' : ''
@@ -1015,7 +1064,7 @@ function AssignmentsList() {
           />
         )}
 
-        {isTeacher && selectedIds.size > 0 && (
+        {canManageAssignments && selectedIds.size > 0 && (
           <div
             role="region"
             aria-label="Thao tác trên bài đã chọn"
@@ -1047,8 +1096,28 @@ function AssignmentsList() {
                 </button>
                 <button
                   type="button"
+                  onClick={() => handleBulkSetStudentVisible(false)}
+                  disabled={bulkDeleting || bulkStudentVisibleBusy}
+                  className="rounded-xl border border-amber-300/85 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-950 shadow-sm transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 dark:border-amber-400/45 dark:bg-amber-500/15 dark:text-amber-100 dark:hover:bg-amber-500/25"
+                >
+                  {bulkStudentVisibleBusy
+                    ? 'Đang cập nhật...'
+                    : `🔒 Khóa thao tác HS (${selectedIds.size})`}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleBulkSetStudentVisible(true)}
+                  disabled={bulkDeleting || bulkStudentVisibleBusy}
+                  className="rounded-xl border border-emerald-300/85 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-900 shadow-sm transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-400/45 dark:bg-emerald-500/15 dark:text-emerald-100 dark:hover:bg-emerald-500/25"
+                >
+                  {bulkStudentVisibleBusy
+                    ? 'Đang cập nhật...'
+                    : `🔓 Mở thao tác HS (${selectedIds.size})`}
+                </button>
+                <button
+                  type="button"
                   onClick={handleBulkDelete}
-                  disabled={bulkDeleting}
+                  disabled={bulkDeleting || bulkStudentVisibleBusy}
                   className="rounded-xl border border-rose-300/80 bg-rose-50 px-4 py-2.5 text-sm font-semibold text-rose-800 shadow-sm transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-400/40 dark:bg-rose-500/15 dark:text-rose-100 dark:hover:bg-rose-500/25"
                 >
                   {bulkDeleting ? 'Đang xóa...' : `🗑️ Xóa (${selectedIds.size})`}
@@ -1075,7 +1144,7 @@ function AssignmentsList() {
 
         <BackToTopButton
           positionClass={
-            isTeacher && selectedIds.size > 0
+            canManageAssignments && selectedIds.size > 0
               ? 'bottom-28 sm:bottom-24'
               : 'bottom-24 sm:bottom-10'
           }
@@ -1096,6 +1165,7 @@ function AssignmentCard({
   onEdit,
   onView,
   onAssign,
+  onSetStudentVisible,
   onReportProblem,
   reportingAssignmentId,
   mySubmissionCount = 0,
@@ -1110,6 +1180,8 @@ function AssignmentCard({
     Number.isFinite(maxSubmissions) && mySubmissionCount >= maxSubmissions;
   const hasSubmitted = mySubmissionCount > 0;
   const problemFlagged = Boolean(assignment.problem_flagged);
+  const studentInteractionLocked =
+    isStudent && assignment.student_visible === false;
   const strTrim = (v) => (typeof v === 'string' ? v.trim() : '');
   const requirementPreview =
     strTrim(assignment.description) ||
@@ -1119,7 +1191,12 @@ function AssignmentCard({
     'Mở bài tập để xem nội dung chi tiết';
   return (
     <article
-      className={`group relative flex h-full min-h-0 cursor-pointer flex-col overflow-hidden rounded-[30px] border border-sky-200/70 bg-white/85 p-5 shadow-[0_10px_28px_rgba(86,132,214,0.08)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-orange-200 hover:shadow-[0_18px_38px_rgba(255,140,61,0.12)] dark:border-slate-600/70 dark:bg-slate-900 dark:shadow-2xl dark:shadow-black/50 dark:hover:border-cyan-400/55 dark:hover:shadow-cyan-950/55 ${
+      aria-disabled={studentInteractionLocked || undefined}
+      className={`group relative flex h-full min-h-0 flex-col overflow-hidden rounded-[30px] border border-sky-200/70 bg-white/85 p-5 shadow-[0_10px_28px_rgba(86,132,214,0.08)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-orange-200 hover:shadow-[0_18px_38px_rgba(255,140,61,0.12)] dark:border-slate-600/70 dark:bg-slate-900 dark:shadow-2xl dark:shadow-black/50 dark:hover:border-cyan-400/55 dark:hover:shadow-cyan-950/55 ${
+        studentInteractionLocked
+          ? 'assignments-student-card--locked cursor-not-allowed'
+          : 'cursor-pointer'
+      } ${
         selectedIds.has(assignment.id)
           ? 'ring-2 ring-orange-300/80 ring-offset-2 ring-offset-amber-50 dark:ring-cyan-300/70 dark:ring-offset-slate-900'
           : ''
@@ -1128,7 +1205,10 @@ function AssignmentCard({
           ? 'ring-2 ring-rose-400/70 ring-offset-2 ring-offset-rose-50 dark:ring-rose-400/55 dark:ring-offset-slate-900'
           : ''
       }`}
-      onClick={() => onView(assignment.id)}
+      onClick={() => {
+        if (studentInteractionLocked) return;
+        onView(assignment.id);
+      }}
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,211,106,0.12),transparent_32%),radial-gradient(circle_at_bottom_left,rgba(143,194,255,0.14),transparent_28%)] opacity-0 transition group-hover:opacity-100 dark:bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.16),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(96,165,250,0.16),transparent_28%)]" />
       <div className="relative flex min-h-0 flex-1 flex-col">
@@ -1207,6 +1287,33 @@ function AssignmentCard({
               >
               ✏️
               </button>
+              {typeof onSetStudentVisible === 'function' && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const next = assignment.student_visible === false;
+                    if (!next) {
+                      if (
+                        !window.confirm(
+                          'Tạm khóa thao tác của học sinh (mọi lớp)? Học sinh vẫn thấy bài trên danh sách nhưng không thể nộp, báo lỗi đề hay mở chi tiết từ thẻ; có thể mở lại bất cứ lúc nào.'
+                        )
+                      ) {
+                        return;
+                      }
+                    }
+                    onSetStudentVisible(assignment.id, next);
+                  }}
+                  className="rounded-xl border border-slate-200/90 bg-slate-50 px-2 py-1 text-slate-800 hover:bg-slate-100 dark:border-slate-500/45 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
+                  title={
+                    assignment.student_visible === false
+                      ? 'Mở lại thao tác cho học sinh (mọi lớp)'
+                      : 'Khóa thao tác học sinh — vẫn hiện bài nhưng không nộp/ không click trên thẻ'
+                  }
+                >
+                  {assignment.student_visible === false ? '👁' : '🙈'}
+                </button>
+              )}
               <button
               onClick={(e) => {
               e.stopPropagation();
@@ -1225,6 +1332,16 @@ function AssignmentCard({
           {isTeacher && problemFlagged && (
             <span className="rounded-xl border border-rose-400/55 bg-rose-600/20 px-3 py-2 text-xs font-semibold text-rose-900 dark:border-rose-400/50 dark:bg-rose-950/75 dark:text-rose-100">
               Đề bị báo lỗi (≥ 5 HS)
+            </span>
+          )}
+          {isTeacher && assignment.student_visible === false && (
+            <span className="rounded-xl border border-slate-500/50 bg-slate-700/25 px-3 py-2 text-xs font-semibold text-slate-800 dark:border-slate-500/45 dark:bg-slate-950/80 dark:text-slate-100">
+              Tạm khóa thao tác HS (toàn hệ thống)
+            </span>
+          )}
+          {isStudent && assignment.student_visible === false && (
+            <span className="rounded-xl border border-slate-400/55 bg-slate-200/90 px-3 py-2 text-xs font-semibold text-slate-800 dark:border-slate-500/50 dark:bg-slate-800/90 dark:text-slate-100">
+              Tạm khóa thao tác — chỉ xem, không nộp/báo lỗi trên hệ thống
             </span>
           )}
           {isTeacher &&
@@ -1302,9 +1419,12 @@ function AssignmentCard({
               <img
                 src={assignment.question_image_url}
                 alt="Đề bài"
-                className="max-h-32 w-auto rounded-2xl object-contain shadow-md sm:max-h-36"
+                className={`max-h-32 w-auto rounded-2xl object-contain shadow-md sm:max-h-36 ${
+                  studentInteractionLocked ? 'pointer-events-none opacity-90' : ''
+                }`}
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (studentInteractionLocked) return;
                   onView(assignment.id);
                 }}
                 onError={(e) => {
@@ -1327,11 +1447,19 @@ function AssignmentCard({
 
         <div className="mt-5 flex shrink-0 gap-3">
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
+              if (studentInteractionLocked) return;
               onView(assignment.id);
             }}
-            className="flex-1 rounded-2xl border border-orange-200/70 bg-[linear-gradient(135deg,#ffd36a_0%,#ff9b3d_55%,#ff7a59_100%)] px-4 py-3 font-medium text-white shadow-[0_10px_24px_rgba(255,140,61,0.18)] transition hover:-translate-y-0.5 dark:border-cyan-300/25 dark:bg-gradient-to-r dark:from-cyan-500/80 dark:to-blue-600/80 dark:shadow-cyan-950/30"
+            disabled={studentInteractionLocked}
+            title={
+              studentInteractionLocked
+                ? 'Giáo viên đã tạm khóa — xem đề trên trang này hoặc hỏi giáo viên nếu cần mở lại'
+                : 'Xem chi tiết bài tập'
+            }
+            className="flex-1 rounded-2xl border border-orange-200/70 bg-[linear-gradient(135deg,#ffd36a_0%,#ff9b3d_55%,#ff7a59_100%)] px-4 py-3 font-medium text-white shadow-[0_10px_24px_rgba(255,140,61,0.18)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:translate-y-0 dark:border-cyan-300/25 dark:bg-gradient-to-r dark:from-cyan-500/80 dark:to-blue-600/80 dark:shadow-cyan-950/30"
           >
             Xem chi tiết
           </button>
@@ -1343,14 +1471,17 @@ function AssignmentCard({
                 onReportProblem(assignment.id);
               }}
               disabled={
+                studentInteractionLocked ||
                 Boolean(assignment.student_reported_problem) ||
                 reportingAssignmentId === assignment.id
               }
               className="flex min-h-[48px] min-w-[48px] shrink-0 items-center justify-center rounded-2xl border border-amber-300/80 bg-white/90 px-3 py-3 text-amber-600 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-45 dark:border-amber-400/45 dark:bg-slate-800 dark:text-amber-400 dark:hover:bg-slate-700"
               title={
-                assignment.student_reported_problem
-                  ? 'Bạn đã báo lỗi đề bài này'
-                  : 'Báo đề bài có lỗi cho giáo viên'
+                studentInteractionLocked
+                  ? 'Giáo viên đã tạm khóa thao tác — không thể báo lỗi đề'
+                  : assignment.student_reported_problem
+                    ? 'Bạn đã báo lỗi đề bài này'
+                    : 'Báo đề bài có lỗi cho giáo viên'
               }
               aria-label="Báo đề bài có lỗi cho giáo viên"
             >

@@ -111,7 +111,7 @@ export async function removeStudentFromTeacherClass(className, studentId) {
 }
 
 /**
- * @returns {Promise<{ class_name: string, assignments: Array<{ id: string, title: string, created_at: string|null, updated_at: string|null, available_from_date: string|null, due_date: string|null, grade_level: string|null }> }>}
+ * @returns {Promise<{ class_name: string, assignments: Array<{ id: string, title: string, created_at: string|null, updated_at: string|null, available_from_date: string|null, due_date: string|null, grade_level: string|null, class_active_for_students?: boolean }> }>}
  */
 export async function fetchTeacherClassAssignments(className) {
   try {
@@ -133,6 +133,38 @@ export async function fetchTeacherClassAssignments(className) {
     return response.json();
   } catch (error) {
     console.error('fetchTeacherClassAssignments:', error);
+    rethrowNetwork(error);
+  }
+}
+
+/**
+ * Ẩn / mở lại bài đối với một lớp (không xóa bài).
+ * @param {boolean} active true = học sinh thấy và nộp được; false = tạm ẩn
+ */
+export async function patchTeacherClassAssignmentActive(className, assignmentId, active) {
+  try {
+    const authHeader = getAuthHeader();
+    if (!authHeader) throw new Error('Cần đăng nhập.');
+    const response = await fetch(
+      `${API_BASE_URL}/teacher/classes/${encodeURIComponent(className)}/assignments/${encodeURIComponent(assignmentId)}/class-active`,
+      {
+        method: 'PATCH',
+        headers: {
+          Authorization: authHeader,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ active }),
+      },
+    );
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        describeApiFailure(response, errorData, 'Không cập nhật được trạng thái bài.'),
+      );
+    }
+    return response.json();
+  } catch (error) {
+    console.error('patchTeacherClassAssignmentActive:', error);
     rethrowNetwork(error);
   }
 }

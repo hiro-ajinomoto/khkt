@@ -12,6 +12,8 @@ import {
   isAssignmentReleased,
   isBeforeOrOnDeadline,
 } from "../utils/assignmentRelease.js";
+import { isClassAssignmentActiveForStudent } from "../utils/assignmentClassLink.js";
+import { isAssignmentVisibleToStudentsGlobally } from "../utils/assignmentStudentVisible.js";
 import { resolveMaxSubmissionsLimit } from "../utils/submissionLimits.js";
 import { uploadFileToS3 } from "../services/s3Service.js";
 import { authenticate, requireTeacher } from "../middleware/auth.js";
@@ -891,6 +893,12 @@ router.post("/", authenticate, upload.array("files"), async (req, res) => {
       return res.status(404).json({ detail: "Assignment not found" });
     }
 
+    if (req.user.role === "student" && !isAssignmentVisibleToStudentsGlobally(assignment)) {
+      return res.status(403).json({
+        detail: "Bài tập này tạm không mở cho học sinh.",
+      });
+    }
+
     if (req.user.role === "student" && !isAssignmentReleased(assignment)) {
       return res.status(403).json({
         detail: "Bài tập chưa đến ngày mở. Vui lòng quay lại sau.",
@@ -922,6 +930,11 @@ router.post("/", authenticate, upload.array("files"), async (req, res) => {
         return res
           .status(403)
           .json({ detail: "Assignment not assigned to your class" });
+      }
+      if (!isClassAssignmentActiveForStudent(assigned)) {
+        return res.status(403).json({
+          detail: "Bài tập này tạm không nhận nộp cho lớp của bạn.",
+        });
       }
 
       const limit = resolveMaxSubmissionsLimit(assignment);

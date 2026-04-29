@@ -121,11 +121,26 @@ function AssignmentDetail() {
     setCropSession(null);
   };
 
+  const pastDueBlocked =
+    isStudent &&
+    assignment?.due_date &&
+    isPastDueClient(assignment.due_date);
+  const limitBlocked = isStudent && isAtSubmissionLimit(assignment);
+  /** Bài tạm khóa thao tác (nộp, báo lỗi…) trên hệ thống — HS vẫn xem được đề. */
+  const studentActionsLocked =
+    isStudent && assignment?.student_visible === false;
+  const submissionBlocked =
+    pastDueBlocked || limitBlocked || studentActionsLocked;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (submissionBlocked) {
-      if (
+      if (studentActionsLocked) {
+        setError(
+          'Giáo viên đã tạm khóa nộp bài và thao tác trên hệ thống cho đề này.'
+        );
+      } else if (
         isStudent &&
         assignment?.due_date &&
         isPastDueClient(assignment.due_date)
@@ -171,13 +186,6 @@ function AssignmentDetail() {
       setIsSubmitting(false);
     }
   };
-
-  const pastDueBlocked =
-    isStudent &&
-    assignment?.due_date &&
-    isPastDueClient(assignment.due_date);
-  const limitBlocked = isStudent && isAtSubmissionLimit(assignment);
-  const submissionBlocked = pastDueBlocked || limitBlocked;
 
   const deadlineHint =
     assignment?.due_date && deadlineReminderClient(assignment.due_date);
@@ -282,6 +290,14 @@ function AssignmentDetail() {
           {isStudent && formatSubmissionQuota(assignment) && (
             <span className="meta-badge quota" title="Số lần nộp của bạn với bài này">
               {formatSubmissionQuota(assignment)}
+            </span>
+          )}
+          {isStudent && studentActionsLocked && (
+            <span
+              className="meta-badge quota"
+              title="Không thể nộp bài hoặc báo lỗi đề trên hệ thống cho đến khi giáo viên mở lại"
+            >
+              Tạm khóa thao tác
             </span>
           )}
           {isTeacher && (
@@ -416,10 +432,17 @@ function AssignmentDetail() {
             nhưng không thể nộp thêm trên hệ thống.
           </div>
         )}
-        {isStudent && limitBlocked && !pastDueBlocked && (
+        {isStudent && limitBlocked && !pastDueBlocked && !studentActionsLocked && (
           <div className="deadline-passed-banner submission-limit-banner" role="alert">
             Bạn đã nộp đủ số lần cho phép với bài này. Không thể nộp thêm để
             giảm tải hệ thống; nếu cần hỗ trợ, hãy báo giáo viên.
+          </div>
+        )}
+        {isStudent && studentActionsLocked && (
+          <div className="deadline-passed-banner submission-limit-banner" role="alert">
+            Giáo viên đã <strong>tạm khóa</strong> nộp bài và các thao tác trên hệ thống cho đề
+            này. Em vẫn xem được đề và hình ảnh để đối chiếu; khi giáo viên mở lại, em có thể nộp
+            và báo lỗi đề như bình thường.
           </div>
         )}
         <form onSubmit={handleSubmit} className="submission-form">
