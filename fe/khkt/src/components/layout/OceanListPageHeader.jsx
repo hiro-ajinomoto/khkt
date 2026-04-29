@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getAssignmentsNavIcon } from './assignmentsNavIcon';
 import NotificationBell from './NotificationBell';
 import ThemeToggle from './ThemeToggle';
+import ClassRankingModal from './ClassRankingModal';
 
 /**
  * Header dùng chung trang bài tập và màn chính quản trị (/admin).
@@ -23,6 +25,7 @@ export default function OceanListPageHeader({
 }) {
   const location = useLocation();
   const { isStudent } = useAuth();
+  const [classRankingOpen, setClassRankingOpen] = useState(false);
   const adminHome = variant === 'adminHome';
   const { theme } = useTheme();
   const assignmentsIcon = getAssignmentsNavIcon(theme);
@@ -36,12 +39,27 @@ export default function OceanListPageHeader({
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(191,217,255,0.18),rgba(255,211,106,0.08),rgba(255,122,89,0.05))] dark:bg-transparent" />
       <div className="relative flex min-w-0 flex-1 items-center justify-between gap-3 lg:justify-start">
         <div className="flex min-w-0 items-center gap-3 md:gap-4">
-          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl border border-sky-200/70 bg-[linear-gradient(135deg,#dbeafe_0%,#fff7ed_50%,#ffedd5_100%)] p-1 shadow-lg shadow-orange-200/30 dark:border-cyan-300/30 dark:bg-gradient-to-br dark:from-cyan-300/20 dark:via-sky-400/10 dark:to-blue-500/20 dark:shadow-cyan-950/40 md:h-16 md:w-16">
-            <div className="flex h-full w-full items-center justify-center rounded-[14px] bg-white/95 text-lg font-bold text-sky-700 dark:bg-slate-900/80 dark:text-cyan-200 md:text-xl">
-              {user?.name?.[0] || user?.username?.[0] || 'ST'}
+          {isAuthenticated && isStudent ? (
+            <button
+              type="button"
+              onClick={() => setClassRankingOpen(true)}
+              className="group relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl border border-sky-200/70 bg-[linear-gradient(135deg,#dbeafe_0%,#fff7ed_50%,#ffedd5_100%)] p-1 shadow-lg shadow-orange-200/30 outline-none ring-sky-400/50 transition hover:scale-[1.02] hover:shadow-xl focus-visible:ring-2 dark:border-cyan-300/30 dark:bg-gradient-to-br dark:from-cyan-300/20 dark:via-sky-400/10 dark:to-blue-500/20 dark:shadow-cyan-950/40 dark:ring-cyan-400/40 md:h-16 md:w-16"
+              aria-label="Xếp hạng lớp — xem thứ hạng của bạn"
+              title="Xếp hạng lớp"
+            >
+              <div className="flex h-full w-full items-center justify-center rounded-[14px] bg-white/95 text-lg font-bold text-sky-700 transition group-hover:bg-sky-50/95 dark:bg-slate-900/80 dark:text-cyan-200 dark:group-hover:bg-slate-800/95 md:text-xl">
+                {user?.name?.[0] || user?.username?.[0] || 'ST'}
+              </div>
+              <div className="pointer-events-none absolute inset-x-1 top-1 h-4 rounded-full bg-orange-200/50 blur-md dark:bg-cyan-300/20" />
+            </button>
+          ) : (
+            <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl border border-sky-200/70 bg-[linear-gradient(135deg,#dbeafe_0%,#fff7ed_50%,#ffedd5_100%)] p-1 shadow-lg shadow-orange-200/30 dark:border-cyan-300/30 dark:bg-gradient-to-br dark:from-cyan-300/20 dark:via-sky-400/10 dark:to-blue-500/20 dark:shadow-cyan-950/40 md:h-16 md:w-16">
+              <div className="flex h-full w-full items-center justify-center rounded-[14px] bg-white/95 text-lg font-bold text-sky-700 dark:bg-slate-900/80 dark:text-cyan-200 md:text-xl">
+                {user?.name?.[0] || user?.username?.[0] || 'ST'}
+              </div>
+              <div className="absolute inset-x-1 top-1 h-4 rounded-full bg-orange-200/50 blur-md dark:bg-cyan-300/20" />
             </div>
-            <div className="absolute inset-x-1 top-1 h-4 rounded-full bg-orange-200/50 blur-md dark:bg-cyan-300/20" />
-          </div>
+          )}
           <div className="hidden min-w-0 md:block">
             <p className="mb-2 text-xs uppercase tracking-[0.35em] text-sky-600/90 dark:text-cyan-200/80">
               Cuộc thi khoa học kỹ thuật
@@ -269,6 +287,13 @@ export default function OceanListPageHeader({
           </button>
         </div>
       )}
+      {isAuthenticated && isStudent ? (
+        <ClassRankingModal
+          open={classRankingOpen}
+          onClose={() => setClassRankingOpen(false)}
+          myStudentId={user?.id}
+        />
+      ) : null}
     </header>
   );
 }

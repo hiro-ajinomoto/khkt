@@ -328,3 +328,34 @@ export async function fetchMyStickers() {
     rethrowNetwork(error);
   }
 }
+
+/**
+ * Bảng xếp hạng lớp của học sinh đang đăng nhập (theo điểm TB các bài đã gán lớp).
+ * @returns {Promise<{ class_name: string, metric_label: string, entries: Array<{ student_id: string, display_name: string, avg_score: number|null, assignments_graded: number, rank: number }> }>}
+ */
+export async function fetchStudentClassRanking() {
+  try {
+    const authHeader = getAuthHeader();
+    if (!authHeader) {
+      throw new Error('Authentication required');
+    }
+    const response = await fetch(`${API_BASE_URL}/submissions/class-ranking`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: authHeader,
+      },
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        describeApiFailure(response, errorData, 'Không tải được xếp hạng lớp.')
+      );
+    }
+    return response.json();
+  } catch (error) {
+    console.error('Error fetching class ranking:', error);
+    rethrowNetwork(error);
+  }
+}

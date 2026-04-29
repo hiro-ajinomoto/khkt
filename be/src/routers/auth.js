@@ -64,6 +64,7 @@ router.post('/login', async (req, res) => {
         role: user.role,
         name: user.name || user.username,
         ...(user.role === 'teacher' ? { assigned_class_names } : {}),
+        ...(user.role === 'student' ? { class_name: user.class_name || null } : {}),
       },
     });
   } catch (error) {
@@ -168,6 +169,7 @@ router.post('/register', async (req, res) => {
         username,
         role: userRole,
         name: newUser.name,
+        class_name: class_name || null,
       },
     });
   } catch (error) {

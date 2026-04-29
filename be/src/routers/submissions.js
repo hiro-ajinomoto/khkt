@@ -28,6 +28,7 @@ import {
   stickerTierPublicMeta,
 } from "../utils/stickers.js";
 import { getStudentRedeemedTotal } from "../utils/stickerRedemptions.js";
+import { buildStudentClassRanking } from "../utils/studentClassRanking.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -351,6 +352,39 @@ router.get("/my-stickers", authenticate, async (req, res) => {
   } catch (error) {
     console.error("Error fetching sticker stats:", error);
     res.status(500).json({ detail: "Failed to fetch sticker stats" });
+  }
+});
+
+/**
+ * GET /submissions/class-ranking
+ * Xếp hạng trong lớp (chỉ học sinh): điểm TB theo bài đã gán lớp.
+ */
+router.get("/class-ranking", authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== "student") {
+      return res.status(403).json({
+        detail: "Chỉ học sinh mới xem được xếp hạng lớp.",
+      });
+    }
+
+    const db = getDB();
+    const user = await db.collection("users").findOne(
+      { _id: ObjectId.createFromHexString(req.user.id) },
+      { projection: { class_name: 1 } },
+    );
+
+    if (!user?.class_name) {
+      return res.status(400).json({
+        detail:
+          "Bạn chưa được gán lớp. Đăng ký bằng mã lớp hoặc liên hệ giáo viên.",
+      });
+    }
+
+    const payload = await buildStudentClassRanking(db, user.class_name);
+    res.json(payload);
+  } catch (error) {
+    console.error("GET /submissions/class-ranking:", error);
+    res.status(500).json({ detail: "Không tải được xếp hạng lớp." });
   }
 });
 
