@@ -1508,6 +1508,7 @@ function AssignmentCard({
 
 // Assign Assignment Modal Component
 function AssignAssignmentModal({ assignmentIds, onClose, onSuccess }) {
+  const { user, isAdmin } = useAuth();
   const [selectedClasses, setSelectedClasses] = useState([]);
   const [assignedClasses, setAssignedClasses] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -1527,10 +1528,19 @@ function AssignAssignmentModal({ assignmentIds, onClose, onSuccess }) {
       if (!assignmentIds?.length) return;
       try {
         setLoadingClasses(true);
-        const [schoolList, ...lists] = await Promise.all([
-          fetchSchoolClasses(),
-          ...assignmentIds.map((id) => getAssignmentClasses(id)),
-        ]);
+        let schoolList = [];
+        if (isAdmin) {
+          schoolList = await fetchSchoolClasses();
+        } else if (user?.role === 'teacher') {
+          schoolList = Array.isArray(user.assigned_class_names)
+            ? [...user.assigned_class_names].sort((a, b) =>
+                a.localeCompare(b, 'vi', { numeric: true }),
+              )
+            : [];
+        }
+        const lists = await Promise.all(
+          assignmentIds.map((id) => getAssignmentClasses(id)),
+        );
         setAvailableClasses(schoolList);
         const union = new Set();
         lists.forEach((list) => {
@@ -1538,7 +1548,11 @@ function AssignAssignmentModal({ assignmentIds, onClose, onSuccess }) {
         });
         const classNames = Array.from(union);
         setAssignedClasses(classNames);
-        setSelectedClasses(classNames);
+        setSelectedClasses(
+          isAdmin
+            ? classNames
+            : classNames.filter((cn) => schoolList.includes(cn)),
+        );
       } catch (err) {
         console.error('Error loading assigned classes:', err);
       } finally {
@@ -1546,7 +1560,7 @@ function AssignAssignmentModal({ assignmentIds, onClose, onSuccess }) {
       }
     };
     loadAssignedClasses();
-  }, [assignmentIds]);
+  }, [assignmentIds, isAdmin, user]);
 
   const handleClassToggle = (className) => {
     setSelectedClasses((prev) => {
@@ -1639,7 +1653,9 @@ function AssignAssignmentModal({ assignmentIds, onClose, onSuccess }) {
               </div>
             ) : classesByGrade.length === 0 ? (
               <div className="rounded-2xl border border-amber-200/60 bg-amber-50 px-4 py-4 text-sm text-amber-900 dark:border-amber-400/25 dark:bg-amber-500/10 dark:text-amber-100">
-                Chưa có lớp nào trong hệ thống. Vui lòng nhờ quản trị viên thêm lớp ở trang Quản trị.
+                {isAdmin
+                  ? 'Chưa có lớp nào trong hệ thống. Vui lòng nhờ quản trị viên thêm lớp ở trang Quản trị.'
+                  : 'Bạn chưa được gán lớp nào. Nhờ quản trị viên phân công lớp trong trang Quản trị.'}
               </div>
             ) : (
               <div className="flex max-h-[min(50vh,420px)] flex-col gap-4 overflow-y-auto pr-1">

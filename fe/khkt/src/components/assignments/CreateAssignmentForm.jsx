@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createAssignment } from '../../api/assignments';
 import { fetchSchoolClasses, groupClassesByGrade } from '../../api/classes';
+import { useAuth } from '../../contexts/AuthContext';
 import OceanShell from '../layout/OceanShell';
 import './CreateAssignmentForm.css';
 import {
@@ -37,6 +38,7 @@ const emptyFormData = () => ({
 
 function CreateAssignmentForm() {
   const navigate = useNavigate();
+  const { user, isAdmin } = useAuth();
   const [formData, setFormData] = useState(emptyFormData);
 
   const [previewUrls, setPreviewUrls] = useState({
@@ -66,7 +68,16 @@ function CreateAssignmentForm() {
     (async () => {
       try {
         setLoadingClasses(true);
-        const list = await fetchSchoolClasses();
+        let list = [];
+        if (isAdmin) {
+          list = await fetchSchoolClasses();
+        } else if (user?.role === 'teacher') {
+          list = Array.isArray(user.assigned_class_names)
+            ? [...user.assigned_class_names].sort((a, b) =>
+                a.localeCompare(b, 'vi', { numeric: true }),
+              )
+            : [];
+        }
         if (!cancelled) setAvailableClasses(list);
       } catch (err) {
         console.error('Error loading school classes:', err);
@@ -78,7 +89,7 @@ function CreateAssignmentForm() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isAdmin, user]);
 
   /** Đảm bảo hạn nộp không sớm hơn ngày mở bài (nếu mở bài sau hôm nay thì kéo due theo). */
   useEffect(() => {
@@ -380,13 +391,26 @@ function CreateAssignmentForm() {
             Chọn từng lớp hoặc dùng &quot;Chọn cả khối&quot; để gán toàn bộ lớp
             trong khối (theo tên lớp bắt đầu bằng số: 8A1 → Khối 8). Để trống:
             tạo bài trước, gán lớp sau trong danh sách bài tập.
+            {!isAdmin && user?.role === 'teacher' && (
+              <> Chỉ hiển thị các lớp bạn được phân công.</>
+            )}
           </p>
           {loadingClasses ? (
             <div className="create-form-class-loading">Đang tải danh sách lớp…</div>
           ) : classesByGrade.length === 0 ? (
             <div className="create-form-class-empty">
-              Chưa có lớp trong hệ thống. Nhờ quản trị viên thêm lớp ở trang Quản
-              trị, hoặc tạo bài và gán lớp sau.
+              {isAdmin ? (
+                <>
+                  Chưa có lớp trong hệ thống. Nhờ quản trị viên thêm lớp ở trang
+                  Quản trị, hoặc tạo bài và gán lớp sau.
+                </>
+              ) : (
+                <>
+                  Bạn chưa được gán lớp nào, hoặc danh sách lớp của bạn đang trống.
+                  Nhờ quản trị viên phân công lớp trong trang Quản trị, hoặc tạo bài
+                  rồi gán lớp sau trong danh sách bài tập (khi đã có lớp).
+                </>
+              )}
             </div>
           ) : (
             <div className="create-form-class-scroll">
