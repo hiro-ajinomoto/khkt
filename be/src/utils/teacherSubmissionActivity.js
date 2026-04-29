@@ -1,4 +1,9 @@
 import { ObjectId } from "mongodb";
+import { isAssignmentReleasedOnYmd } from "./assignmentRelease.js";
+import {
+  getTeacherScopedClassSet,
+  listScopedAssignmentObjectIdsForTeacher,
+} from "./teacherClassScope.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -82,33 +87,111 @@ function effectiveScore(sub) {
 }
 
 /**
- * Tổng quan nộp bài theo ngày (lịch VN) cho một lớp.
- * @param {import('mongodb').Db} db
- * @param {string} className
- * @param {string} fromYmd
- * @param {string} toYmd
+ * Các assignment_id (ObjectId) duy nhất đã gán lớp và còn tồn tại trong `assignments`.
+ * Tránh đếm trùng trong `assignment_classes` và link mồ côi sau khi xóa bài.
  */
-export async function buildClassSubmissionActivityByDay(db, className, fromYmd, toYmd) {
-  const { start, end } = vietnamDayBoundsInclusive(fromYmd, toYmd);
-
+export async function resolveExistingAssignmentIdsForClass(db, className) {
   const links = await db
     .collection("assignment_classes")
     .find({ class_name: className })
     .project({ assignment_id: 1 })
     .toArray();
 
-  const assignmentIds = [];
+  const byStr = new Map();
   for (const row of links) {
     const id = row.assignment_id;
     if (!id) continue;
     try {
-      assignmentIds.push(
-        id instanceof ObjectId ? id : ObjectId.createFromHexString(String(id)),
-      );
+      const oid =
+        id instanceof ObjectId ? id : ObjectId.createFromHexString(String(id));
+      byStr.set(oid.toString(), oid);
     } catch {
       /* skip */
     }
   }
+  const candidates = [...byStr.values()];
+  if (candidates.length === 0) return [];
+
+  const existing = await db
+    .collection("assignments")
+    .find({ _id: { $in: candidates } })
+    .project({ _id: 1 })
+    .toArray();
+
+  return existing.map((a) => a._id);
+}
+
+/**
+ * Bài đang gán lớp (còn tồn tại) và khớp phạm vi GV như GET /assignments.
+ * Admin: toàn bộ bài gán lớp.
+ */
+export async function resolveClassAssignmentIdsForTeacherView(db, className, viewer) {
+  const base = await resolveExistingAssignmentIdsForClass(db, className);
+  if (!viewer || viewer.role === "admin") return base;
+  if (viewer.role !== "teacher") return base;
+  const scoped = await getTeacherScopedClassSet(db, viewer);
+  const allowed = await listScopedAssignmentObjectIdsForTeacher(
+    db,
+    viewer.id,
+    scoped,
+  );
+  const allowSet = new Set(allowed.map((id) => id.toString()));
+  return base.filter((id) => allowSet.has(id.toString()));
+}
+
+/**
+ * Chỉ các bài đã mở cho HS vào ngày `ymd` (giống bộ lọc GET /assignments của học sinh).
+ */
+export async function filterAssignmentIdsReleasedByVnYmd(db, objectIds, ymd) {
+  if (!objectIds?.length) return [];
+  const rows = await db
+    .collection("assignments")
+    .find({ _id: { $in: objectIds } })
+    .project({ available_from_date: 1 })
+    .toArray();
+  return rows
+    .filter((a) => isAssignmentReleasedOnYmd(a, ymd))
+    .map((a) => a._id);
+}
+
+async function loadAssignmentReleaseMetaById(db, objectIds) {
+  /** @type {Map<string, { available_from_date?: unknown }>} */
+  const map = new Map();
+  if (!objectIds?.length) return map;
+  const rows = await db
+    .collection("assignments")
+    .find({ _id: { $in: objectIds } })
+    .project({ available_from_date: 1 })
+    .toArray();
+  for (const r of rows) map.set(r._id.toString(), r);
+  return map;
+}
+
+/**
+ * Tổng quan nộp bài theo ngày (lịch VN) cho một lớp.
+ * @param {import('mongodb').Db} db
+ * @param {string} className
+ * @param {string} fromYmd
+ * @param {string} toYmd
+ */
+export async function buildClassSubmissionActivityByDay(
+  db,
+  className,
+  fromYmd,
+  toYmd,
+  viewer,
+) {
+  const { start, end } = vietnamDayBoundsInclusive(fromYmd, toYmd);
+
+  const scopedAssignmentIds = await resolveClassAssignmentIdsForTeacherView(
+    db,
+    className,
+    viewer,
+  );
+  const releaseMetaById = await loadAssignmentReleaseMetaById(
+    db,
+    scopedAssignmentIds,
+  );
 
   const students = await db
     .collection("users")
@@ -124,7 +207,7 @@ export async function buildClassSubmissionActivityByDay(db, className, fromYmd, 
     ]),
   );
 
-  if (assignmentIds.length === 0 || studentIds.length === 0) {
+  if (scopedAssignmentIds.length === 0 || studentIds.length === 0) {
     const dayKeys = eachVietnamDayKeyInclusive(fromYmd, toYmd);
     return {
       class_name: className,
@@ -147,20 +230,29 @@ export async function buildClassSubmissionActivityByDay(db, className, fromYmd, 
     };
   }
 
-  const submissions = await db
+  const submissionsRaw = await db
     .collection("submissions")
     .find({
-      assignment_id: { $in: assignmentIds },
+      assignment_id: { $in: scopedAssignmentIds },
       student_id: { $in: studentIds },
       created_at: { $gte: start, $lte: end },
     })
     .project({
       student_id: 1,
+      assignment_id: 1,
       created_at: 1,
       ai_result: 1,
       teacher_review: 1,
     })
     .toArray();
+
+  const submissions = submissionsRaw.filter((sub) => {
+    const dayKey = vietnamDayKey(sub.created_at);
+    if (!dayKey) return false;
+    const aid = sub.assignment_id?.toString();
+    const meta = aid ? releaseMetaById.get(aid) : null;
+    return !!(meta && isAssignmentReleasedOnYmd(meta, dayKey));
+  });
 
   /** @type {Map<string, { submission_count: number, graded: number, scores: number[], byStudent: Map<string, number> }>} */
   const byDay = new Map();
@@ -270,27 +362,24 @@ function roundAvg(scores) {
  * Chi tiết một ngày (lịch VN): từng học sinh có nộp, điểm TB trong ngày, lượt nộp,
  * số bài tập (không trùng) có nộp trong ngày / tổng bài được gán lớp.
  */
-export async function buildClassSubmissionActivityDayDetail(db, className, dayYmd) {
+export async function buildClassSubmissionActivityDayDetail(
+  db,
+  className,
+  dayYmd,
+  viewer,
+) {
   const { start, end } = vietnamDayBoundsInclusive(dayYmd, dayYmd);
 
-  const links = await db
-    .collection("assignment_classes")
-    .find({ class_name: className })
-    .project({ assignment_id: 1 })
-    .toArray();
-
-  const assignmentIds = [];
-  for (const row of links) {
-    const id = row.assignment_id;
-    if (!id) continue;
-    try {
-      assignmentIds.push(
-        id instanceof ObjectId ? id : ObjectId.createFromHexString(String(id)),
-      );
-    } catch {
-      /* skip */
-    }
-  }
+  const scopedIds = await resolveClassAssignmentIdsForTeacherView(
+    db,
+    className,
+    viewer,
+  );
+  const assignmentIds = await filterAssignmentIdsReleasedByVnYmd(
+    db,
+    scopedIds,
+    dayYmd,
+  );
 
   const assignments_total = assignmentIds.length;
 
@@ -316,7 +405,7 @@ export async function buildClassSubmissionActivityDayDetail(db, className, dayYm
       students: [],
       label: {
         assignments_note:
-          "Điểm TB chỉ các lượt có điểm trong ngày (ưu tiên điểm giáo viên).",
+          "Điểm TB chỉ các lượt có điểm trong ngày (ưu tiên điểm giáo viên). Tổng bài: chỉ bài đã mở cho HS tính đến ngày này (theo Mở cho HS).",
       },
     };
   }
@@ -376,7 +465,7 @@ export async function buildClassSubmissionActivityDayDetail(db, className, dayYm
     students: studentsOut,
     label: {
       assignments_note:
-        "Bài trong ngày: số bài tập khác nhau có ít nhất một lượt nộp trong ngày. Tổng bài: số bài được gán cho lớp.",
+        "Bài trong ngày: số bài tập khác nhau có ít nhất một lượt nộp trong ngày (chỉ bài đã mở cho HS tính đến ngày đó). Tổng bài: bài gán lớp trong phạm vi xem của bạn — đã mở cho HS tính đến ngày này (khớp đề HS thấy trong /assignments).",
     },
   };
 }

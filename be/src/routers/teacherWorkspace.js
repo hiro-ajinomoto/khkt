@@ -8,6 +8,7 @@ import {
   buildClassSubmissionActivityByDay,
   buildClassSubmissionActivityDayDetail,
   defaultVnRangeYmd,
+  resolveClassAssignmentIdsForTeacherView,
 } from '../utils/teacherSubmissionActivity.js';
 
 const YMD_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -48,13 +49,14 @@ router.get('/classes', async (req, res) => {
     const names = await classNamesForViewer(db, req.user);
     const rows = await Promise.all(
       names.map(async (class_name) => {
-        const [student_count, assignment_count] = await Promise.all([
+        const [student_count, assignmentIds] = await Promise.all([
           db.collection('users').countDocuments({
             role: 'student',
             class_name,
           }),
-          db.collection('assignment_classes').countDocuments({ class_name }),
+          resolveClassAssignmentIdsForTeacherView(db, class_name, req.user),
         ]);
+        const assignment_count = assignmentIds.length;
         return { class_name, student_count, assignment_count };
       }),
     );
@@ -156,23 +158,7 @@ router.get('/classes/:className/assignments', async (req, res) => {
   try {
     const db = getDB();
     const className = await assertClassInScope(db, req.user, req.params.className);
-    const links = await db
-      .collection('assignment_classes')
-      .find({ class_name: className })
-      .project({ assignment_id: 1 })
-      .toArray();
-    const oids = [];
-    for (const row of links) {
-      const id = row.assignment_id;
-      if (!id) continue;
-      try {
-        oids.push(
-          id instanceof ObjectId ? id : ObjectId.createFromHexString(String(id)),
-        );
-      } catch {
-        /* bỏ qua id không hợp lệ */
-      }
-    }
+    const oids = await resolveClassAssignmentIdsForTeacherView(db, className, req.user);
     if (oids.length === 0) {
       return res.json({ class_name: className, assignments: [] });
     }
@@ -240,7 +226,13 @@ router.get('/classes/:className/submission-activity', async (req, res) => {
       return res.status(400).json({ detail: 'Khoảng thời gian tối đa 120 ngày.' });
     }
 
-    const payload = await buildClassSubmissionActivityByDay(db, className, fromYmd, toYmd);
+    const payload = await buildClassSubmissionActivityByDay(
+      db,
+      className,
+      fromYmd,
+      toYmd,
+      req.user,
+    );
 
     /** Gợi ý hiển thị: mỗi lượt nộp = một lần "làm bài" (bài tập có thể nhiều câu trên một ảnh). */
     payload.label = {
@@ -272,7 +264,7 @@ router.get('/classes/:className/submission-activity/day/:dayYmd', async (req, re
     if (!YMD_RE.test(dayYmd)) {
       return res.status(400).json({ detail: 'Đường dẫn ngày phải là YYYY-MM-DD.' });
     }
-    const payload = await buildClassSubmissionActivityDayDetail(db, className, dayYmd);
+    const payload = await buildClassSubmissionActivityDayDetail(db, className, dayYmd, req.user);
     res.json(payload);
   } catch (error) {
     if (error.status === 400 || error.status === 403) {
