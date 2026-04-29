@@ -8,6 +8,46 @@ const PERIODS = [
   { id: 'month', label: 'Trong tháng' },
 ];
 
+function PodiumMark({ rank }) {
+  if (rank === 1) {
+    return (
+      <span
+        className="text-lg leading-none"
+        title="Quán quân"
+        aria-label="Quán quân"
+        role="img"
+      >
+        🏆
+      </span>
+    );
+  }
+  if (rank === 2) {
+    return (
+      <span
+        className="text-lg leading-none"
+        title="Hạng nhì"
+        aria-label="Hạng nhì — huy chương"
+        role="img"
+      >
+        🥈
+      </span>
+    );
+  }
+  if (rank === 3) {
+    return (
+      <span
+        className="text-lg leading-none"
+        title="Hạng ba"
+        aria-label="Hạng ba — huy chương"
+        role="img"
+      >
+        🥉
+      </span>
+    );
+  }
+  return null;
+}
+
 /**
  * Modal xếp hạng lớp (học sinh). Mở khi bấm avatar trên header.
  */
@@ -162,8 +202,11 @@ export default function ClassRankingModal({ open, onClose, myStudentId }) {
                           : 'odd:bg-white/80 even:bg-sky-50/40 dark:odd:bg-slate-900/40 dark:even:bg-slate-900/20'
                       }`}
                     >
-                      <td className="px-2 py-2.5 tabular-nums text-slate-800 dark:text-slate-100">
-                        {row.rank}
+                      <td className="px-2 py-2.5 text-slate-800 tabular-nums dark:text-slate-100">
+                        <span className="inline-flex items-center gap-1.5">
+                          <PodiumMark rank={row.rank} />
+                          <span>{row.rank}</span>
+                        </span>
                       </td>
                       <td className="max-w-[12rem] truncate px-2 py-2.5 text-slate-900 dark:text-white">
                         {row.display_name}
