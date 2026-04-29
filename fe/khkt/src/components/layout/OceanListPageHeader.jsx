@@ -122,7 +122,7 @@ export default function OceanListPageHeader({
                   onClick={() => navigate('/teacher/classes')}
                   className="flex h-11 w-11 items-center justify-center rounded-2xl border border-violet-200/80 bg-[linear-gradient(135deg,#ddd6fe_0%,#e0e7ff_100%)] text-base text-violet-900 shadow-md shadow-violet-200/30 transition hover:-translate-y-0.5 dark:border-violet-400/50 dark:bg-gradient-to-br dark:from-violet-700/85 dark:to-indigo-800/90 dark:text-white dark:shadow-violet-950/50"
                   aria-label="Lớp của tôi"
-                  title="Bài tập và học sinh theo lớp"
+                  title="Bài tập, tổng quan và học sinh theo lớp"
                 >
                   <span aria-hidden>🏫</span>
                 </button>

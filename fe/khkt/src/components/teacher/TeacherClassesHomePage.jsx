@@ -68,7 +68,7 @@ export default function TeacherClassesHomePage() {
           Lớp của tôi
         </h2>
         <p className="mb-6 text-sm text-slate-600 dark:text-slate-300">
-          Chọn lớp để xem bài tập đã gán và danh sách học sinh.
+          Chọn lớp để xem bài tập đã gán, tổng quan nộp bài theo ngày và danh sách học sinh.
         </p>
 
         {classes.length === 0 ? (
@@ -120,6 +120,12 @@ export default function TeacherClassesHomePage() {
                             className="rounded-xl bg-sky-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-sky-700 dark:bg-cyan-600 dark:hover:bg-cyan-500"
                           >
                             Bài tập
+                          </Link>
+                          <Link
+                            to={`/teacher/classes/${enc}/activity`}
+                            className="rounded-xl border border-sky-200/80 bg-white px-4 py-2 text-sm font-medium text-sky-900 transition hover:bg-sky-50 dark:border-cyan-500/35 dark:bg-slate-800 dark:text-cyan-100 dark:hover:bg-slate-700"
+                          >
+                            Tổng quan
                           </Link>
                           <Link
                             to={`/teacher/classes/${enc}/students`}

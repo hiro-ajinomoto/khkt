@@ -26,14 +26,14 @@ export default function TeacherClassSubNav({ className, active }) {
       >
         Bài tập lớp
       </Link>
-      <Link to={`${base}/students`} className={tabClass(active === 'students')}>
-        Học sinh
-      </Link>
       <Link
         to={`${base}/activity`}
         className={tabClass(active === 'activity')}
       >
-        Theo ngày
+        Tổng quan
+      </Link>
+      <Link to={`${base}/students`} className={tabClass(active === 'students')}>
+        Học sinh
       </Link>
       <Link
         to="/teacher/classes"

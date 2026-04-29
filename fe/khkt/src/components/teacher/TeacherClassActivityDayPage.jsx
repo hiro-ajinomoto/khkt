@@ -115,7 +115,7 @@ export default function TeacherClassActivityDayPage() {
             to={backToActivity}
             className="font-medium text-sky-700 underline underline-offset-2 hover:text-sky-800 dark:text-cyan-300 dark:hover:text-cyan-200"
           >
-            ← Bảng theo ngày
+            ← Tổng quan
           </Link>
         </p>
         <h2 className="mb-1 text-xl font-semibold text-slate-900 dark:text-white">

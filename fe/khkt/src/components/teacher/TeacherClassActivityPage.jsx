@@ -184,7 +184,7 @@ export default function TeacherClassActivityPage() {
       />
       <div className="mx-auto max-w-5xl px-4 pb-12">
         <h2 className="mb-1 text-xl font-semibold text-slate-900 dark:text-white">
-          Hoạt động & điểm · {className}
+          Tổng quan · {className}
         </h2>
         <p className="mb-4 text-sm text-slate-600 dark:text-slate-300">
           Theo ngày theo giờ Việt Nam: ai đã nộp (lượt nộp), số lượt đã có điểm, điểm trung bình trong
