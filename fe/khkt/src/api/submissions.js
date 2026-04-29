@@ -330,8 +330,13 @@ export async function fetchMyStickers() {
 }
 
 /**
- * Bảng xếp hạng lớp của học sinh đang đăng nhập (theo điểm TB các bài đã gán lớp).
- * @returns {Promise<{ class_name: string, metric_label: string, entries: Array<{ student_id: string, display_name: string, avg_score: number|null, assignments_graded: number, rank: number }> }>}
+ * Xếp hạng lớp (HS): day / week / month theo giờ VN.
+ * @returns {Promise<{
+ *   class_name: string,
+ *   day: { period: string, from_ymd: string, to_ymd: string, range_label: string, metric_label: string, entries: Array<object> },
+ *   week: { ... },
+ *   month: { ... }
+ * }>}
  */
 export async function fetchStudentClassRanking() {
   try {

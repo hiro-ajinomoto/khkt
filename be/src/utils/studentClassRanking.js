@@ -1,4 +1,8 @@
-import { resolveExistingAssignmentIdsForClass } from "./teacherSubmissionActivity.js";
+import {
+  shiftVietnamYmd,
+  vietnamDayBoundsInclusive,
+  resolveExistingAssignmentIdsForClass,
+} from "./teacherSubmissionActivity.js";
 
 function effectiveScore(sub) {
   const o = sub?.teacher_review?.score_override;
@@ -8,24 +12,59 @@ function effectiveScore(sub) {
   return null;
 }
 
-/**
- * Bảng xếp hạng lớp theo điểm: với mỗi bài gán lớp lấy điểm cao nhất của HS,
- * rồi trung bình các điểm đó (chỉ các bài đã có ít nhất một lần chấm).
- * @param {import('mongodb').Db} db
- * @param {string} className
- * @returns {Promise<{ class_name: string, metric_label: string, entries: Array<{ student_id: string, display_name: string, avg_score: number|null, assignments_graded: number, rank: number }> }>}
- */
-export async function buildStudentClassRanking(db, className) {
-  const students = await db
-    .collection("users")
-    .find({ role: "student", class_name: className })
-    .project({ name: 1, username: 1 })
-    .toArray();
+function vietnamTodayYmd() {
+  return new Date().toLocaleDateString("en-CA", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+}
 
-  const assignmentIds = await resolveExistingAssignmentIdsForClass(
-    db,
-    className,
-  );
+/** Thứ Hai = 0 … Chủ nhật = 6 theo lịch VN. */
+function vnWeekdayMon0FromYmd(ymd) {
+  const w = new Date(`${ymd}T12:00:00+07:00`).toLocaleDateString("en-US", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    weekday: "short",
+  });
+  const key = String(w).replace(/\.$/, "").slice(0, 3);
+  const map = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 };
+  return map[key] ?? 0;
+}
+
+function weekBoundsVnMondayToSunday(ymd) {
+  const mon0 = vnWeekdayMon0FromYmd(ymd);
+  const startYmd = shiftVietnamYmd(ymd, -mon0);
+  const endYmd = shiftVietnamYmd(startYmd, 6);
+  return { startYmd, endYmd };
+}
+
+function monthBoundsVnContaining(ymd) {
+  const ym = ymd.slice(0, 7);
+  const startYmd = `${ym}-01`;
+  let endYmd = startYmd;
+  let candidate = shiftVietnamYmd(endYmd, 1);
+  while (candidate.slice(0, 7) === ym) {
+    endYmd = candidate;
+    candidate = shiftVietnamYmd(candidate, 1);
+  }
+  return { startYmd, endYmd };
+}
+
+function formatYmdViShort(ymd) {
+  const [y, m, d] = ymd.split("-");
+  if (!y || !m || !d) return ymd;
+  return `${d}/${m}/${y}`;
+}
+
+/**
+ * @param {import('mongodb').Db} db
+ * @param {Date} start
+ * @param {Date} end
+ * @param {{ students: object[], assignmentIds: import('mongodb').ObjectId[] }} cached
+ */
+async function buildRankedEntriesForWindow(db, start, end, cached) {
+  const { students, assignmentIds } = cached;
 
   /** @type {Map<string, Map<string, number>>} */
   const bestByStudent = new Map();
@@ -40,6 +79,7 @@ export async function buildStudentClassRanking(db, className) {
       .find({
         student_id: { $in: studentIds },
         assignment_id: { $in: assignmentIds },
+        created_at: { $gte: start, $lte: end },
       })
       .project({
         student_id: 1,
@@ -108,10 +148,79 @@ export async function buildStudentClassRanking(db, className) {
     }
   }
 
+  return entries;
+}
+
+/**
+ * Xếp hạng lớp — ba kỳ: hôm nay, tuần (Thứ Hai–CN, VN), tháng dương lịch (VN).
+ * Chỉ tính lượt nộp có điểm và có `created_at` trong khoảng (theo giờ VN).
+ *
+ * @param {import('mongodb').Db} db
+ * @param {string} className
+ */
+export async function buildStudentClassRanking(db, className) {
+  const students = await db
+    .collection("users")
+    .find({ role: "student", class_name: className })
+    .project({ name: 1, username: 1 })
+    .toArray();
+
+  const assignmentIds = await resolveExistingAssignmentIdsForClass(
+    db,
+    className,
+  );
+
+  const cached = { students, assignmentIds };
+
+  const today = vietnamTodayYmd();
+  const { startYmd: weekStart, endYmd: weekEnd } =
+    weekBoundsVnMondayToSunday(today);
+  const { startYmd: monthStart, endYmd: monthEnd } =
+    monthBoundsVnContaining(today);
+
+  const dayBounds = vietnamDayBoundsInclusive(today, today);
+  const weekBounds = vietnamDayBoundsInclusive(weekStart, weekEnd);
+  const monthBounds = vietnamDayBoundsInclusive(monthStart, monthEnd);
+
+  const [dayEntries, weekEntries, monthEntries] = await Promise.all([
+    buildRankedEntriesForWindow(db, dayBounds.start, dayBounds.end, cached),
+    buildRankedEntriesForWindow(db, weekBounds.start, weekBounds.end, cached),
+    buildRankedEntriesForWindow(db, monthBounds.start, monthBounds.end, cached),
+  ]);
+
+  const dayLabel = `Hôm nay (${formatYmdViShort(today)})`;
+  const weekLabel = `Tuần này (${formatYmdViShort(weekStart)} — ${formatYmdViShort(weekEnd)})`;
+  const [ty, tm] = today.split("-");
+  const monthLabel = `Tháng ${Number(tm)}/${ty}`;
+
   return {
     class_name: className,
-    metric_label:
-      "Xếp hạng theo điểm trung bình các bài tập đã gán cho lớp (mỗi bài lấy điểm cao nhất của bạn, ưu tiên điểm giáo viên).",
-    entries,
+    day: {
+      period: "day",
+      from_ymd: today,
+      to_ymd: today,
+      range_label: dayLabel,
+      metric_label:
+        "Chỉ các lượt nộp trong ngày hôm nay (giờ Việt Nam), có điểm; mỗi bài trong ngày lấy điểm cao nhất (ưu tiên điểm giáo viên). ĐTB trung bình trên các bài có điểm trong ngày.",
+      entries: dayEntries,
+    },
+    week: {
+      period: "week",
+      from_ymd: weekStart,
+      to_ymd: weekEnd,
+      range_label: weekLabel,
+      metric_label:
+        "Tuần từ Thứ Hai đến Chủ nhật (giờ VN), chỉ lượt nộp có điểm trong khoảng đó; mỗi bài lấy điểm cao nhất trong tuần.",
+      entries: weekEntries,
+    },
+    month: {
+      period: "month",
+      from_ymd: monthStart,
+      to_ymd: monthEnd,
+      range_label: monthLabel,
+      metric_label:
+        "Trong tháng dương lịch hiện tại (giờ VN), lượt nộp có điểm; mỗi bài lấy điểm cao nhất trong tháng.",
+      entries: monthEntries,
+    },
   };
 }

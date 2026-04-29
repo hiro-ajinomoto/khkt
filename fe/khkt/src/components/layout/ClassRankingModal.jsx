@@ -2,6 +2,12 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { fetchStudentClassRanking } from '../../api/submissions';
 
+const PERIODS = [
+  { id: 'day', label: 'Trong ngày' },
+  { id: 'week', label: 'Trong tuần' },
+  { id: 'month', label: 'Trong tháng' },
+];
+
 /**
  * Modal xếp hạng lớp (học sinh). Mở khi bấm avatar trên header.
  */
@@ -9,6 +15,11 @@ export default function ClassRankingModal({ open, onClose, myStudentId }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
+  const [period, setPeriod] = useState('day');
+
+  useEffect(() => {
+    if (open) setPeriod('day');
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -42,7 +53,8 @@ export default function ClassRankingModal({ open, onClose, myStudentId }) {
 
   if (!open) return null;
 
-  const entries = Array.isArray(data?.entries) ? data.entries : [];
+  const slice = data?.[period];
+  const entries = Array.isArray(slice?.entries) ? slice.entries : [];
 
   return createPortal(
     <div
@@ -57,7 +69,7 @@ export default function ClassRankingModal({ open, onClose, myStudentId }) {
         aria-label="Đóng"
         onClick={onClose}
       />
-      <div className="relative z-10 flex max-h-[min(92vh,640px)] w-full max-w-lg flex-col rounded-t-3xl border border-sky-200/70 bg-white shadow-2xl dark:border-cyan-500/25 dark:bg-slate-900 sm:rounded-3xl">
+      <div className="relative z-10 flex max-h-[min(92vh,680px)] w-full max-w-lg flex-col rounded-t-3xl border border-sky-200/70 bg-white shadow-2xl dark:border-cyan-500/25 dark:bg-slate-900 sm:rounded-3xl">
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-sky-100 px-5 py-4 dark:border-cyan-950/60">
           <div className="min-w-0">
             <h2
@@ -81,9 +93,39 @@ export default function ClassRankingModal({ open, onClose, myStudentId }) {
           </button>
         </div>
 
-        {data?.metric_label ? (
-          <p className="shrink-0 px-5 pb-3 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-            {data.metric_label}
+        <div className="shrink-0 border-b border-sky-100 px-3 py-2 dark:border-cyan-950/60 sm:px-5">
+          <div
+            className="flex gap-1 rounded-xl bg-sky-50/90 p-1 dark:bg-slate-800/80"
+            role="tablist"
+            aria-label="Kỳ xếp hạng"
+          >
+            {PERIODS.map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={period === id}
+                onClick={() => setPeriod(id)}
+                className={`min-w-0 flex-1 rounded-lg px-2 py-2 text-center text-xs font-semibold transition sm:text-sm ${
+                  period === id
+                    ? 'bg-white text-sky-900 shadow-sm dark:bg-cyan-950/90 dark:text-cyan-100'
+                    : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {!loading && !error && slice?.range_label ? (
+            <p className="mt-2 px-1 text-center text-xs text-slate-500 dark:text-slate-400">
+              {slice.range_label}
+            </p>
+          ) : null}
+        </div>
+
+        {slice?.metric_label ? (
+          <p className="shrink-0 px-5 pb-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+            {slice.metric_label}
           </p>
         ) : null}
 
