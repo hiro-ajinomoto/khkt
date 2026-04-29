@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { login as loginAPI, getCurrentUser } from '../api/auth';
 import { getAuthErrorMessage } from '../utils/authErrors';
 
@@ -61,6 +61,19 @@ export function AuthProvider({ children }) {
       setLoading(false);
     }
   }, []);
+
+  const refreshUser = useCallback(async () => {
+    const t = token;
+    if (!t) return;
+    try {
+      const currentUser = await getCurrentUser(t);
+      setUser(currentUser);
+      localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+      emitAuthChanged();
+    } catch (e) {
+      console.error('refreshUser failed:', e);
+    }
+  }, [token]);
 
   // Khi tab/cửa sổ khác cùng origin đổi `localStorage` (ví dụ vừa đăng ký HS ở tab 2),
   // `getAuthHeader()` ở tab này đã trỏ tài khoản mới nhưng state React còn cũ → API lệch quyền.
@@ -127,6 +140,7 @@ export function AuthProvider({ children }) {
     isTeacher,
     isStudent,
     loading,
+    refreshUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

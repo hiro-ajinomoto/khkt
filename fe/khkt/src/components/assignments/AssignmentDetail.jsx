@@ -23,7 +23,7 @@ import './AssignmentDetail.css';
 function AssignmentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isStudent, isTeacher } = useAuth();
+  const { isStudent, isTeacher, refreshUser } = useAuth();
   const [assignment, setAssignment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [assignmentError, setAssignmentError] = useState(null);
@@ -150,6 +150,9 @@ function AssignmentDetail() {
       setSubmission(result);
       setShowResult(true);
       refreshStudentStickers();
+      if (isStudent && refreshUser) {
+        await refreshUser();
+      }
 
       await loadAssignment();
 

@@ -29,6 +29,7 @@ import {
 } from "../utils/stickers.js";
 import { getStudentRedeemedTotal } from "../utils/stickerRedemptions.js";
 import { buildStudentClassRanking } from "../utils/studentClassRanking.js";
+import { applyStreakOnSubmission } from "../utils/studentStreak.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1000,6 +1001,14 @@ router.post("/", authenticate, upload.array("files"), async (req, res) => {
 
     const result = await db.collection("submissions").insertOne(submissionDoc);
     const submissionId = result.insertedId;
+
+    if (req.user.role === "student") {
+      try {
+        await applyStreakOnSubmission(db, studentId);
+      } catch (streakErr) {
+        console.error("applyStreakOnSubmission:", streakErr);
+      }
+    }
 
     // Call AI grading
     let aiResult;

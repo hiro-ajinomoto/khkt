@@ -97,6 +97,37 @@
   gap: 0.35rem;
 }
 
+.student-sticker-bloom__streak {
+  pointer-events: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(255, 247, 237, 0.96);
+  border: 2px solid rgba(234, 88, 12, 0.38);
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #9a3412;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+}
+
+html.dark .student-sticker-bloom__streak {
+  background: rgba(67, 20, 7, 0.92);
+  border-color: rgba(251, 146, 60, 0.48);
+  color: #ffedd5;
+}
+
+.student-sticker-bloom__streak-flame {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.student-sticker-bloom__streak-num {
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
 .student-sticker-bloom__inner {
   filter: drop-shadow(0 10px 24px rgba(15, 23, 42, 0.2));
   transform-origin: center center;

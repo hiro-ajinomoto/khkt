@@ -60,6 +60,18 @@ export default function OceanListPageHeader({
               <div className="absolute inset-x-1 top-1 h-4 rounded-full bg-orange-200/50 blur-md dark:bg-cyan-300/20" />
             </div>
           )}
+          {isAuthenticated && isStudent ? (
+            <span
+              className="flex shrink-0 items-center gap-0.5 rounded-2xl border border-orange-200/85 bg-gradient-to-br from-amber-50 to-orange-50 px-2.5 py-1 text-sm font-bold leading-none tabular-nums text-orange-900 shadow-sm dark:border-orange-400/40 dark:from-orange-950/60 dark:to-amber-950/50 dark:text-amber-100"
+              title={`Streak: ${user?.streak_current ?? 0} ngày liên tiếp có nộp bài (giờ VN). Kỷ lục: ${user?.streak_longest ?? 0} ngày.`}
+              aria-label={`Streak: ${user?.streak_current ?? 0} ngày`}
+            >
+              <span aria-hidden className="text-base">
+                🔥
+              </span>
+              {user?.streak_current ?? 0}
+            </span>
+          ) : null}
           <div className="hidden min-w-0 md:block">
             <p className="mb-2 text-xs uppercase tracking-[0.35em] text-sky-600/90 dark:text-cyan-200/80">
               Cuộc thi khoa học kỹ thuật

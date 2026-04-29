@@ -8,6 +8,17 @@ import { authenticate } from '../middleware/auth.js';
 import { listClassNames, resolveClassNameFromEnrollmentCode } from '../schoolClasses.js';
 import { listClassNamesForTeacher } from '../classTeacherAssignments.js';
 import { validateNewLoginUsername } from '../utils/loginUsername.js';
+import { normalizeStreakForCalendar } from '../utils/studentStreak.js';
+
+/** Trường streak trên users (chỉ HS). */
+function streakFieldsForApiStudent(user) {
+  if (user.role !== 'student') return {};
+  return {
+    streak_current: Number.isFinite(user.streak_current) ? user.streak_current : 0,
+    streak_longest: Number.isFinite(user.streak_longest) ? user.streak_longest : 0,
+    streak_last_activity_ymd: user.streak_last_activity_ymd || null,
+  };
+}
 
 const router = express.Router();
 
@@ -56,6 +67,11 @@ router.post('/login', async (req, res) => {
       assigned_class_names = await listClassNamesForTeacher(db, user._id.toString());
     }
 
+    if (user.role === 'student') {
+      const patch = await normalizeStreakForCalendar(db, user._id);
+      if (patch) user.streak_current = 0;
+    }
+
     res.json({
       token,
       user: {
@@ -64,7 +80,9 @@ router.post('/login', async (req, res) => {
         role: user.role,
         name: user.name || user.username,
         ...(user.role === 'teacher' ? { assigned_class_names } : {}),
-        ...(user.role === 'student' ? { class_name: user.class_name || null } : {}),
+        ...(user.role === 'student'
+          ? { class_name: user.class_name || null, ...streakFieldsForApiStudent(user) }
+          : {}),
       },
     });
   } catch (error) {
@@ -170,6 +188,9 @@ router.post('/register', async (req, res) => {
         role: userRole,
         name: newUser.name,
         class_name: class_name || null,
+        streak_current: 0,
+        streak_longest: 0,
+        streak_last_activity_ymd: null,
       },
     });
   } catch (error) {
@@ -208,6 +229,11 @@ router.get('/me', authenticate, async (req, res) => {
       return res.status(404).json({ detail: 'User not found' });
     }
 
+    if (user.role === 'student') {
+      const patch = await normalizeStreakForCalendar(db, user._id);
+      if (patch) user.streak_current = 0;
+    }
+
     let assigned_class_names = [];
     if (user.role === 'teacher') {
       assigned_class_names = await listClassNamesForTeacher(db, user._id.toString());
@@ -220,6 +246,7 @@ router.get('/me', authenticate, async (req, res) => {
       name: user.name || user.username,
       class_name: user.class_name || null, // For students
       ...(user.role === 'teacher' ? { assigned_class_names } : {}),
+      ...(user.role === 'student' ? streakFieldsForApiStudent(user) : {}),
     });
   } catch (error) {
     console.error('Get user error:', error);

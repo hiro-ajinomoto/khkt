@@ -16,7 +16,7 @@ const BEAR_SRC = `${import.meta.env.BASE_URL}sticker-bear-mascot.jpg`;
  * On narrow screens, show when idle (hide while touching/scrolling).
  */
 export default function StudentStickerDock() {
-  const { isAuthenticated, isStudent, loading } = useAuth();
+  const { isAuthenticated, isStudent, loading, user } = useAuth();
   const [stats, setStats] = useState(null);
   const [isPhone, setIsPhone] = useState(false);
   const [phoneVisible, setPhoneVisible] = useState(true);
@@ -108,15 +108,25 @@ export default function StudentStickerDock() {
 
   const total = stats?.total_sticker_count ?? 0;
   const showBloom = !isPhone || phoneVisible;
+  const streak = user?.streak_current ?? 0;
 
   return (
     <div
       className={`student-sticker-bloom ${showBloom ? 'student-sticker-bloom--visible' : 'student-sticker-bloom--hidden-touch'}`}
       aria-live="polite"
-      aria-label={`Sticker: ${total}`}
+      aria-label={`Streak ${streak} ngày, sticker ${total}`}
     >
       <div className="student-sticker-bloom__inner">
         <div className="student-sticker-bloom__stack">
+          <div
+            className="student-sticker-bloom__streak"
+            title={`Streak ${streak} ngày (kỷ lục ${user?.streak_longest ?? 0}) — mỗi ngày VN có nộp bài là +1; bỏ một ngày thì streak về 0.`}
+          >
+            <span className="student-sticker-bloom__streak-flame" aria-hidden>
+              🔥
+            </span>
+            <span className="student-sticker-bloom__streak-num tabular-nums">{streak}</span>
+          </div>
           <NotificationBell variant="dock" />
           <div className="student-sticker-bloom__bear-motion">
             <Link
