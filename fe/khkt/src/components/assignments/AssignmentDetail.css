@@ -373,6 +373,17 @@ html:not(.dark) .assignment-detail .model-solution-text--locked p {
   font-weight: 600;
 }
 
+.submission-flexible-hint {
+  margin: -0.35rem 0 1.25rem 0;
+  padding: 0.95rem 1.1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  background: rgba(8, 51, 68, 0.35);
+  color: #cffafe;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
 .deadline-passed-banner {
   margin-bottom: 1.25rem;
   padding: 1rem 1.15rem;
@@ -715,6 +726,12 @@ html:not(.dark) .assignment-detail .submission-section {
 
 html:not(.dark) .assignment-detail .submission-section h2 {
   color: #0f172a;
+}
+
+html:not(.dark) .assignment-detail .submission-flexible-hint {
+  border-color: rgba(14, 165, 233, 0.45);
+  background: #f0f9ff;
+  color: #0c4a6e;
 }
 
 html:not(.dark) .assignment-detail .deadline-passed-banner {

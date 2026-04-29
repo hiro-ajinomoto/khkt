@@ -182,7 +182,7 @@ function AssignmentDetail() {
   const deadlineHint =
     assignment?.due_date && deadlineReminderClient(assignment.due_date);
 
-  /** HS chỉ được xem đáp án mẫu sau khi đã nộp (đối chiếu bài làm); GV/Admin xem luôn. */
+  /** HS xem đáp án mẫu sau ít nhất một lần nộp (có thể là ảnh nháp); GV/Admin xem luôn. */
   const studentCanSeeModelSolution =
     !isStudent || (assignment?.my_submission_count ?? 0) > 0;
 
@@ -192,6 +192,9 @@ function AssignmentDetail() {
       : assignment?.model_solution_image_url
         ? [assignment.model_solution_image_url]
         : [];
+
+  const hasModelSolutionContent =
+    modelSolutionUrls.length > 0 || String(assignment?.model_solution ?? '').trim().length > 0;
 
   const assignmentModelForSubmissionResult =
     assignment &&
@@ -327,14 +330,14 @@ function AssignmentDetail() {
           </div>
         )}
 
-        {isStudent && !studentCanSeeModelSolution &&
-          (modelSolutionUrls.length > 0 || assignment.model_solution) && (
+        {isStudent && !studentCanSeeModelSolution && hasModelSolutionContent && (
           <div className="model-solution-text model-solution-text--locked" role="note">
             <label>Đáp án mẫu</label>
             <p>
-              Sau khi bạn nộp bài, bạn xem bài giải mẫu (kể cả hình ảnh, nếu có) trong phần kết quả
-              chấm để đối chiếu. Nếu có lời giải dạng chữ, bạn cũng có thể xem thêm khi quay lại trang
-              bài tập này.
+              Sau <strong>một lần nộp bất kỳ</strong> (kể cả ảnh nháp hay ảnh tạm), bài giải mẫu sẽ mở
+              để đối chiếu — trong phần kết quả chấm và lại trang này (chữ / hình nếu có).{' '}
+              <strong>Luyện thêm:</strong> xem phần bài tập tương tự (AI gợi ý sau khi chấm, ví dụ khi
+              nộp ảnh nháp) để luyện tập thêm.
             </p>
           </div>
         )}
@@ -389,6 +392,23 @@ function AssignmentDetail() {
       {/* Submission Form */}
       <div className="submission-section">
         <h2>Nộp bài làm</h2>
+        {isStudent && !submissionBlocked && (
+          <p className="submission-flexible-hint" role="note">
+            {hasModelSolutionContent ? (
+              <>
+                <strong>Gợi ý:</strong> Nếu em chưa làm được hết, vẫn có thể chọn{' '}
+                <strong>bất kỳ ảnh nào</strong> (nháp, ảnh trắng…) rồi bấm <strong>Nộp bài</strong> để
+                sau khi chấm mở xem <strong>bài giải mẫu</strong>. Tiếp theo làm lại bài hoặc xem phần
+                bài tập tương tự (AI gợi ý sau khi chấm) để luyện tập thêm.
+              </>
+            ) : (
+              <>
+                <strong>Gợi ý:</strong> Có thể nộp <strong>bất kỳ ảnh nháp nào</strong> nếu em muốn có
+                phản hồi chấm sớm; luyện tập thêm với phần bài tập tương tự (AI gợi ý sau khi chấm).
+              </>
+            )}
+          </p>
+        )}
         {isStudent && pastDueBlocked && (
           <div className="deadline-passed-banner" role="alert">
             Đã quá hạn nộp bài (hạn{' '}
