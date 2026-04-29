@@ -62,9 +62,11 @@ function formatYmdViShort(ymd) {
  * @param {Date} start
  * @param {Date} end
  * @param {{ students: object[], assignmentIds: import('mongodb').ObjectId[] }} cached
+ * @param {{ allTime?: boolean }} [options] allTime = true → mọi lượt nộp có điểm (không lọc theo ngày).
  */
-async function buildRankedEntriesForWindow(db, start, end, cached) {
+async function buildRankedEntriesForWindow(db, start, end, cached, options = {}) {
   const { students, assignmentIds } = cached;
+  const allTime = Boolean(options.allTime);
 
   /** @type {Map<string, Map<string, number>>} */
   const bestByStudent = new Map();
@@ -74,13 +76,16 @@ async function buildRankedEntriesForWindow(db, start, end, cached) {
 
   if (assignmentIds.length > 0 && students.length > 0) {
     const studentIds = students.map((s) => s._id);
+    const filter = {
+      student_id: { $in: studentIds },
+      assignment_id: { $in: assignmentIds },
+    };
+    if (!allTime) {
+      filter.created_at = { $gte: start, $lte: end };
+    }
     const submissions = await db
       .collection("submissions")
-      .find({
-        student_id: { $in: studentIds },
-        assignment_id: { $in: assignmentIds },
-        created_at: { $gte: start, $lte: end },
-      })
+      .find(filter)
       .project({
         student_id: 1,
         assignment_id: 1,
@@ -152,8 +157,9 @@ async function buildRankedEntriesForWindow(db, start, end, cached) {
 }
 
 /**
- * Xếp hạng lớp — ba kỳ: hôm nay, tuần (Thứ Hai–CN, VN), tháng dương lịch (VN).
- * Chỉ tính lượt nộp có điểm và có `created_at` trong khoảng (theo giờ VN).
+ * Xếp hạng lớp — bốn kỳ: ĐTB tổng (toàn thời gian), hôm nay, tuần (Thứ Hai–CN, VN), tháng (VN).
+ * Kỳ có khoảng ngày: chỉ lượt nộp có điểm trong khoảng (theo giờ VN).
+ * Kỳ tổng: mọi lượt nộp có điểm; mỗi bài lấy điểm cao nhất mọi thời điểm.
  *
  * @param {import('mongodb').Db} db
  * @param {string} className
@@ -182,7 +188,8 @@ export async function buildStudentClassRanking(db, className) {
   const weekBounds = vietnamDayBoundsInclusive(weekStart, weekEnd);
   const monthBounds = vietnamDayBoundsInclusive(monthStart, monthEnd);
 
-  const [dayEntries, weekEntries, monthEntries] = await Promise.all([
+  const [overallEntries, dayEntries, weekEntries, monthEntries] = await Promise.all([
+    buildRankedEntriesForWindow(db, null, null, cached, { allTime: true }),
     buildRankedEntriesForWindow(db, dayBounds.start, dayBounds.end, cached),
     buildRankedEntriesForWindow(db, weekBounds.start, weekBounds.end, cached),
     buildRankedEntriesForWindow(db, monthBounds.start, monthBounds.end, cached),
@@ -195,6 +202,15 @@ export async function buildStudentClassRanking(db, className) {
 
   return {
     class_name: className,
+    overall: {
+      period: "overall",
+      from_ymd: null,
+      to_ymd: null,
+      range_label: "ĐTB tổng (toàn thời gian)",
+      metric_label:
+        "Trên tất cả bài tập đã gán cho lớp: với mỗi bài, lấy điểm cao nhất mọi lượt nộp (ưu tiên điểm giáo viên). ĐTB = trung bình các bài đã có điểm — dùng để xếp hạng theo điểm ổn định.",
+      entries: overallEntries,
+    },
     day: {
       period: "day",
       from_ymd: today,

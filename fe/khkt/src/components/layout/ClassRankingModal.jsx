@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { fetchStudentClassRanking } from '../../api/submissions';
 
 const PERIODS = [
+  { id: 'overall', label: 'ĐTB tổng' },
   { id: 'day', label: 'Trong ngày' },
   { id: 'week', label: 'Trong tuần' },
   { id: 'month', label: 'Trong tháng' },
@@ -58,7 +59,7 @@ export default function ClassRankingModal({ open, onClose, myStudentId }) {
   const [period, setPeriod] = useState('day');
 
   useEffect(() => {
-    if (open) setPeriod('day');
+    if (open) setPeriod('overall');
   }, [open]);
 
   useEffect(() => {

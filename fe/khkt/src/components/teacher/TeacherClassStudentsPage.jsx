@@ -13,6 +13,7 @@ import BackToTopButton from '../layout/BackToTopButton';
 import TeacherClassSubNav from './TeacherClassSubNav';
 
 const SCORE_PERIODS = [
+  { id: 'overall', label: 'ĐTB tổng' },
   { id: 'day', label: 'Trong ngày' },
   { id: 'week', label: 'Trong tuần' },
   { id: 'month', label: 'Trong tháng' },
@@ -66,7 +67,7 @@ export default function TeacherClassStudentsPage() {
   const [students, setStudents] = useState([]);
   const [ranking, setRanking] = useState(null);
   const [rankingNote, setRankingNote] = useState(null);
-  const [scorePeriod, setScorePeriod] = useState('day');
+  const [scorePeriod, setScorePeriod] = useState('overall');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [removingId, setRemovingId] = useState(null);
@@ -301,7 +302,7 @@ export default function TeacherClassStudentsPage() {
             aria-labelledby="score-rank-heading"
           >
             <h3 id="score-rank-heading" className="mb-3 text-lg font-semibold text-slate-900 dark:text-white">
-              📊 Xếp hạng điểm (theo bài đã chấm trong lớp)
+              📊 Xếp hạng điểm — ĐTB theo kỳ (ưu tiên tab &quot;ĐTB tổng&quot; để xếp hạng ổn định)
             </h3>
             <div
               className="mb-3 flex gap-1 rounded-xl bg-sky-50/90 p-1 dark:bg-slate-800/80"
