@@ -2,14 +2,14 @@
  * API service for assignments
  */
 
-import { getAuthHeader } from '../utils/auth';
+import { getAuthHeader } from "../utils/auth";
 import {
   describeApiFailure,
   getNetworkErrorMessage,
   isLikelyNetworkError,
-} from '../utils/fetchErrors';
+} from "../utils/fetchErrors";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
 function rethrowNetwork(error) {
   if (isLikelyNetworkError(error)) throw new Error(getNetworkErrorMessage());
@@ -24,29 +24,33 @@ export async function fetchAssignments() {
   try {
     const authHeader = getAuthHeader();
     const headers = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     };
     if (authHeader) {
-      headers['Authorization'] = authHeader;
+      headers["Authorization"] = authHeader;
     }
 
     const response = await fetch(`${API_BASE_URL}/assignments`, {
-      method: 'GET',
+      method: "GET",
       headers,
-      cache: 'no-store',
+      cache: "no-store",
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
-        describeApiFailure(response, errorData, 'Không tải được danh sách bài tập.')
+        describeApiFailure(
+          response,
+          errorData,
+          "Không tải được danh sách bài tập.",
+        ),
       );
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Error fetching assignments:', error);
+    console.error("Error fetching assignments:", error);
     rethrowNetwork(error);
   }
 }
@@ -60,29 +64,29 @@ export async function fetchAssignmentById(id) {
   try {
     const authHeader = getAuthHeader();
     const headers = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     };
     if (authHeader) {
-      headers['Authorization'] = authHeader;
+      headers["Authorization"] = authHeader;
     }
 
     const response = await fetch(`${API_BASE_URL}/assignments/${id}`, {
-      method: 'GET',
+      method: "GET",
       headers,
-      cache: 'no-store',
+      cache: "no-store",
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
-        describeApiFailure(response, errorData, 'Không tải được bài tập.')
+        describeApiFailure(response, errorData, "Không tải được bài tập."),
       );
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Error fetching assignment:', error);
+    console.error("Error fetching assignment:", error);
     rethrowNetwork(error);
   }
 }
@@ -96,30 +100,30 @@ export async function reportAssignmentProblem(id) {
   try {
     const authHeader = getAuthHeader();
     const headers = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     };
     if (authHeader) {
-      headers['Authorization'] = authHeader;
+      headers["Authorization"] = authHeader;
     }
 
     const response = await fetch(
       `${API_BASE_URL}/assignments/${id}/report-problem`,
       {
-        method: 'POST',
+        method: "POST",
         headers,
-      }
+      },
     );
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
-        describeApiFailure(response, errorData, 'Không gửi được báo lỗi đề.')
+        describeApiFailure(response, errorData, "Không gửi được báo lỗi đề."),
       );
     }
 
     return response.json();
   } catch (error) {
-    console.error('Error reporting assignment problem:', error);
+    console.error("Error reporting assignment problem:", error);
     rethrowNetwork(error);
   }
 }
@@ -132,29 +136,29 @@ export async function reportAssignmentProblem(id) {
 export async function deleteAssignment(id) {
   try {
     const headers = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     };
     const authHeader = getAuthHeader();
     if (authHeader) {
-      headers['Authorization'] = authHeader;
+      headers["Authorization"] = authHeader;
     }
 
     const response = await fetch(`${API_BASE_URL}/assignments/${id}`, {
-      method: 'DELETE',
+      method: "DELETE",
       headers,
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
-        describeApiFailure(response, errorData, 'Không xóa được bài tập.')
+        describeApiFailure(response, errorData, "Không xóa được bài tập."),
       );
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Error deleting assignment:', error);
+    console.error("Error deleting assignment:", error);
     rethrowNetwork(error);
   }
 }
@@ -167,15 +171,15 @@ export async function deleteAssignment(id) {
 export async function deleteAssignments(ids) {
   try {
     const headers = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     };
     const authHeader = getAuthHeader();
     if (authHeader) {
-      headers['Authorization'] = authHeader;
+      headers["Authorization"] = authHeader;
     }
 
     const response = await fetch(`${API_BASE_URL}/assignments`, {
-      method: 'DELETE',
+      method: "DELETE",
       headers,
       body: JSON.stringify({ ids }),
     });
@@ -183,14 +187,14 @@ export async function deleteAssignments(ids) {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
-        describeApiFailure(response, errorData, 'Không xóa được các bài tập.')
+        describeApiFailure(response, errorData, "Không xóa được các bài tập."),
       );
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Error deleting assignments:', error);
+    console.error("Error deleting assignments:", error);
     rethrowNetwork(error);
   }
 }
@@ -204,20 +208,20 @@ export async function deleteAssignments(ids) {
 export async function patchAssignmentsStudentVisibleBulk(ids, visible) {
   try {
     const headers = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     };
     const authHeader = getAuthHeader();
     if (authHeader) {
-      headers['Authorization'] = authHeader;
+      headers["Authorization"] = authHeader;
     }
 
     const response = await fetch(
       `${API_BASE_URL}/assignments/bulk-student-visible`,
       {
-        method: 'PATCH',
+        method: "PATCH",
         headers,
         body: JSON.stringify({ ids, visible }),
-      }
+      },
     );
 
     if (!response.ok) {
@@ -226,14 +230,14 @@ export async function patchAssignmentsStudentVisibleBulk(ids, visible) {
         describeApiFailure(
           response,
           errorData,
-          'Không cập nhật được trạng thái hiển thị cho học sinh.'
-        )
+          "Không cập nhật được trạng thái hiển thị cho học sinh.",
+        ),
       );
     }
 
     return response.json();
   } catch (error) {
-    console.error('Error patching student_visible (bulk):', error);
+    console.error("Error patching student_visible (bulk):", error);
     rethrowNetwork(error);
   }
 }
@@ -246,20 +250,20 @@ export async function patchAssignmentsStudentVisibleBulk(ids, visible) {
 export async function patchAssignmentStudentVisible(id, visible) {
   try {
     const headers = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     };
     const authHeader = getAuthHeader();
     if (authHeader) {
-      headers['Authorization'] = authHeader;
+      headers["Authorization"] = authHeader;
     }
 
     const response = await fetch(
       `${API_BASE_URL}/assignments/${id}/student-visible`,
       {
-        method: 'PATCH',
+        method: "PATCH",
         headers,
         body: JSON.stringify({ visible }),
-      }
+      },
     );
 
     if (!response.ok) {
@@ -268,14 +272,14 @@ export async function patchAssignmentStudentVisible(id, visible) {
         describeApiFailure(
           response,
           errorData,
-          'Không cập nhật được trạng thái hiển thị cho học sinh.'
-        )
+          "Không cập nhật được trạng thái hiển thị cho học sinh.",
+        ),
       );
     }
 
     return response.json();
   } catch (error) {
-    console.error('Error patching student_visible:', error);
+    console.error("Error patching student_visible:", error);
     rethrowNetwork(error);
   }
 }
@@ -287,15 +291,15 @@ export async function patchAssignmentStudentVisible(id, visible) {
  */
 export async function createAssignment(formData) {
   try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
     const headers = {};
     const authHeader = getAuthHeader();
     if (authHeader) {
-      headers['Authorization'] = authHeader;
+      headers["Authorization"] = authHeader;
     }
 
     const response = await fetch(`${API_BASE_URL}/assignments`, {
-      method: 'POST',
+      method: "POST",
       headers,
       body: formData,
     });
@@ -303,14 +307,14 @@ export async function createAssignment(formData) {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
-        describeApiFailure(response, errorData, 'Không tạo được bài tập.')
+        describeApiFailure(response, errorData, "Không tạo được bài tập."),
       );
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Error creating assignment:', error);
+    console.error("Error creating assignment:", error);
     rethrowNetwork(error);
   }
 }
@@ -323,15 +327,15 @@ export async function createAssignment(formData) {
  */
 export async function updateAssignment(id, formData) {
   try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
     const headers = {};
     const authHeader = getAuthHeader();
     if (authHeader) {
-      headers['Authorization'] = authHeader;
+      headers["Authorization"] = authHeader;
     }
 
     const response = await fetch(`${API_BASE_URL}/assignments/${id}`, {
-      method: 'PATCH',
+      method: "PATCH",
       headers,
       body: formData,
     });
@@ -339,14 +343,14 @@ export async function updateAssignment(id, formData) {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
-        describeApiFailure(response, errorData, 'Không cập nhật được bài tập.')
+        describeApiFailure(response, errorData, "Không cập nhật được bài tập."),
       );
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Error updating assignment:', error);
+    console.error("Error updating assignment:", error);
     rethrowNetwork(error);
   }
 }
@@ -358,24 +362,31 @@ export async function updateAssignment(id, formData) {
  */
 export async function fetchAssignmentsByDate(date) {
   try {
-    const response = await fetch(`${API_BASE_URL}/assignments/by-date?date=${date}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
+    const response = await fetch(
+      `${API_BASE_URL}/assignments/by-date?date=${date}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    });
+    );
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
-        describeApiFailure(response, errorData, 'Không tải được bài theo ngày.')
+        describeApiFailure(
+          response,
+          errorData,
+          "Không tải được bài theo ngày.",
+        ),
       );
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Error fetching assignments by date:', error);
+    console.error("Error fetching assignments by date:", error);
     rethrowNetwork(error);
   }
 }
@@ -396,29 +407,32 @@ export async function assignAssignmentToClasses(assignmentId, classNames) {
   try {
     const authHeader = getAuthHeader();
     if (!authHeader) {
-      throw new Error('Authentication required');
+      throw new Error("Authentication required");
     }
 
-    const response = await fetch(`${API_BASE_URL}/assignments/${assignmentId}/assign`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': authHeader,
+    const response = await fetch(
+      `${API_BASE_URL}/assignments/${assignmentId}/assign`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: authHeader,
+        },
+        body: JSON.stringify({ class_names: classNames }),
       },
-      body: JSON.stringify({ class_names: classNames }),
-    });
+    );
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
-        describeApiFailure(response, errorData, 'Không gán được bài cho lớp.')
+        describeApiFailure(response, errorData, "Không gán được bài cho lớp."),
       );
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Error assigning assignment to classes:', error);
+    console.error("Error assigning assignment to classes:", error);
     rethrowNetwork(error);
   }
 }
@@ -443,28 +457,35 @@ export async function getAssignmentClasses(assignmentId) {
   try {
     const authHeader = getAuthHeader();
     if (!authHeader) {
-      throw new Error('Authentication required');
+      throw new Error("Authentication required");
     }
 
-    const response = await fetch(`${API_BASE_URL}/assignments/${assignmentId}/classes`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': authHeader,
+    const response = await fetch(
+      `${API_BASE_URL}/assignments/${assignmentId}/classes`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: authHeader,
+        },
       },
-    });
+    );
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
-        describeApiFailure(response, errorData, 'Không tải được danh sách lớp.')
+        describeApiFailure(
+          response,
+          errorData,
+          "Không tải được danh sách lớp.",
+        ),
       );
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Error fetching assignment classes:', error);
+    console.error("Error fetching assignment classes:", error);
     rethrowNetwork(error);
   }
 }
@@ -474,24 +495,28 @@ export async function fetchAssignmentsByMonth(year, month) {
     const response = await fetch(
       `${API_BASE_URL}/assignments/by-month?year=${year}&month=${month}`,
       {
-        method: 'GET',
+        method: "GET",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-      }
+      },
     );
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
-        describeApiFailure(response, errorData, 'Không tải được bài theo tháng.')
+        describeApiFailure(
+          response,
+          errorData,
+          "Không tải được bài theo tháng.",
+        ),
       );
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Error fetching assignments by month:', error);
+    console.error("Error fetching assignments by month:", error);
     rethrowNetwork(error);
   }
 }

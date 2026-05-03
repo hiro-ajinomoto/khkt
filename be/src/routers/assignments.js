@@ -286,10 +286,7 @@ let problemReportIndexesEnsured = false;
 async function ensureProblemReportIndexes(db) {
   if (problemReportIndexesEnsured) return;
   const c = db.collection(ASSIGNMENT_PROBLEM_REPORTS);
-  await c.createIndex(
-    { assignment_id: 1, student_id: 1 },
-    { unique: true },
-  );
+  await c.createIndex({ assignment_id: 1, student_id: 1 }, { unique: true });
   await c.createIndex({ assignment_id: 1 });
   problemReportIndexesEnsured = true;
 }
@@ -328,11 +325,11 @@ async function loadProblemReportAggregates(db, assignmentOids, viewer) {
   return { countById, studentReportedIds };
 }
 
-function buildListReportContextObject(viewer, { countById, studentReportedIds }) {
-  if (
-    !viewer ||
-    !["teacher", "admin", "student"].includes(viewer.role)
-  ) {
+function buildListReportContextObject(
+  viewer,
+  { countById, studentReportedIds },
+) {
+  if (!viewer || !["teacher", "admin", "student"].includes(viewer.role)) {
     return null;
   }
   return {
@@ -342,7 +339,12 @@ function buildListReportContextObject(viewer, { countById, studentReportedIds })
   };
 }
 
-async function mapAssignmentDocToApi(item, creatorMap, listCtx = null, opts = {}) {
+async function mapAssignmentDocToApi(
+  item,
+  creatorMap,
+  listCtx = null,
+  opts = {},
+) {
   const cid = assignmentCreatedByString(item.created_by);
   const cr = cid ? creatorMap.get(cid) : null;
   // Ở chế độ list, ảnh đáp án gốc KHÔNG hiển thị trên card (chỉ dùng ở trang
@@ -351,7 +353,9 @@ async function mapAssignmentDocToApi(item, creatorMap, listCtx = null, opts = {}
   // bình thường.
   const listMode = Boolean(opts.listMode);
   const rawModelUrls = storedModelSolutionUrlsFromDoc(item);
-  const questionImageUrl = await convertToAccessibleUrl(item.question_image_url);
+  const questionImageUrl = await convertToAccessibleUrl(
+    item.question_image_url,
+  );
 
   let modelSolutionImageUrls = [];
   let modelSolutionImageUrl = null;
@@ -395,9 +399,7 @@ async function mapAssignmentDocToApi(item, creatorMap, listCtx = null, opts = {}
       base.problem_flagged = n >= PROBLEM_REPORT_FLAG_THRESHOLD;
     }
     if (listCtx.viewerRole === "student") {
-      base.student_reported_problem = listCtx.studentReportedIds.has(
-        base.id,
-      );
+      base.student_reported_problem = listCtx.studentReportedIds.has(base.id);
     }
   }
   return base;
@@ -465,10 +467,12 @@ router.patch(
       }
 
       const now = new Date();
-      const result = await db.collection("assignments").updateMany(
-        { _id: { $in: objectIds } },
-        { $set: { student_visible: visible, updated_at: now } },
-      );
+      const result = await db
+        .collection("assignments")
+        .updateMany(
+          { _id: { $in: objectIds } },
+          { $set: { student_visible: visible, updated_at: now } },
+        );
 
       res.json({
         success: true,
@@ -531,10 +535,12 @@ router.patch(
       }
 
       const now = new Date();
-      await db.collection("assignments").updateOne(
-        { _id: objectId },
-        { $set: { student_visible: visible, updated_at: now } },
-      );
+      await db
+        .collection("assignments")
+        .updateOne(
+          { _id: objectId },
+          { $set: { student_visible: visible, updated_at: now } },
+        );
 
       const updated = await db.collection("assignments").findOne({
         _id: objectId,
@@ -734,11 +740,7 @@ router.get("/by-date", optionalAuthenticate, async (req, res) => {
       const scoped = await getTeacherScopedClassSet(db, req.user);
       const allowed = new Set(
         (
-          await listScopedAssignmentObjectIdsForTeacher(
-            db,
-            req.user.id,
-            scoped,
-          )
+          await listScopedAssignmentObjectIdsForTeacher(db, req.user.id, scoped)
         ).map((x) => x.toString()),
       );
       assignments = assignments.filter((a) => allowed.has(a._id.toString()));
@@ -804,11 +806,7 @@ router.get("/by-month", optionalAuthenticate, async (req, res) => {
       const scoped = await getTeacherScopedClassSet(db, req.user);
       const allowed = new Set(
         (
-          await listScopedAssignmentObjectIdsForTeacher(
-            db,
-            req.user.id,
-            scoped,
-          )
+          await listScopedAssignmentObjectIdsForTeacher(db, req.user.id, scoped)
         ).map((x) => x.toString()),
       );
       assignments = assignments.filter((a) => allowed.has(a._id.toString()));
@@ -967,7 +965,9 @@ router.post("/:id/report-problem", authenticate, async (req, res) => {
     }
 
     if (!isAssignmentVisibleToStudentsGlobally(assignment)) {
-      return res.status(403).json({ detail: "Bài tập hiện không mở cho học sinh." });
+      return res
+        .status(403)
+        .json({ detail: "Bài tập hiện không mở cho học sinh." });
     }
 
     const studentId = ObjectId.createFromHexString(req.user.id);
@@ -1152,7 +1152,8 @@ router.post(
 
       let finalSolutionUrls = [];
       if (solutionImageFiles.length > 0) {
-        finalSolutionUrls = await uploadModelSolutionFilesToS3(solutionImageFiles);
+        finalSolutionUrls =
+          await uploadModelSolutionFilesToS3(solutionImageFiles);
       } else {
         const arrUrls = parseModelSolutionImageUrlsFromBody(req.body);
         if (arrUrls !== null && arrUrls.length > 0) {
@@ -1232,7 +1233,9 @@ router.post(
 
       const classParse = parseClassNamesFromBody(req.body.class_names);
       if (classParse.error) {
-        await db.collection("assignments").deleteOne({ _id: result.insertedId });
+        await db
+          .collection("assignments")
+          .deleteOne({ _id: result.insertedId });
         return res.status(400).json({ detail: classParse.error });
       }
 
@@ -1240,14 +1243,18 @@ router.post(
         if (req.user.role === "teacher") {
           const scoped = await getTeacherScopedClassSet(db, req.user);
           if (!assertTeacherClassesAllowed(scoped, classParse.names, res)) {
-            await db.collection("assignments").deleteOne({ _id: result.insertedId });
+            await db
+              .collection("assignments")
+              .deleteOne({ _id: result.insertedId });
             return;
           }
         }
         try {
           await assertClassNamesRegistered(db, classParse.names);
         } catch (e) {
-          await db.collection("assignments").deleteOne({ _id: result.insertedId });
+          await db
+            .collection("assignments")
+            .deleteOne({ _id: result.insertedId });
           if (e.status === 400) {
             return res.status(400).json({ detail: e.message });
           }
@@ -1583,10 +1590,16 @@ router.delete("/", authenticate, requireTeacher, async (req, res) => {
     if (req.user.role === "teacher") {
       const scoped = await getTeacherScopedClassSet(db, req.user);
       for (const oid of objectIds) {
-        const ok = await canTeacherManageAssignmentDb(db, req.user, oid, scoped);
+        const ok = await canTeacherManageAssignmentDb(
+          db,
+          req.user,
+          oid,
+          scoped,
+        );
         if (!ok) {
           return res.status(403).json({
-            detail: "Bạn không có quyền xóa một hoặc nhiều bài tập trong danh sách.",
+            detail:
+              "Bạn không có quyền xóa một hoặc nhiều bài tập trong danh sách.",
           });
         }
       }
