@@ -4,7 +4,7 @@ import { formatMoney, formatViDate, formatViDateTime } from "./formatMoney.js";
 import { NameSuggestInput } from "./NameSuggestInput.jsx";
 import "./App.css";
 
-const ROW_COUNT = 18;
+const ROW_COUNT = 40;
 const SAN_STEP = 15;
 const CUON_CAN_STEP = 10;
 const SUOI_STEP = 5;
@@ -69,7 +69,7 @@ function mergeLedgerIntoRows(baseRows, ledger) {
 
 function normalizeApiLedger(raw) {
   const out = emptyClientLedger();
-  if (!Array.isArray(raw) || raw.length !== ROW_COUNT) return out;
+  if (!Array.isArray(raw)) return out;
   for (let i = 0; i < ROW_COUNT; i++) {
     const blob = raw[i];
     if (!blob || typeof blob !== "object" || Array.isArray(blob)) continue;
@@ -259,12 +259,10 @@ function computeRow(r) {
 }
 
 function normalizeRowsFromApi(raw) {
-  if (!Array.isArray(raw) || raw.length !== ROW_COUNT) {
-    return Array.from({ length: ROW_COUNT }, () => emptyRow());
-  }
   const allowed = new Set(Object.keys(emptyRow()));
-  return raw.map((r) => {
+  return Array.from({ length: ROW_COUNT }, (_, i) => {
     const o = emptyRow();
+    const r = Array.isArray(raw) ? raw[i] : undefined;
     if (!r || typeof r !== "object") return o;
     for (const k of allowed) {
       if (typeof r[k] === "string") o[k] = r[k];

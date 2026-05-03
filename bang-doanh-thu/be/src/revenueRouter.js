@@ -99,6 +99,8 @@ revenueRouter.get("/sheets/:reportDate", async (req, res) => {
       updatedAt: null,
     });
   }
+  const rowsNormalized = normalizeRows(Array.isArray(doc.rows) ? doc.rows : []);
+  const rowsSafe = rowsNormalized ?? Array.from({ length: ROW_COUNT }, () => emptyRow());
   res.json({
     reportDate: doc.reportDate,
     year: doc.year,
@@ -106,8 +108,8 @@ revenueRouter.get("/sheets/:reportDate", async (req, res) => {
     day: doc.day,
     isoWeekYear: doc.isoWeekYear,
     isoWeek: doc.isoWeek,
-    rows: doc.rows,
-    totals: doc.totals,
+    rows: rowsSafe,
+    totals: computeTotals(rowsSafe),
     cellLedger:
       doc.cellLedger != null ? normalizeCellLedger(doc.cellLedger, new Date()) : emptyCellLedger(),
     createdAt: doc.createdAt ?? null,

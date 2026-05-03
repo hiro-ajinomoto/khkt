@@ -1,6 +1,6 @@
 import { getISOWeek, getISOWeekYear, parseISO } from "date-fns";
 
-export const ROW_COUNT = 18;
+export const ROW_COUNT = 40;
 
 export const emptyRow = () => ({
   ten: "",
@@ -92,9 +92,10 @@ export function metaFromReportDate(reportDate) {
 }
 
 export function normalizeRows(raw) {
-  if (!Array.isArray(raw) || raw.length !== ROW_COUNT) return null;
+  if (!Array.isArray(raw)) return null;
   const allowed = new Set(Object.keys(emptyRow()));
-  return raw.map((r) => {
+  return Array.from({ length: ROW_COUNT }, (_, i) => {
+    const r = raw[i];
     const o = emptyRow();
     if (!r || typeof r !== "object") return o;
     for (const k of allowed) {
@@ -152,7 +153,7 @@ function coerceLedgerDate(v, serverNow) {
  */
 export function normalizeCellLedger(raw, serverNow = new Date()) {
   const out = emptyCellLedger();
-  if (!Array.isArray(raw) || raw.length !== ROW_COUNT) return out;
+  if (!Array.isArray(raw)) return out;
   for (let i = 0; i < ROW_COUNT; i++) {
     const blob = raw[i];
     if (!blob || typeof blob !== "object" || Array.isArray(blob)) continue;
