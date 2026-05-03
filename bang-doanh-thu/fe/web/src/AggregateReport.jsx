@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { getISOWeek, getISOWeekYear } from "date-fns";
-import { formatMoney } from "./formatMoney.js";
+import { formatMoney, formatViDate } from "./formatMoney.js";
 import { getCalendarWeekSpansInMonth } from "./calendarSpans.js";
 import { getCauClicksPerQua } from "./cauShuttleRates.js";
 import "./App.css";
@@ -121,14 +121,26 @@ function sumEstimatedCauQua(tiers, stepOrder) {
   return sum;
 }
 
+function pad2(n) {
+  return String(n).padStart(2, "0");
+}
+
+/** @param {number} year @param {number} month 1–12 @param {number} day */
+function isoDateLocal(year, month, day) {
+  return `${year}-${pad2(month)}-${pad2(day)}`;
+}
+
 export default function AggregateReport() {
   const now = useMemo(() => new Date(), []);
-  const [mode, setMode] = useState(/** @type {"month_full"|"month_week"|"iso"} */ ("month_full"));
+  const [mode, setMode] = useState(/** @type {"month_full"|"month_week"|"iso"|"day"} */ ("month_full"));
   const [filterYear, setFilterYear] = useState(now.getFullYear());
   const [filterMonth, setFilterMonth] = useState(now.getMonth() + 1);
   const [filterCalendarWeek, setFilterCalendarWeek] = useState(1);
   const [filterIsoYear, setFilterIsoYear] = useState(() => getISOWeekYear(now));
   const [filterIsoWeek, setFilterIsoWeek] = useState(() => getISOWeek(now));
+  const [filterDayISO, setFilterDayISO] = useState(() =>
+    isoDateLocal(now.getFullYear(), now.getMonth() + 1, now.getDate()),
+  );
 
   /** @type {Agg | null} */
   const [data, setData] = useState(null);
@@ -154,6 +166,28 @@ export default function AggregateReport() {
       if (mode === "month_week") {
         params.set("calendarWeek", String(filterCalendarWeek));
       }
+    } else if (mode === "day") {
+      const mch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(filterDayISO);
+      if (!mch) {
+        setData(null);
+        setLoadErr("Ngày không hợp lệ.");
+        return () => {
+          cancelled = true;
+        };
+      }
+      const y = Number(mch[1]);
+      const mo = Number(mch[2]);
+      const dd = Number(mch[3]);
+      if (!Number.isFinite(y) || !Number.isFinite(mo) || !Number.isFinite(dd)) {
+        setData(null);
+        setLoadErr("Ngày không hợp lệ.");
+        return () => {
+          cancelled = true;
+        };
+      }
+      params.set("year", String(y));
+      params.set("month", String(mo));
+      params.set("day", String(dd));
     } else {
       params.set("year", String(filterIsoYear));
       params.set("week", String(filterIsoWeek));
@@ -191,12 +225,22 @@ export default function AggregateReport() {
     return () => {
       cancelled = true;
     };
-  }, [mode, filterYear, filterMonth, filterCalendarWeek, filterIsoYear, filterIsoWeek]);
+  }, [mode, filterYear, filterMonth, filterCalendarWeek, filterIsoYear, filterIsoWeek, filterDayISO]);
 
   const subtitle = data?.meta ? (
     data.meta.scope === "month" ? (
       <>
         Tháng <strong>{data.meta.month}</strong>/<strong>{data.meta.year}</strong> (cả tháng)
+      </>
+    ) : data.meta.scope === "day" ? (
+      <>
+        {formatViDate(
+          `${Number(data.meta.year)}-${pad2(Number(data.meta.month))}-${pad2(Number(data.meta.day))}`,
+        ) || (
+          <>
+            Ngày <strong>{data.meta.day}</strong>/<strong>{data.meta.month}</strong>/<strong>{data.meta.year}</strong>
+          </>
+        )}
       </>
     ) : data.meta.scope === "month_calendar_week" ? (
       <>
@@ -227,7 +271,9 @@ export default function AggregateReport() {
           <strong>cầu</strong>, mỗi lần ± chỉ là <strong>một phần thanh toán theo bước</strong> — cần{" "}
           <strong>đủ N lần</strong> (theo mức giá) mới tương đương <strong>1 quả</strong>; số N chỉnh trong{" "}
           <code className="aggregate-code-ref">src/cauShuttleRates.js</code> (hiện <strong>4 lần ±6k = 1 quả</strong>).
-          <strong> Đồ ăn</strong> đang giữ <strong>mỗi lần ± khớp bước = 1 suất</strong>. Phần chỉ gõ tay không chia theo mức
+          Chọn kiểu kỳ theo{" "}
+          <strong>cả tháng, một ngày, tuần trong tháng hoặc tuần ISO</strong>. <strong> Đồ ăn</strong> đang giữ{" "}
+          <strong>mỗi lần ± khớp bước = 1 suất</strong>. Phần chỉ gõ tay không chia theo mức
           được.
         </p>
 
@@ -238,17 +284,22 @@ export default function AggregateReport() {
               className="select-input"
               value={mode}
               onChange={(e) => {
-                const v = /** @type {"month_full"|"month_week"|"iso"} */ (e.target.value);
+                const v = /** @type {"month_full"|"month_week"|"iso"|"day"} */ (e.target.value);
                 setMode(v);
                 if (v === "iso") {
                   const t = new Date();
                   setFilterIsoYear(getISOWeekYear(t));
                   setFilterIsoWeek(getISOWeek(t));
                 }
+                if (v === "day") {
+                  const t = new Date();
+                  setFilterDayISO(isoDateLocal(t.getFullYear(), t.getMonth() + 1, t.getDate()));
+                }
               }}
               aria-label="Kiểu kỳ"
             >
               <option value="month_full">Tháng (cả tháng)</option>
+              <option value="day">Một ngày</option>
               <option value="month_week">Tuần trong tháng (7 ngày liên tiếp từ ngày 1)</option>
               <option value="iso">Tuần (ISO)</option>
             </select>
@@ -297,6 +348,17 @@ export default function AggregateReport() {
                 </label>
               )}
             </>
+          ) : mode === "day" ? (
+            <label className="aggregate-field">
+              <span>Ngày</span>
+              <input
+                type="date"
+                value={filterDayISO}
+                onChange={(e) => setFilterDayISO(e.target.value)}
+                className="date-input"
+                aria-label="Chọn ngày để tổng hợp"
+              />
+            </label>
           ) : (
             <>
               <label className="aggregate-field">

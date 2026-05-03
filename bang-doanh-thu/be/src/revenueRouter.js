@@ -5,6 +5,7 @@ import {
   aggregateSheetsInsight,
   buildPersonHistory,
   computeTotals,
+  daysInMonth,
   emptyCellLedger,
   emptyRow,
   fillMissingLedgerFromRows,
@@ -24,7 +25,7 @@ revenueRouter.use("/people", peopleRouter);
 
 /**
  * @returns {{ ok: true } & Record<string, unknown> | { ok: false; status: number; body: Record<string, unknown> }}
- * `scope`: month | month_calendar_week | week | year
+ * `scope`: day | month | month_calendar_week | week | year
  */
 function parsePeriodFilter(query) {
   const year = parseInt(String(query.year || ""), 10);
@@ -33,13 +34,56 @@ function parsePeriodFilter(query) {
   }
   const monthRaw = query.month;
   const weekRaw = query.week;
+  const dayRaw = query.day;
   const cwRaw = query.calendarWeek ?? query.calendar_week;
   const cwProvided = cwRaw !== undefined && String(cwRaw).trim() !== "";
+
+  const dayProvided = dayRaw !== undefined && String(dayRaw).trim() !== "";
+  if (dayProvided && (monthRaw === undefined || monthRaw === "")) {
+    return {
+      ok: false,
+      status: 400,
+      body: { error: "day_requires_month", hint: "Thêm month= (và year=) khi dùng day= (ngày trong tháng 1–31)." },
+    };
+  }
 
   if (monthRaw !== undefined && monthRaw !== "") {
     const month = parseInt(String(monthRaw), 10);
     if (!Number.isFinite(month) || month < 1 || month > 12) {
       return { ok: false, status: 400, body: { error: "invalid_month" } };
+    }
+
+    if (dayProvided) {
+      if (cwProvided) {
+        return {
+          ok: false,
+          status: 400,
+          body: {
+            error: "day_conflict_calendar_week",
+            hint: "Chỉ dùng một trong hai: day= (một ngày) hoặc calendarWeek= (tuần trong tháng).",
+          },
+        };
+      }
+      const dayNum = parseInt(String(dayRaw), 10);
+      if (!Number.isFinite(dayNum) || dayNum < 1) {
+        return { ok: false, status: 400, body: { error: "invalid_day" } };
+      }
+      const dim = daysInMonth(year, month);
+      if (dayNum > dim) {
+        return {
+          ok: false,
+          status: 400,
+          body: { error: "invalid_day_for_month", hint: `Tháng ${month}/${year} có tối đa ${dim} ngày.` },
+        };
+      }
+      return {
+        ok: true,
+        filter: { year, month, day: dayNum },
+        scope: "day",
+        year,
+        month,
+        day: dayNum,
+      };
     }
 
     if (cwProvided) {
@@ -84,7 +128,7 @@ function parsePeriodFilter(query) {
   return { ok: true, filter: { year }, scope: "year", year };
 }
 
-/** GET /api/revenue/sheets?year=2026&month=5[&calendarWeek=2] | &week=18 (ISO; isoWeekYear = year) */
+/** GET /api/revenue/sheets?year=…&month=…[&day=D | &calendarWeek=W] | &week=… (ISO) */
 revenueRouter.get("/sheets", async (req, res) => {
   const pf = parsePeriodFilter(req.query);
   if (!pf.ok) return res.status(pf.status).json(pf.body);
@@ -121,7 +165,7 @@ revenueRouter.get("/sheets", async (req, res) => {
   res.json({ sheets, summary });
 });
 
-/** GET /api/revenue/aggregate — tổng hợp tiền + số lần ± (tháng, tuần-dương-lịch-trong-tháng, hoặc tuần ISO). */
+/** GET /api/revenue/aggregate — tổng hợp (tháng, một ngày, tuần trong tháng, tuần ISO). */
 revenueRouter.get("/aggregate", async (req, res) => {
   const pf = parsePeriodFilter(req.query);
   if (!pf.ok) return res.status(pf.status).json(pf.body);
@@ -129,7 +173,7 @@ revenueRouter.get("/aggregate", async (req, res) => {
     return res.status(400).json({
       error: "aggregate_requires_month_or_week",
       hint:
-        "Thêm month= (cả tháng hoặc kèm calendarWeek= cho tuần 1…N: 1–7, 8–14, … trong tháng) hoặc week= (tuần ISO; year= là năm ISO tuần).",
+        "Thêm month= (và tuỳ chọn day=D cho một ngày, hoặc calendarWeek= cho tuần trong tháng) hoặc week= (tuần ISO; year= là năm ISO tuần).",
     });
   }
 
@@ -144,16 +188,18 @@ revenueRouter.get("/aggregate", async (req, res) => {
   const meta =
     pf.scope === "month"
       ? { scope: pf.scope, year: pf.year, month: pf.month }
-      : pf.scope === "month_calendar_week"
-        ? {
-            scope: pf.scope,
-            year: pf.year,
-            month: pf.month,
-            calendarWeek: pf.calendarWeek,
-            dayStart: pf.dayStart,
-            dayEnd: pf.dayEnd,
-          }
-        : { scope: pf.scope, isoWeekYear: pf.year, isoWeek: pf.isoWeek };
+      : pf.scope === "day"
+        ? { scope: pf.scope, year: pf.year, month: pf.month, day: pf.day }
+        : pf.scope === "month_calendar_week"
+          ? {
+              scope: pf.scope,
+              year: pf.year,
+              month: pf.month,
+              calendarWeek: pf.calendarWeek,
+              dayStart: pf.dayStart,
+              dayEnd: pf.dayEnd,
+            }
+          : { scope: pf.scope, isoWeekYear: pf.year, isoWeek: pf.isoWeek };
 
   res.json({ meta, ...agg });
 });
