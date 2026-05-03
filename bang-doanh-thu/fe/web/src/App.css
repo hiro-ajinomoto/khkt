@@ -9,6 +9,31 @@
   margin-bottom: 1rem;
 }
 
+.sheet-header-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem 1.25rem;
+  margin-bottom: 0.35rem;
+}
+
+.sheet-header-top .sheet-title {
+  margin: 0;
+}
+
+.header-nav-link {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #2563eb;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.header-nav-link:hover {
+  text-decoration: underline;
+}
+
 .sheet-title {
   margin: 0 0 0.35rem;
   font-size: 1.5rem;
@@ -358,13 +383,13 @@
 
 .cell-stepper-panel {
   position: absolute;
-  z-index: 20;
-  right: 100%;
-  top: 50%;
-  transform: translateY(-50%);
-  margin-top: 0;
-  margin-right: 0.35rem;
-  left: auto;
+  z-index: 35;
+  left: 0;
+  right: auto;
+  top: calc(100% + 3px);
+  bottom: auto;
+  transform: none;
+  margin: 0;
 
   display: flex;
   flex-direction: row;
@@ -389,18 +414,6 @@
     max-height 0.22s ease,
     opacity 0.16s ease,
     visibility 0.16s ease;
-}
-
-/* Ô có nhiều bước (đồ ăn ±5…±10): không mở panel sang trái — tránh đè lên cột Tên của dòng và ô bên trái */
-.cell-stepper-panel.cell-stepper-panel--anchored-below {
-  right: auto;
-  left: 0;
-  top: calc(100% + 3px);
-  bottom: auto;
-  transform: none;
-  margin-top: 0;
-  margin-right: 0;
-  z-index: 35;
 }
 
 .cell-stepper:hover .cell-stepper-panel,
@@ -1123,4 +1136,112 @@
 
 .quick-register-msg--err {
   color: #b91c1c;
+}
+
+/* —— Báo cáo /tong-hop —— */
+.app--aggregate {
+  max-width: 58rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.aggregate-header {
+  margin-bottom: 1.25rem;
+}
+
+.aggregate-title {
+  font-size: 1.35rem;
+}
+
+.aggregate-back {
+  display: inline-block;
+  margin-bottom: 0.5rem;
+}
+
+.aggregate-intro,
+.aggregate-period {
+  text-align: left;
+  margin: 0.5rem auto 0;
+  max-width: 52rem;
+  font-size: 0.86rem;
+  color: #475569;
+  line-height: 1.45;
+}
+
+.aggregate-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.65rem 1rem;
+  justify-content: center;
+  margin: 1rem 0 0.25rem;
+}
+
+.aggregate-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+  font-size: 0.82rem;
+  color: #334155;
+  text-align: left;
+}
+
+.aggregate-loading,
+.aggregate-err {
+  text-align: center;
+}
+
+.aggregate-section-title {
+  font-size: 1rem;
+  margin: 1.25rem 0 0.5rem;
+  color: #0f172a;
+}
+
+.aggregate-tables .aggregate-detail-table th,
+.aggregate-tables .aggregate-detail-table td {
+  text-align: left;
+  vertical-align: top;
+  font-size: 0.8rem;
+}
+
+.aggregate-detail-table td.cell-num-report,
+.aggregate-detail-table .cell-num-report {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.aggregate-notes-cell {
+  font-size: 0.76rem !important;
+  color: #475569;
+  max-width: 14rem;
+  line-height: 1.35;
+}
+
+.aggregate-summary-table {
+  width: 100%;
+  max-width: 28rem;
+}
+
+.aggregate-summary-table th {
+  white-space: normal;
+  font-size: 0.82rem !important;
+  text-align: left;
+}
+
+.aggregate-summary-table td {
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.aggregate-footnotes {
+  margin: 1.5rem auto 0;
+  max-width: 52rem;
+  font-size: 0.8rem;
+  color: #64748b;
+  line-height: 1.48;
+}
+
+.aggregate-footnotes p {
+  margin: 0;
 }

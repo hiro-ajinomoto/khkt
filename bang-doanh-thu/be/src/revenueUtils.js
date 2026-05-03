@@ -91,6 +91,38 @@ export function metaFromReportDate(reportDate) {
   };
 }
 
+/** Số ngày trong tháng dương lịch (month 1–12). */
+export function daysInMonth(year, month1based) {
+  return new Date(year, month1based, 0).getDate();
+}
+
+/**
+ * Chia tháng thành các tuần liên tiếp 7 ngày: tuần 1 = ngày 1–7, tuần 2 = 8–14, …
+ * @returns {{ index: number; startDay: number; endDay: number }[]}
+ */
+export function getCalendarWeekSpansInMonth(year, month1based) {
+  const dim = daysInMonth(year, month1based);
+  /** @type {{ index: number; startDay: number; endDay: number }[]} */
+  const spans = [];
+  let d = 1;
+  while (d <= dim) {
+    const end = Math.min(d + 6, dim);
+    spans.push({ index: spans.length + 1, startDay: d, endDay: end });
+    d = end + 1;
+  }
+  return spans;
+}
+
+/**
+ * @param {number} weekIndex1based  tuần thứ mấy trong tháng dương lịch, bắt đầu từ 1
+ */
+export function getCalendarWeekSlice(year, month1based, weekIndex1based) {
+  const spans = getCalendarWeekSpansInMonth(year, month1based);
+  const ix = Number(weekIndex1based);
+  if (!Number.isFinite(ix) || ix < 1 || ix > spans.length) return null;
+  return spans[ix - 1];
+}
+
 export function normalizeRows(raw) {
   if (!Array.isArray(raw)) return null;
   const allowed = new Set(Object.keys(emptyRow()));
@@ -414,4 +446,91 @@ export function buildPersonHistory(rowIndex, docs) {
 
   const grandTotal = outward.reduce((s, x) => s + x.amount, 0);
   return { ten, items: outward, grandTotal, totalPaid };
+}
+
+/** Ước số chai / lượt theo đơn giá bấm ± cố định (±15 sân, ±10 cuốn, ±5 suối, ±10 NN). Không áp cố định cho cầu / đồ ăn. */
+const IMPLIED_UNIT_PRICE = {
+  san: 15,
+  cuonCan: 10,
+  suoi5k: 5,
+  nuocNgot10k: 10,
+};
+
+/**
+ * Gộp tất cả phiếu trong kỳ để đối chiếu tiền vs "số lần bán" từ ledger.
+ * @param {Array<{ rows?: unknown; cellLedger?: unknown }>} docs — nên chứa đủ rows + cellLedger
+ */
+export function aggregateSheetsInsight(docs) {
+  const sumMoney = {
+    san: 0,
+    cuonCan: 0,
+    cau: 0,
+    suoi5k: 0,
+    nuocNgot10k: 0,
+    doAn: 0,
+    noCu: 0,
+    doanhThu: 0,
+    homNayTra: 0,
+    conNo: 0,
+  };
+
+  /** @type {Record<string, number>} */
+  const ledgerTxnCount = {};
+  /** @type {Record<string, number>} */
+  const legacyCellCount = {};
+  for (const { key } of HISTORY_LINE_FIELDS) {
+    ledgerTxnCount[key] = 0;
+    legacyCellCount[key] = 0;
+  }
+
+  const serverNow = new Date();
+  for (const doc of docs) {
+    const rows = normalizeRows(Array.isArray(doc.rows) ? doc.rows : []);
+    if (!rows) continue;
+    const ledger = normalizeCellLedger(doc.cellLedger, serverNow);
+    const t = computeTotals(rows);
+    sumMoney.san += t.san;
+    sumMoney.cuonCan += t.cuonCan;
+    sumMoney.cau += t.cau;
+    sumMoney.suoi5k += t.suoi5k;
+    sumMoney.nuocNgot10k += t.nuocNgot10k;
+    sumMoney.doAn += t.doAn;
+    sumMoney.noCu += t.noCu;
+    sumMoney.doanhThu += t.doanhThu;
+    sumMoney.homNayTra += t.homNayTra;
+    sumMoney.conNo += t.conNo;
+
+    for (let i = 0; i < ROW_COUNT; i++) {
+      for (const { key } of HISTORY_LINE_FIELDS) {
+        const entries = ledger[i]?.[key];
+        const n = Array.isArray(entries) ? entries.length : 0;
+        if (n > 0) ledgerTxnCount[key] += n;
+        else if (parseMoney(rows[i]?.[key]) > 0) legacyCellCount[key] += 1;
+      }
+    }
+  }
+
+  /** @type {Record<string, number | null>} */
+  const impliedUnits = {};
+  for (const { key } of HISTORY_LINE_FIELDS) impliedUnits[key] = null;
+
+  impliedUnits.san =
+    sumMoney.san > 0 ? Math.round((sumMoney.san / IMPLIED_UNIT_PRICE.san) * 100) / 100 : null;
+  impliedUnits.cuonCan =
+    sumMoney.cuonCan > 0 ? Math.round((sumMoney.cuonCan / IMPLIED_UNIT_PRICE.cuonCan) * 100) / 100 : null;
+  impliedUnits.suoi5k =
+    sumMoney.suoi5k > 0 ? Math.round((sumMoney.suoi5k / IMPLIED_UNIT_PRICE.suoi5k) * 100) / 100 : null;
+  impliedUnits.nuocNgot10k =
+    sumMoney.nuocNgot10k > 0
+      ? Math.round((sumMoney.nuocNgot10k / IMPLIED_UNIT_PRICE.nuocNgot10k) * 100) / 100
+      : null;
+
+  return {
+    sheetCount: docs.length,
+    sumMoney,
+    ledgerTxnCount,
+    legacyCellCount,
+    impliedUnits,
+    impliedUnitPrices: { ...IMPLIED_UNIT_PRICE },
+  };
 }

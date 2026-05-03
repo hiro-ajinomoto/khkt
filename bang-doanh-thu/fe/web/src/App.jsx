@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { getISOWeek, getISOWeekYear } from "date-fns";
 import { formatMoney, formatViDate, formatViDateTime } from "./formatMoney.js";
 import { NameSuggestInput } from "./NameSuggestInput.jsx";
+import { getCalendarWeekSpansInMonth } from "./calendarSpans.js";
 import "./App.css";
 
 const ROW_COUNT = 40;
@@ -271,7 +273,7 @@ function normalizeRowsFromApi(raw) {
   });
 }
 
-/** Ô tiền: thanh +/− nổi bên trái ô (tên trái trong thanh; + trên, − dưới). `step` hoặc `steps`. */
+/** Ô tiền: hover mở panel +/− dưới ô (tên cột / tên người; + trên, − dưới mỗi bước). `step` hoặc `steps`. */
 function HoverStepperCell({
   rowIndex,
   field,
@@ -332,7 +334,7 @@ function HoverStepperCell({
         />
         <div
           className={`cell-stepper-panel${multi ? " cell-stepper-panel--multi" : ""}${
-            panelMany ? " cell-stepper-panel--many-steps cell-stepper-panel--anchored-below" : ""
+            panelMany ? " cell-stepper-panel--many-steps" : ""
           }`}
         >
           <div className="cell-stepper-headline">
@@ -394,6 +396,8 @@ export default function App() {
   const [listMode, setListMode] = useState("month");
   const [filterYear, setFilterYear] = useState(now.getFullYear());
   const [filterMonth, setFilterMonth] = useState(now.getMonth() + 1);
+  /** "" = cả tháng; "1","2",… = tuần dương lịch trong tháng (1–7, 8–14, …) */
+  const [filterCalendarWeek, setFilterCalendarWeek] = useState("");
   const [filterIsoYear, setFilterIsoYear] = useState(() => getISOWeekYear(now));
   const [filterIsoWeek, setFilterIsoWeek] = useState(() => getISOWeek(now));
   const [sheetList, setSheetList] = useState([]);
@@ -490,6 +494,10 @@ export default function App() {
   }, [rows, cellLedger, reportDate, hydrated, persist]);
 
   useEffect(() => {
+    setFilterCalendarWeek("");
+  }, [filterYear, filterMonth]);
+
+  useEffect(() => {
     let cancelled = false;
     const params = new URLSearchParams();
     if (listMode === "year") {
@@ -497,6 +505,9 @@ export default function App() {
     } else if (listMode === "month") {
       params.set("year", String(filterYear));
       params.set("month", String(filterMonth));
+      if (filterCalendarWeek !== "") {
+        params.set("calendarWeek", String(filterCalendarWeek));
+      }
     } else {
       params.set("year", String(filterIsoYear));
       params.set("week", String(filterIsoWeek));
@@ -517,7 +528,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [listMode, filterYear, filterMonth, filterIsoYear, filterIsoWeek]);
+  }, [listMode, filterYear, filterMonth, filterCalendarWeek, filterIsoYear, filterIsoWeek]);
 
   const derived = useMemo(() => rows.map((r) => computeRow(r)), [rows]);
 
@@ -638,6 +649,7 @@ export default function App() {
 
   function onListModeChange(mode) {
     setListMode(mode);
+    if (mode !== "month") setFilterCalendarWeek("");
     if (mode === "week") {
       const t = new Date();
       setFilterIsoYear(getISOWeekYear(t));
@@ -646,11 +658,20 @@ export default function App() {
   }
 
   const weekOptions = useMemo(() => Array.from({ length: 53 }, (_, i) => i + 1), []);
+  const monthCalendarWeekSpans = useMemo(
+    () => getCalendarWeekSpansInMonth(filterYear, filterMonth),
+    [filterYear, filterMonth],
+  );
 
   return (
     <div className="app">
       <header className="sheet-header">
-        <h1 className="sheet-title">DOANH THU</h1>
+        <div className="sheet-header-top">
+          <h1 className="sheet-title">DOANH THU</h1>
+          <Link to="/tong-hop" className="header-nav-link">
+            Tổng hợp kỳ
+          </Link>
+        </div>
         <label className="sheet-date">
           <span className="visually-hidden">Ngày</span>
           <input
@@ -733,6 +754,20 @@ export default function App() {
                 {Array.from({ length: 12 }, (_, i) => (
                   <option key={i + 1} value={i + 1}>
                     Tháng {i + 1}
+                  </option>
+                ))}
+              </select>
+              <span className="browse-hint">Tuần trong tháng</span>
+              <select
+                className="select-input"
+                value={filterCalendarWeek}
+                onChange={(e) => setFilterCalendarWeek(e.target.value)}
+                aria-label="Tuần trong tháng (để trống = cả tháng)"
+              >
+                <option value="">Cả tháng</option>
+                {monthCalendarWeekSpans.map((s) => (
+                  <option key={s.index} value={String(s.index)}>
+                    Tuần {s.index} ({s.startDay}–{s.endDay})
                   </option>
                 ))}
               </select>
@@ -990,8 +1025,9 @@ export default function App() {
         thu − Hôm nay trả. Lưu trữ: MongoDB (cùng biến <code>MONGODB_URI</code>, <code>MONGODB_DB</code>{" "}
         với backend KHKT), collection <code>bang_doanh_thu_sheets</code>. Tuần lọc theo chuẩn ISO (thứ
         Hai đầu tuần). Cột <strong>Sân</strong> / <strong>Cuốn cán</strong> / <strong>Cầu</strong> /{" "}
-        <strong>Suối</strong> / <strong>Nước ngọt</strong> / <strong>Đồ ăn</strong>: hover — thanh{" "}
-        <strong>bên trái ô</strong> (tên trong thanh; <strong>+</strong> trên, <strong>−</strong> dưới); rời chuột
+        <strong>Suối</strong> / <strong>Nước ngọt</strong> / <strong>Đồ ăn</strong>: hover — panel hiện{" "}
+        <strong>dưới ô</strong> (tên cột + tên người; <strong>+</strong> trên, <strong>−</strong> dưới mỗi
+        bước); rời chuột
         giữ ~<strong>
           {HOVER_HOLD_MS / 1000}s
         </strong>

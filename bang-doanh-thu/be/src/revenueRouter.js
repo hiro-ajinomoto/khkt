@@ -2,12 +2,14 @@ import { Router } from "express";
 import { getSheetsCollection } from "./db.js";
 import { peopleRouter } from "./peopleRouter.js";
 import {
+  aggregateSheetsInsight,
   buildPersonHistory,
   computeTotals,
   emptyCellLedger,
   emptyRow,
   fillMissingLedgerFromRows,
   mergeCellTimes,
+  getCalendarWeekSlice,
   metaFromReportDate,
   normalizeCellLedger,
   normalizeRows,
@@ -20,37 +22,76 @@ export const revenueRouter = Router();
 
 revenueRouter.use("/people", peopleRouter);
 
-/** GET /api/revenue/sheets?year=2026&month=5 | &week=18 (tuần ISO, isoWeekYear = year) */
-revenueRouter.get("/sheets", async (req, res) => {
-  const year = parseInt(String(req.query.year || ""), 10);
+/**
+ * @returns {{ ok: true } & Record<string, unknown> | { ok: false; status: number; body: Record<string, unknown> }}
+ * `scope`: month | month_calendar_week | week | year
+ */
+function parsePeriodFilter(query) {
+  const year = parseInt(String(query.year || ""), 10);
   if (!Number.isFinite(year)) {
-    return res.status(400).json({ error: "year_required" });
+    return { ok: false, status: 400, body: { error: "year_required" } };
   }
-  const monthRaw = req.query.month;
-  const weekRaw = req.query.week;
-
-  const coll = getSheetsCollection();
-  /** @type {import('mongodb').Filter<import('mongodb').Document>} */
-  let filter = {};
+  const monthRaw = query.month;
+  const weekRaw = query.week;
+  const cwRaw = query.calendarWeek ?? query.calendar_week;
+  const cwProvided = cwRaw !== undefined && String(cwRaw).trim() !== "";
 
   if (monthRaw !== undefined && monthRaw !== "") {
     const month = parseInt(String(monthRaw), 10);
     if (!Number.isFinite(month) || month < 1 || month > 12) {
-      return res.status(400).json({ error: "invalid_month" });
+      return { ok: false, status: 400, body: { error: "invalid_month" } };
     }
-    filter = { year, month };
-  } else if (weekRaw !== undefined && weekRaw !== "") {
-    const week = parseInt(String(weekRaw), 10);
-    if (!Number.isFinite(week) || week < 1 || week > 53) {
-      return res.status(400).json({ error: "invalid_week" });
+
+    if (cwProvided) {
+      const calendarWeek = parseInt(String(cwRaw), 10);
+      if (!Number.isFinite(calendarWeek) || calendarWeek < 1) {
+        return { ok: false, status: 400, body: { error: "invalid_calendar_week" } };
+      }
+      const slice = getCalendarWeekSlice(year, month, calendarWeek);
+      if (!slice) {
+        return { ok: false, status: 400, body: { error: "invalid_calendar_week_range" } };
+      }
+      return {
+        ok: true,
+        filter: { year, month, day: { $gte: slice.startDay, $lte: slice.endDay } },
+        scope: "month_calendar_week",
+        year,
+        month,
+        calendarWeek,
+        dayStart: slice.startDay,
+        dayEnd: slice.endDay,
+      };
     }
-    filter = { isoWeekYear: year, isoWeek: week };
-  } else {
-    filter = { year };
+
+    return { ok: true, filter: { year, month }, scope: "month", year, month };
   }
 
+  if (cwProvided) {
+    return {
+      ok: false,
+      status: 400,
+      body: { error: "calendar_week_requires_month", hint: "Thêm month= (tháng 1–12) khi dùng calendarWeek=." },
+    };
+  }
+
+  if (weekRaw !== undefined && weekRaw !== "") {
+    const week = parseInt(String(weekRaw), 10);
+    if (!Number.isFinite(week) || week < 1 || week > 53) {
+      return { ok: false, status: 400, body: { error: "invalid_week" } };
+    }
+    return { ok: true, filter: { isoWeekYear: year, isoWeek: week }, scope: "week", year, isoWeek: week };
+  }
+  return { ok: true, filter: { year }, scope: "year", year };
+}
+
+/** GET /api/revenue/sheets?year=2026&month=5[&calendarWeek=2] | &week=18 (ISO; isoWeekYear = year) */
+revenueRouter.get("/sheets", async (req, res) => {
+  const pf = parsePeriodFilter(req.query);
+  if (!pf.ok) return res.status(pf.status).json(pf.body);
+
+  const coll = getSheetsCollection();
   const docs = await coll
-    .find(filter, { projection: { rows: 0 } })
+    .find(pf.filter, { projection: { rows: 0 } })
     .sort({ reportDate: -1 })
     .toArray();
 
@@ -78,6 +119,43 @@ revenueRouter.get("/sheets", async (req, res) => {
   );
 
   res.json({ sheets, summary });
+});
+
+/** GET /api/revenue/aggregate — tổng hợp tiền + số lần ± (tháng, tuần-dương-lịch-trong-tháng, hoặc tuần ISO). */
+revenueRouter.get("/aggregate", async (req, res) => {
+  const pf = parsePeriodFilter(req.query);
+  if (!pf.ok) return res.status(pf.status).json(pf.body);
+  if (pf.scope === "year") {
+    return res.status(400).json({
+      error: "aggregate_requires_month_or_week",
+      hint:
+        "Thêm month= (cả tháng hoặc kèm calendarWeek= cho tuần 1…N: 1–7, 8–14, … trong tháng) hoặc week= (tuần ISO; year= là năm ISO tuần).",
+    });
+  }
+
+  const coll = getSheetsCollection();
+  const docs = await coll
+    .find(pf.filter, { projection: { rows: 1, cellLedger: 1, reportDate: 1 } })
+    .sort({ reportDate: 1 })
+    .toArray();
+
+  const agg = aggregateSheetsInsight(docs);
+
+  const meta =
+    pf.scope === "month"
+      ? { scope: pf.scope, year: pf.year, month: pf.month }
+      : pf.scope === "month_calendar_week"
+        ? {
+            scope: pf.scope,
+            year: pf.year,
+            month: pf.month,
+            calendarWeek: pf.calendarWeek,
+            dayStart: pf.dayStart,
+            dayEnd: pf.dayEnd,
+          }
+        : { scope: pf.scope, isoWeekYear: pf.year, isoWeek: pf.isoWeek };
+
+  res.json({ meta, ...agg });
 });
 
 /** GET /api/revenue/sheets/:reportDate */
