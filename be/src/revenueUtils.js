@@ -34,7 +34,7 @@ function roundLedgerAmt(n) {
   return Math.round(Math.abs(n) * 100) / 100;
 }
 
-function computeRow(r) {
+export function computeRow(r) {
   const doanhThu =
     parseMoney(r.san) +
     parseMoney(r.cuonCan) +
@@ -46,7 +46,11 @@ function computeRow(r) {
   return { doanhThu, conNo };
 }
 
-export function computeTotals(rows) {
+/**
+ * @param {ReturnType<typeof normalizeRows>} rows
+ * @param {unknown} [conNoLedgerRaw] — mỗi hàng: `{ kind: 'cong'|'tru'|'ghi', amount, at, note? }[]`
+ */
+export function computeTotals(rows, conNoLedgerRaw = null) {
   let san = 0;
   let cuonCan = 0;
   let cau = 0;
@@ -57,6 +61,7 @@ export function computeTotals(rows) {
   let homNayTra = 0;
   let conNo = 0;
   const derived = rows.map((r) => computeRow(r));
+  const cnNorm = conNoLedgerRaw != null ? normalizeConNoLedger(conNoLedgerRaw) : null;
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
     san += parseMoney(r.san);
@@ -67,7 +72,8 @@ export function computeTotals(rows) {
     doAn += parseMoney(r.doAn);
     doanhThu += derived[i].doanhThu;
     homNayTra += parseMoney(r.homNayTra);
-    conNo += derived[i].conNo;
+    const adj = cnNorm ? sumConNoLedgerNetForRow(cnNorm[i]) : 0;
+    conNo += derived[i].conNo + adj;
   }
   return {
     san,
@@ -218,6 +224,80 @@ export function normalizeCellLedger(raw, serverNow = new Date()) {
         });
       }
       if (lines.length > 0) out[i][key] = lines;
+    }
+  }
+  return out;
+}
+
+function roundConNoLedgerAmt(n) {
+  if (!Number.isFinite(n)) return 0;
+  return Math.round(Math.abs(n) * 100) / 100;
+}
+
+/** Mỗi hàng: các dòng ghi nợ (+) / trả nợ (−) điều chỉnh cột «Còn nợ» hiển thị. */
+export function emptyConNoLedger() {
+  return Array.from(
+    { length: ROW_COUNT },
+    () => /** @type {Array<{ kind: string; amount: number; at: Date; note: string }>} */ ([]),
+  );
+}
+
+/** `cong` cộng vào còn nợ hiển thị, `tru` trừ (đã trả). `ghi` chỉ lịch sử (Danh bạ), không đổi ô. */
+export function sumConNoLedgerNetForRow(lines) {
+  if (!Array.isArray(lines)) return 0;
+  let net = 0;
+  for (const e of lines) {
+    if (!e || typeof e !== "object") continue;
+    const kind = e.kind === "tru" ? "tru" : e.kind === "cong" ? "cong" : null;
+    if (!kind) continue;
+    const a = roundConNoLedgerAmt(
+      typeof e.amount === "number" && Number.isFinite(e.amount)
+        ? e.amount
+        : parseMoney(String(e.amount ?? "")),
+    );
+    if (a <= 0) continue;
+    net += kind === "cong" ? a : -a;
+  }
+  return Math.round(net * 100) / 100;
+}
+
+/**
+ * @param {unknown} raw
+ * @param {Date} [serverNow]
+ */
+export function normalizeConNoLedger(raw, serverNow = new Date()) {
+  const out = emptyConNoLedger();
+  if (!Array.isArray(raw)) return out;
+  for (let i = 0; i < ROW_COUNT; i++) {
+    const arr = raw[i];
+    if (!Array.isArray(arr)) continue;
+    const lines = [];
+    for (const e of arr) {
+      if (!e || typeof e !== "object") continue;
+      const kind =
+        e.kind === "tru" ? "tru" : e.kind === "cong" ? "cong" : e.kind === "ghi" ? "ghi" : null;
+      if (!kind) continue;
+      let amount = 0;
+      if (typeof e.amount === "number" && Number.isFinite(e.amount)) {
+        amount = roundConNoLedgerAmt(e.amount);
+      } else if (typeof e.amount === "string" && e.amount.trim() !== "") {
+        amount = roundConNoLedgerAmt(parseMoney(e.amount));
+      }
+      if (amount <= 0) continue;
+      let note = "";
+      if (typeof e.note === "string") {
+        note = e.note.trim().slice(0, 500);
+      }
+      lines.push({
+        kind,
+        amount,
+        at: coerceLedgerDate("at" in e ? e.at : undefined, serverNow),
+        note,
+      });
+    }
+    if (lines.length > 0) {
+      lines.sort((a, b) => a.at.getTime() - b.at.getTime());
+      out[i] = lines;
     }
   }
   return out;
@@ -575,7 +655,7 @@ export function aggregateSheetsInsight(docs) {
     const rows = normalizeRows(Array.isArray(doc.rows) ? doc.rows : []);
     if (!rows) continue;
     const ledger = normalizeCellLedger(doc.cellLedger, serverNow);
-    const t = computeTotals(rows);
+    const t = computeTotals(rows, doc.conNoLedger);
     sumMoney.san += t.san;
     sumMoney.cuonCan += t.cuonCan;
     sumMoney.cau += t.cau;
@@ -634,4 +714,155 @@ export function aggregateSheetsInsight(docs) {
     impliedUnits,
     impliedUnitPrices: { ...IMPLIED_UNIT_PRICE },
   };
+}
+
+function roundSignedMoney(n) {
+  if (!Number.isFinite(n)) return 0;
+  return Math.round(n * 100) / 100;
+}
+
+/** Giống `normalizePersonKey` trong peopleRouter (tránh import vòng). */
+function rowNameNorm(name) {
+  return String(name || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .normalize("NFKC")
+    .toLowerCase();
+}
+
+/**
+ * Các dòng ghi nợ / trả nợ trên phiếu (theo tên chuẩn), mới nhất trước.
+ */
+export function aggregatePersonConNoLedgerLines(nameNorm, sheetDocs) {
+  /** @type {Array<{ reportDate: string; stt: number; kind: string; amount: number; at: string; note: string }>} */
+  const lines = [];
+  let sumCong = 0;
+  let sumTru = 0;
+  let sumGhi = 0;
+  if (!nameNorm || !Array.isArray(sheetDocs)) {
+    return { debtLedgerLines: lines, debtLedgerTotals: { cong: 0, tru: 0, ghi: 0 } };
+  }
+
+  for (const doc of sheetDocs) {
+    const rows = normalizeRows(Array.isArray(doc.rows) ? doc.rows : []);
+    if (!rows) continue;
+    const reportDate = doc.reportDate;
+    if (typeof reportDate !== "string") continue;
+    const cnNorm = normalizeConNoLedger(doc.conNoLedger);
+    for (let i = 0; i < ROW_COUNT; i++) {
+      if (rowNameNorm(rows[i].ten) !== nameNorm) continue;
+      const rowLines = cnNorm[i] || [];
+      for (const entry of rowLines) {
+        const amt = roundConNoLedgerAmt(entry.amount);
+        const iso =
+          entry.at instanceof Date ? entry.at.toISOString() : new Date(entry.at).toISOString();
+        lines.push({
+          reportDate,
+          stt: i + 1,
+          kind: entry.kind,
+          amount: amt,
+          at: iso,
+          note: entry.note || "",
+        });
+        if (entry.kind === "cong") sumCong += amt;
+        else if (entry.kind === "tru") sumTru += amt;
+        else if (entry.kind === "ghi") sumGhi += amt;
+      }
+    }
+  }
+  lines.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : b.stt - a.stt));
+  return {
+    debtLedgerLines: lines,
+    debtLedgerTotals: {
+      cong: roundSignedMoney(sumCong),
+      tru: roundSignedMoney(sumTru),
+      ghi: roundSignedMoney(sumGhi),
+    },
+  };
+}
+
+/**
+ * Còn nợ hiển thị (phiếu + ghi nợ/trả nợ) gộp theo tháng cho dòng trùng `nameNorm`.
+ */
+export function aggregatePersonDebtByYearMonth(nameNorm, sheetDocs) {
+  if (!nameNorm || !Array.isArray(sheetDocs)) {
+    return { months: [], yearTotal: 0 };
+  }
+
+  /** @type {Map<string, { year: number; month: number; totalConNo: number; lineCount: number; days: Map<string, { totalConNo: number; lineCount: number; entries: { stt: number; conNo: number; conNoBase: number; conNoAdjust: number; doanhThu: number; homNayTra: number }[] }> }>} */
+  const monthMap = new Map();
+
+  for (const doc of sheetDocs) {
+    const rows = normalizeRows(Array.isArray(doc.rows) ? doc.rows : []);
+    if (!rows) continue;
+    const reportDate = doc.reportDate;
+    if (typeof reportDate !== "string") continue;
+
+    let year = doc.year;
+    let month = doc.month;
+    if (!Number.isFinite(year) || !Number.isFinite(month)) {
+      const meta = metaFromReportDate(reportDate);
+      if (!meta) continue;
+      year = meta.year;
+      month = meta.month;
+    }
+
+    const cnNorm = normalizeConNoLedger(doc.conNoLedger);
+    const mKey = `${year}-${month}`;
+    for (let i = 0; i < ROW_COUNT; i++) {
+      const r = rows[i];
+      if (rowNameNorm(r.ten) !== nameNorm) continue;
+      const { doanhThu, conNo: conNoBase } = computeRow(r);
+      const adj = sumConNoLedgerNetForRow(cnNorm[i]);
+      const conNo = roundSignedMoney(conNoBase + adj);
+
+      let mAgg = monthMap.get(mKey);
+      if (!mAgg) {
+        mAgg = { year, month, totalConNo: 0, lineCount: 0, days: new Map() };
+        monthMap.set(mKey, mAgg);
+      }
+      mAgg.totalConNo += conNo;
+      mAgg.lineCount += 1;
+
+      let dAgg = mAgg.days.get(reportDate);
+      if (!dAgg) {
+        dAgg = { totalConNo: 0, lineCount: 0, entries: [] };
+        mAgg.days.set(reportDate, dAgg);
+      }
+      dAgg.totalConNo += conNo;
+      dAgg.lineCount += 1;
+      dAgg.entries.push({
+        stt: i + 1,
+        conNo,
+        conNoBase: roundSignedMoney(conNoBase),
+        conNoAdjust: roundSignedMoney(adj),
+        doanhThu: roundSignedMoney(doanhThu),
+        homNayTra: roundSignedMoney(parseMoney(r.homNayTra)),
+      });
+    }
+  }
+
+  const months = Array.from(monthMap.values())
+    .map((m) => ({
+      year: m.year,
+      month: m.month,
+      totalConNo: roundSignedMoney(m.totalConNo),
+      lineCount: m.lineCount,
+      days: Array.from(m.days.entries())
+        .map(([rd, d]) => ({
+          reportDate: rd,
+          totalConNo: roundSignedMoney(d.totalConNo),
+          lineCount: d.lineCount,
+          entries: d.entries.sort((a, b) => a.stt - b.stt),
+        }))
+        .sort((a, b) => a.reportDate.localeCompare(b.reportDate)),
+    }))
+    .sort((a, b) => (a.year !== b.year ? a.year - b.year : a.month - b.month));
+
+  let yearTotal = 0;
+  for (const mo of months) {
+    yearTotal += mo.totalConNo;
+  }
+
+  return { months, yearTotal: roundSignedMoney(yearTotal) };
 }

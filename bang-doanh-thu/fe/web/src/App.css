@@ -1470,3 +1470,134 @@
   gap: 0.5rem 1rem;
   margin-bottom: 0.35rem;
 }
+
+.revenue-table tbody tr:has(.cell-conno-wrap:hover),
+.revenue-table tbody tr:has(.cell-conno-wrap:focus-within),
+.revenue-table tbody tr:has(.cell-conno-hover--open) {
+  z-index: 4;
+}
+
+.cell-conno-hover {
+  position: relative;
+  vertical-align: top;
+}
+
+.cell-conno-wrap {
+  position: relative;
+  min-height: 1.5rem;
+}
+
+.cell-conno-display {
+  display: inline-block;
+  cursor: help;
+  padding: 0.1rem 0;
+}
+
+.cell-conno-panel {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 2px;
+  z-index: 50;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  padding: 0.45rem 0.5rem;
+  font-size: 0.82rem;
+}
+
+.cell-conno-wrap:hover .cell-conno-panel,
+.cell-conno-wrap:focus-within .cell-conno-panel,
+.cell-conno-hover--open .cell-conno-panel {
+  display: block;
+}
+
+.cell-conno-form--minimal {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.35rem;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+}
+
+.cell-conno-add-btn {
+  font: inherit;
+  font-size: 0.78rem;
+  padding: 0.3rem 0.55rem;
+  border-radius: 6px;
+  border: none;
+  background: #1d4ed8;
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.cell-conno-add-btn:hover:not(:disabled) {
+  background: #1e40af;
+}
+
+.cell-conno-add-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.cell-conno-add-btn--recorded:disabled {
+  opacity: 1;
+  background: #15803d;
+  cursor: default;
+}
+
+.member-name-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.member-name-link:hover {
+  text-decoration: underline;
+}
+
+.member-debt-headline {
+  margin-top: 0.25rem;
+}
+
+.member-debt-toolbar {
+  align-items: flex-end;
+}
+
+.member-debt-year-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.member-debt-year-input {
+  width: 6rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.member-debt-help {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  font-size: 0.88rem;
+  color: #475569;
+}
+
+.member-debt-year-total {
+  margin: 0.5rem 0 1rem;
+  font-size: 0.95rem;
+}
+
+.member-debt-year-total-note {
+  font-weight: normal;
+  color: #64748b;
+  font-size: 0.85rem;
+}

@@ -7,12 +7,14 @@ import {
   computeTotals,
   daysInMonth,
   emptyCellLedger,
+  emptyConNoLedger,
   emptyRow,
   fillMissingLedgerFromRows,
   mergeCellTimes,
   getCalendarWeekSlice,
   metaFromReportDate,
   normalizeCellLedger,
+  normalizeConNoLedger,
   normalizeRows,
   pruneLedgerZeroRows,
   syncRowsStringsFromLedger,
@@ -205,7 +207,7 @@ revenueRouter.get("/aggregate", async (req, res) => {
 
   const coll = getSheetsCollection();
   const docs = await coll
-    .find(pf.filter, { projection: { rows: 1, cellLedger: 1, reportDate: 1 } })
+    .find(pf.filter, { projection: { rows: 1, cellLedger: 1, conNoLedger: 1, reportDate: 1 } })
     .sort({ reportDate: 1 })
     .toArray();
 
@@ -245,8 +247,10 @@ revenueRouter.get("/sheets/:reportDate", async (req, res) => {
       rows: Array.from({ length: ROW_COUNT }, () => emptyRow()),
       totals: computeTotals(
         Array.from({ length: ROW_COUNT }, () => emptyRow()),
+        emptyConNoLedger(),
       ),
       cellLedger: emptyCellLedger(),
+      conNoLedger: emptyConNoLedger(),
       createdAt: null,
       updatedAt: null,
     });
@@ -254,6 +258,10 @@ revenueRouter.get("/sheets/:reportDate", async (req, res) => {
   const rowsNormalized = normalizeRows(Array.isArray(doc.rows) ? doc.rows : []);
   const rowsSafe =
     rowsNormalized ?? Array.from({ length: ROW_COUNT }, () => emptyRow());
+  const conNoLedgerSafe =
+    doc.conNoLedger != null
+      ? normalizeConNoLedger(doc.conNoLedger, new Date())
+      : emptyConNoLedger();
   res.json({
     reportDate: doc.reportDate,
     year: doc.year,
@@ -262,11 +270,12 @@ revenueRouter.get("/sheets/:reportDate", async (req, res) => {
     isoWeekYear: doc.isoWeekYear,
     isoWeek: doc.isoWeek,
     rows: rowsSafe,
-    totals: computeTotals(rowsSafe),
+    totals: computeTotals(rowsSafe, conNoLedgerSafe),
     cellLedger:
       doc.cellLedger != null
         ? normalizeCellLedger(doc.cellLedger, new Date())
         : emptyCellLedger(),
+    conNoLedger: conNoLedgerSafe,
     createdAt: doc.createdAt ?? null,
     updatedAt: doc.updatedAt ?? null,
   });
@@ -340,7 +349,14 @@ revenueRouter.put("/sheets/:reportDate", async (req, res) => {
   }
 
   const rowsSynced = syncRowsStringsFromLedger(rowsInput, ledger);
-  const totals = computeTotals(rowsSynced);
+
+  const bodyConNoLedgerProvided =
+    req.body != null && Array.isArray(req.body.conNoLedger);
+  const conNoLedger = bodyConNoLedgerProvided
+    ? normalizeConNoLedger(req.body.conNoLedger, now)
+    : normalizeConNoLedger(existing?.conNoLedger, now);
+
+  const totals = computeTotals(rowsSynced, conNoLedger);
 
   const cellTimes = mergeCellTimes(
     existing?.rows,
@@ -359,6 +375,7 @@ revenueRouter.put("/sheets/:reportDate", async (req, res) => {
         totals,
         updatedAt: now,
         cellLedger: ledger,
+        conNoLedger,
         cellTimes,
       },
       $setOnInsert: { createdAt: now },
@@ -367,6 +384,10 @@ revenueRouter.put("/sheets/:reportDate", async (req, res) => {
   );
 
   const doc = await coll.findOne({ reportDate });
+  const conNoOut =
+    doc.conNoLedger != null
+      ? normalizeConNoLedger(doc.conNoLedger, new Date())
+      : emptyConNoLedger();
   res.json({
     reportDate: doc.reportDate,
     year: doc.year,
@@ -374,11 +395,12 @@ revenueRouter.put("/sheets/:reportDate", async (req, res) => {
     isoWeekYear: doc.isoWeekYear,
     isoWeek: doc.isoWeek,
     rows: doc.rows,
-    totals: doc.totals,
+    totals: doc.totals ?? computeTotals(normalizeRows(doc.rows) ?? [], conNoOut),
     cellLedger:
       doc.cellLedger != null
         ? normalizeCellLedger(doc.cellLedger, new Date())
         : emptyCellLedger(),
+    conNoLedger: conNoOut,
     createdAt: doc.createdAt ?? null,
     updatedAt: doc.updatedAt ?? null,
   });

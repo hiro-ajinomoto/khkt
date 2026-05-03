@@ -1,6 +1,10 @@
 import { Router } from "express";
 import { ObjectId } from "mongodb";
-import { getPeopleCollection } from "./db.js";
+import { getPeopleCollection, getSheetsCollection } from "./db.js";
+import {
+  aggregatePersonConNoLedgerLines,
+  aggregatePersonDebtByYearMonth,
+} from "./revenueUtils.js";
 
 export const peopleRouter = Router();
 
@@ -107,6 +111,74 @@ peopleRouter.get("/", async (req, res) => {
       createdAt: d.createdAt ?? null,
       updatedAt: d.updatedAt ?? null,
     })),
+  });
+});
+
+/** GET /api/revenue/people/:id/debt?year= */
+peopleRouter.get("/:id/debt", async (req, res) => {
+  let oid;
+  try {
+    oid = new ObjectId(String(req.params.id));
+  } catch {
+    return res.status(400).json({ error: "invalid_id" });
+  }
+
+  const rawYear = parseInt(String(req.query.year ?? ""), 10);
+  const year =
+    Number.isFinite(rawYear) && rawYear >= 2000 && rawYear <= 2100
+      ? rawYear
+      : new Date().getFullYear();
+
+  const peopleColl = getPeopleCollection();
+  const person = await peopleColl.findOne(
+    { _id: oid },
+    { projection: { name: 1, nickname: 1, phone: 1, nameNorm: 1 } },
+  );
+  if (!person) {
+    return res.status(404).json({ error: "not_found" });
+  }
+
+  const nameNorm = person.nameNorm || normalizePersonKey(person.name);
+  const sheetsColl = getSheetsCollection();
+  const sheetDocs = await sheetsColl
+    .find(
+      { year },
+      {
+        projection: {
+          rows: 1,
+          reportDate: 1,
+          year: 1,
+          month: 1,
+          day: 1,
+          conNoLedger: 1,
+        },
+      },
+    )
+    .sort({ reportDate: 1 })
+    .toArray();
+
+  const { months, yearTotal } = aggregatePersonDebtByYearMonth(nameNorm, sheetDocs);
+  const { debtLedgerLines, debtLedgerTotals } = aggregatePersonConNoLedgerLines(
+    nameNorm,
+    sheetDocs,
+  );
+
+  res.json({
+    person: {
+      id: oid.toString(),
+      name: person.name,
+      nickname: person.nickname || "",
+      phone: person.phone != null ? String(person.phone) : "",
+    },
+    year,
+    months,
+    yearTotalConNo: yearTotal,
+    debtLedgerLines,
+    debtLedgerTotals,
+    help: {
+      conNo:
+        "«Còn nợ» trên phiếu = (Doanh thu − Hôm nay trả) + nếu có điều chỉnh cộng/trừ (loại cong/tru). Hover ô Còn nợ → Ghi nợ: lưu đúng số đang hiển thị vào lịch sử (không đổi số trong ô). Tổng theo người = các dòng trùng tên trên phiếu trong năm.",
+    },
   });
 });
 

@@ -158,7 +158,8 @@ export default function MembersPage() {
           </nav>
         </div>
         <p className="members-intro">
-          Quản lý họ tên, biệt danh và số điện thoại dùng cho gợi ý ô Tên trên bảng doanh thu.
+          Quản lý họ tên, biệt danh và số điện thoại dùng cho gợi ý ô Tên trên bảng doanh thu. Bấm{" "}
+          <strong>họ tên</strong> để xem nợ cộng dồn (ghi nợ từ hover ô Còn nợ trên phiếu).
         </p>
         <div className="members-toolbar">
           <button type="button" className="members-btn members-btn--primary" onClick={openCreate} disabled={busy}>
@@ -245,7 +246,9 @@ export default function MembersPage() {
               people.map((p) => (
                 <tr key={p.id}>
                   <td>
-                    <strong>{p.name}</strong>
+                    <Link to={`/thanh-vien/${encodeURIComponent(p.id)}`} className="member-name-link">
+                      <strong>{p.name}</strong>
+                    </Link>
                   </td>
                   <td>{p.nickname || "—"}</td>
                   <td className="cell-num-report">{p.phone || "—"}</td>

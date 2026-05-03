@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { getISOWeek, getISOWeekYear } from "date-fns";
 import { formatMoney, formatViDate, formatViDateTime } from "./formatMoney.js";
 import { NameSuggestInput } from "./NameSuggestInput.jsx";
+import ConNoLedgerHoverCell, { emptyClientConNoLedger, normalizeApiConNoLedger } from "./ConNoLedgerHoverCell.jsx";
 import { getCalendarWeekSpansInMonth } from "./calendarSpans.js";
 import "./App.css";
 
@@ -233,17 +234,23 @@ function normalizeQuickPhone(raw) {
   return s.replace(/\D/g, "").slice(0, 15);
 }
 
-function formatConNo(conNo, doanhThu) {
-  if (doanhThu === 0 && conNo === 0) return "";
-  return formatMoney(conNo, { blankZero: false });
-}
-
 function todayISODate() {
   const d = new Date();
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+function initialReportDateFromSearch() {
+  if (typeof window === "undefined") return todayISODate();
+  try {
+    const d = new URLSearchParams(window.location.search).get("date");
+    if (d && /^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+  } catch {
+    /* ignore */
+  }
+  return todayISODate();
 }
 
 function computeRow(r) {
@@ -384,7 +391,8 @@ function HoverStepperCell({
 
 export default function App() {
   const now = useMemo(() => new Date(), []);
-  const [reportDate, setReportDate] = useState(todayISODate);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [reportDate, setReportDate] = useState(initialReportDateFromSearch);
   const [rows, setRows] = useState(() => Array.from({ length: ROW_COUNT }, () => emptyRow()));
   const [hydrated, setHydrated] = useState(false);
   const [loadError, setLoadError] = useState(null);
@@ -404,6 +412,7 @@ export default function App() {
   const [mongoTimestamps, setMongoTimestamps] = useState({ createdAt: null, updatedAt: null });
   /** Chi tiết từng lần bán (ghi Mongo `cellLedger`) */
   const [cellLedger, setCellLedger] = useState(emptyClientLedger);
+  const [conNoLedger, setConNoLedger] = useState(() => emptyClientConNoLedger());
 
   const [quickName, setQuickName] = useState("");
   const [quickNick, setQuickNick] = useState("");
@@ -414,6 +423,28 @@ export default function App() {
   );
 
   const saveTimerRef = useRef(null);
+
+  useEffect(() => {
+    const d = searchParams.get("date");
+    if (d && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
+      setReportDate((prev) => (prev === d ? prev : d));
+    }
+  }, [searchParams]);
+
+  const bumpReportDate = useCallback(
+    (next) => {
+      setReportDate(next);
+      setSearchParams(
+        (prev) => {
+          const p = new URLSearchParams(prev);
+          p.set("date", next);
+          return p;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
 
   useEffect(() => {
     const ac = new AbortController();
@@ -428,6 +459,7 @@ export default function App() {
         const merged = mergeLedgerIntoRows(rowsNorm, led);
         setRows(merged);
         setCellLedger(led);
+        setConNoLedger(normalizeApiConNoLedger(data.conNoLedger));
         setMongoTimestamps({
           createdAt: data.createdAt ?? null,
           updatedAt: data.updatedAt ?? null,
@@ -439,6 +471,7 @@ export default function App() {
         setLoadError("Không tải được phiếu từ server.");
         setMongoTimestamps({ createdAt: null, updatedAt: null });
         setCellLedger(emptyClientLedger());
+        setConNoLedger(emptyClientConNoLedger());
         setRows(Array.from({ length: ROW_COUNT }, () => emptyRow()));
         setHydrated(true);
       }
@@ -453,13 +486,13 @@ export default function App() {
       .catch(() => setMongoOk(false));
   }, []);
 
-  const persist = useCallback(async (date, bodyRows, bodyLedger) => {
+  const persist = useCallback(async (date, bodyRows, bodyLedger, bodyConNoLedger) => {
     setSaveState("saving");
     try {
       const r = await fetch(`/api/revenue/sheets/${date}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rows: bodyRows, cellLedger: bodyLedger }),
+        body: JSON.stringify({ rows: bodyRows, cellLedger: bodyLedger, conNoLedger: bodyConNoLedger }),
       });
       if (!r.ok) throw new Error("save_failed");
       const saved = await r.json();
@@ -484,12 +517,12 @@ export default function App() {
     if (!hydrated) return;
     if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
     saveTimerRef.current = window.setTimeout(() => {
-      persist(reportDate, rows, cellLedger);
+      persist(reportDate, rows, cellLedger, conNoLedger);
     }, 1400);
     return () => {
       if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
     };
-  }, [rows, cellLedger, reportDate, hydrated, persist]);
+  }, [rows, cellLedger, conNoLedger, reportDate, hydrated, persist]);
 
   useEffect(() => {
     setFilterCalendarWeek("");
@@ -528,7 +561,19 @@ export default function App() {
     };
   }, [listMode, filterYear, filterMonth, filterCalendarWeek, filterIsoYear, filterIsoWeek]);
 
-  const derived = useMemo(() => rows.map((r) => computeRow(r)), [rows]);
+  const derived = useMemo(() => {
+    return rows.map((r, i) => {
+      const b = computeRow(r);
+      const lines = conNoLedger[i] || [];
+      let adj = 0;
+      for (const e of lines) {
+        if (e.kind === "tru") adj -= e.amount;
+        else if (e.kind === "cong") adj += e.amount;
+      }
+      const conNo = Math.round((b.conNo + adj) * 100) / 100;
+      return { ...b, conNo };
+    });
+  }, [rows, conNoLedger]);
 
   const totals = useMemo(() => {
     let san = 0;
@@ -586,13 +631,29 @@ export default function App() {
     });
   }
 
+  function appendGhiNoLine(rowIdx, amountNum) {
+    setConNoLedger((prev) => {
+      const next = prev.map((row) => [...row]);
+      const line = {
+        kind: "ghi",
+        amount: Math.round(Math.abs(amountNum) * 100) / 100,
+        at: new Date().toISOString(),
+        note: "",
+      };
+      next[rowIdx] = [...(next[rowIdx] || []), line];
+      return next;
+    });
+  }
+
   function clearAll() {
     if (!window.confirm("Xóa toàn bộ dữ liệu trong bảng (và lưu lên server)?")) return;
     const blank = Array.from({ length: ROW_COUNT }, () => emptyRow());
     const blankLed = emptyClientLedger();
+    const blankConNo = emptyClientConNoLedger();
     setRows(blank);
     setCellLedger(blankLed);
-    persist(reportDate, blank, blankLed);
+    setConNoLedger(blankConNo);
+    persist(reportDate, blank, blankLed, blankConNo);
   }
 
   async function handleQuickRegister(e) {
@@ -676,7 +737,7 @@ export default function App() {
           <input
             type="date"
             value={reportDate}
-            onChange={(e) => setReportDate(e.target.value)}
+            onChange={(e) => bumpReportDate(e.target.value)}
             className="date-input"
           />
         </label>
@@ -820,7 +881,7 @@ export default function App() {
                     ? `Cập nhật lần cuối (${formatViDateTime(s.updatedAt)} giờ VN)`
                     : s.reportDate
                 }
-                onClick={() => setReportDate(s.reportDate)}
+                onClick={() => bumpReportDate(s.reportDate)}
               >
                 <span className="sheet-pill-date">{s.reportDate}</span>
                 {s.updatedAt ? (
@@ -976,7 +1037,13 @@ export default function App() {
                       onChange={(e) => updateRow(i, "homNayTra", e.target.value)}
                     />
                   </td>
-                  <td className="cell-remaining">{formatConNo(conNo, doanhThu)}</td>
+                  <ConNoLedgerHoverCell
+                    rowIndex={i}
+                    ten={r.ten}
+                    doanhThu={doanhThu}
+                    effectiveConNo={conNo}
+                    onGhiNo={(amount) => appendGhiNoLine(i, amount)}
+                  />
                   <td className="col-note">
                     <input
                       className="cell-input cell-text"
@@ -1009,8 +1076,10 @@ export default function App() {
       </div>
 
       <p className="hint">
-        Doanh thu = Sân + Cuốn cán + Cầu + Suối + Nước ngọt + Đồ ăn. Còn nợ = Doanh thu − Hôm nay trả. Theo
-        dõi / đối soát nợ theo từng người: mục <Link to="/thanh-vien">Danh bạ</Link> → bấm họ tên. Lưu trữ:
+        Doanh thu = Sân + Cuốn cán + Cầu + Suối + Nước ngọt + Đồ ăn. Còn nợ hiển thị = Doanh thu − Hôm nay trả + (nếu có)
+        điều chỉnh <strong>cộng/trừ</strong> trên phiếu. Hover ô Còn nợ → <strong>Ghi nợ</strong> lưu đúng số đang hiển thị
+        (lịch sử Danh bạ, không đổi số trong ô). Tổng theo từng người: <Link to="/thanh-vien">Danh bạ</Link>{" "}
+        → bấm họ tên (tên dòng cần trùng chuẩn danh bạ). Lưu trữ:
         MongoDB (cùng biến <code>MONGODB_URI</code>, <code>MONGODB_DB</code>{" "}
         với backend KHKT), collection <code>bang_doanh_thu_sheets</code>. Tuần lọc theo chuẩn ISO (thứ
         Hai đầu tuần). Cột <strong>Sân</strong> / <strong>Cuốn cán</strong> / <strong>Cầu</strong> /{" "}
