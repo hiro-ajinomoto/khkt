@@ -10,6 +10,7 @@ import adminRouter from "./routers/admin.js";
 import notificationsRouter from "./routers/notifications.js";
 import classEnrollmentRouter from "./routers/classEnrollment.js";
 import teacherWorkspaceRouter from "./routers/teacherWorkspace.js";
+import { revenueRouter } from "./revenueRouter.js";
 import { config } from "./config.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -43,6 +44,8 @@ app.use("/submissions", submissionsRouter);
 app.use("/notifications", notificationsRouter);
 app.use("/class-enrollment", classEnrollmentRouter);
 app.use("/teacher", teacherWorkspaceRouter);
+// Bảng doanh thu: FE gọi /api/revenue/*; nginx/vite strip /api → /revenue/*
+app.use("/revenue", revenueRouter);
 
 // Health check
 app.get("/health", (req, res) => {

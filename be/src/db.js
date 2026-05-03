@@ -6,6 +6,17 @@ import { ensureTeacherInviteCodeIndexes } from './utils/teacherInviteCodes.js'
 let client = null
 let db = null
 
+const BANG_DOANH_THU_SHEETS = 'bang_doanh_thu_sheets'
+const BANG_DOANH_THU_PEOPLE = 'bang_doanh_thu_people'
+
+export function getSheetsCollection() {
+  return getDB().collection(BANG_DOANH_THU_SHEETS)
+}
+
+export function getPeopleCollection() {
+  return getDB().collection(BANG_DOANH_THU_PEOPLE)
+}
+
 export async function connectDB() {
   if (client) {
     return db
@@ -77,6 +88,25 @@ async function ensureIndexes(database) {
 
     ensureClassTeacherIndexes(database),
     ensureTeacherInviteCodeIndexes(database),
+
+    database
+      .collection(BANG_DOANH_THU_SHEETS)
+      .createIndex({ reportDate: 1 }, { unique: true }),
+    database
+      .collection(BANG_DOANH_THU_SHEETS)
+      .createIndex(
+        { year: 1, month: 1, reportDate: -1 },
+        { name: 'bdt_calendar_idx' },
+      ),
+    database
+      .collection(BANG_DOANH_THU_SHEETS)
+      .createIndex(
+        { isoWeekYear: 1, isoWeek: 1, reportDate: -1 },
+        { name: 'bdt_isoweek_idx' },
+      ),
+    database
+      .collection(BANG_DOANH_THU_PEOPLE)
+      .createIndex({ nameNorm: 1 }, { unique: true, name: 'bdt_people_nameNorm_u' }),
   ]
 
   const results = await Promise.allSettled(jobs)
