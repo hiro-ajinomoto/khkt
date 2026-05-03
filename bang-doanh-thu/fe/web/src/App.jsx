@@ -671,6 +671,9 @@ export default function App() {
           <Link to="/tong-hop" className="header-nav-link">
             Tổng hợp kỳ
           </Link>
+          <Link to="/thanh-vien" className="header-nav-link">
+            Danh bạ
+          </Link>
         </div>
         <label className="sheet-date">
           <span className="visually-hidden">Ngày</span>

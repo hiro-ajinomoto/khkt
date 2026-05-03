@@ -258,9 +258,14 @@ export default function AggregateReport() {
   return (
     <div className="app app--aggregate">
       <header className="aggregate-header">
-        <Link to="/" className="history-back aggregate-back">
-          ← Bảng doanh thu
-        </Link>
+        <div className="aggregate-header-toplinks">
+          <Link to="/" className="history-back aggregate-back">
+            ← Bảng doanh thu
+          </Link>
+          <Link to="/thanh-vien" className="header-nav-link">
+            Danh bạ
+          </Link>
+        </div>
         <h1 className="sheet-title aggregate-title">Tổng hợp doanh thu theo kỳ</h1>
         <p className="aggregate-intro">
           Gộp tất cả phiếu ngày trong kỳ: <strong>tổng tiền</strong> theo mặt hàng,{" "}
