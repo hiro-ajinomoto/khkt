@@ -21,7 +21,8 @@ function escapeRegex(s) {
 export function normalizePhoneDigits(raw) {
   let s = String(raw ?? "").replace(/[\s().-]/g, "");
   if (s.startsWith("+84")) s = "0" + s.slice(3);
-  else if (s.startsWith("84") && s.length >= 10 && /^84\d+$/.test(s)) s = "0" + s.slice(2);
+  else if (s.startsWith("84") && s.length >= 10 && /^84\d+$/.test(s))
+    s = "0" + s.slice(2);
   return s.replace(/\D/g, "").slice(0, 15);
 }
 
@@ -38,7 +39,10 @@ peopleRouter.get("/suggest", async (req, res) => {
   }
 
   const rawLimit = parseInt(String(req.query.limit ?? "12"), 10);
-  const limit = Math.min(20, Math.max(1, Number.isFinite(rawLimit) ? rawLimit : 12));
+  const limit = Math.min(
+    20,
+    Math.max(1, Number.isFinite(rawLimit) ? rawLimit : 12),
+  );
 
   const coll = getPeopleCollection();
   const re = new RegExp(escapeRegex(q), "i");
@@ -51,7 +55,10 @@ peopleRouter.get("/suggest", async (req, res) => {
   }
 
   const docs = await coll
-    .find({ $or: orConditions }, { projection: { _id: 0, name: 1, nickname: 1, phone: 1 } })
+    .find(
+      { $or: orConditions },
+      { projection: { _id: 0, name: 1, nickname: 1, phone: 1 } },
+    )
     .sort({ name: 1 })
     .limit(limit)
     .toArray();
@@ -69,10 +76,24 @@ peopleRouter.get("/suggest", async (req, res) => {
 peopleRouter.get("/", async (req, res) => {
   const coll = getPeopleCollection();
   const rawLimit = parseInt(String(req.query.limit ?? "2000"), 10);
-  const limit = Math.min(5000, Math.max(1, Number.isFinite(rawLimit) ? rawLimit : 2000));
+  const limit = Math.min(
+    5000,
+    Math.max(1, Number.isFinite(rawLimit) ? rawLimit : 2000),
+  );
 
   const docs = await coll
-    .find({}, { projection: { name: 1, nickname: 1, phone: 1, createdAt: 1, updatedAt: 1 } })
+    .find(
+      {},
+      {
+        projection: {
+          name: 1,
+          nickname: 1,
+          phone: 1,
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      },
+    )
     .sort({ name: 1 })
     .limit(limit)
     .toArray();
@@ -100,7 +121,15 @@ peopleRouter.get("/:id", async (req, res) => {
   const coll = getPeopleCollection();
   const doc = await coll.findOne(
     { _id: oid },
-    { projection: { name: 1, nickname: 1, phone: 1, createdAt: 1, updatedAt: 1 } },
+    {
+      projection: {
+        name: 1,
+        nickname: 1,
+        phone: 1,
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    },
   );
   if (!doc) {
     return res.status(404).json({ error: "not_found" });
@@ -117,7 +146,9 @@ peopleRouter.get("/:id", async (req, res) => {
 
 /** POST /api/revenue/people — { name, nickname?, phone? } */
 peopleRouter.post("/", async (req, res) => {
-  const name = String(req.body?.name ?? "").trim().replace(/\s+/g, " ");
+  const name = String(req.body?.name ?? "")
+    .trim()
+    .replace(/\s+/g, " ");
   const nickname = String(req.body?.nickname ?? "").trim();
   const phoneNorm = normalizePhoneDigits(req.body?.phone);
 
@@ -180,11 +211,17 @@ peopleRouter.put("/:id", async (req, res) => {
   const name =
     req.body?.name !== undefined
       ? String(req.body.name).trim().replace(/\s+/g, " ")
-      : String(existing.name || "").trim().replace(/\s+/g, " ");
+      : String(existing.name || "")
+          .trim()
+          .replace(/\s+/g, " ");
   const nickname =
-    req.body?.nickname !== undefined ? String(req.body.nickname).trim() : String(existing.nickname ?? "").trim();
+    req.body?.nickname !== undefined
+      ? String(req.body.nickname).trim()
+      : String(existing.nickname ?? "").trim();
   const phoneNorm =
-    req.body?.phone !== undefined ? normalizePhoneDigits(req.body.phone) : normalizePhoneDigits(existing.phone);
+    req.body?.phone !== undefined
+      ? normalizePhoneDigits(req.body.phone)
+      : normalizePhoneDigits(existing.phone);
 
   if (!name) {
     return res.status(400).json({ error: "name_required" });

@@ -17,7 +17,7 @@ const DO_AN_STEPS = [5, 6, 7, 8, 9, 10];
 const HOVER_HOLD_MS = 500;
 
 /** Ô có sổ dòng chi tiết (đối chứng khách — mỗi lần +/− / nhập tạo dòng riêng). */
-const HISTORY_FIELD_LIST = ["san", "cuonCan", "cau", "suoi5k", "nuocNgot10k", "doAn", "noCu"];
+const HISTORY_FIELD_LIST = ["san", "cuonCan", "cau", "suoi5k", "nuocNgot10k", "doAn"];
 const HISTORY_KEYS = new Set(HISTORY_FIELD_LIST);
 
 function emptyClientLedger() {
@@ -207,7 +207,6 @@ const emptyRow = () => ({
   suoi5k: "",
   nuocNgot10k: "",
   doAn: "",
-  noCu: "",
   homNayTra: "",
   ghiChu: "",
 });
@@ -254,8 +253,7 @@ function computeRow(r) {
     parseMoney(r.cau) +
     parseMoney(r.suoi5k) +
     parseMoney(r.nuocNgot10k) +
-    parseMoney(r.doAn) +
-    parseMoney(r.noCu);
+    parseMoney(r.doAn);
   const conNo = doanhThu - parseMoney(r.homNayTra);
   return { doanhThu, conNo };
 }
@@ -539,7 +537,6 @@ export default function App() {
     let suoi5k = 0;
     let nuocNgot10k = 0;
     let doAn = 0;
-    let noCu = 0;
     let doanhThu = 0;
     let homNayTra = 0;
     let conNo = 0;
@@ -551,12 +548,11 @@ export default function App() {
       suoi5k += parseMoney(r.suoi5k);
       nuocNgot10k += parseMoney(r.nuocNgot10k);
       doAn += parseMoney(r.doAn);
-      noCu += parseMoney(r.noCu);
       doanhThu += derived[i].doanhThu;
       homNayTra += parseMoney(r.homNayTra);
       conNo += derived[i].conNo;
     }
-    return { san, cuonCan, cau, suoi5k, nuocNgot10k, doAn, noCu, doanhThu, homNayTra, conNo };
+    return { san, cuonCan, cau, suoi5k, nuocNgot10k, doAn, doanhThu, homNayTra, conNo };
   }, [rows, derived]);
 
   function updateRow(i, field, value) {
@@ -858,7 +854,6 @@ export default function App() {
             <col className="col-w-equal" />
             <col className="col-w-equal" />
             <col className="col-w-equal" />
-            <col className="col-w-equal" />
             <col className="col-w-wide" />
           </colgroup>
           <thead>
@@ -871,7 +866,6 @@ export default function App() {
               <th className="col-num-medium">Suối</th>
               <th className="col-num-tight th-compact">Nước ngọt</th>
               <th>Đồ ăn</th>
-              <th>Nợ cũ</th>
               <th className="col-computed">Doanh thu</th>
               <th className="col-computed col-hom-nay-tra th-compact">Hôm nay trả</th>
               <th>Còn nợ</th>
@@ -973,14 +967,6 @@ export default function App() {
                     onBump={bumpMoneyField}
                     onChangeField={updateRow}
                   />
-                  <td>
-                    <input
-                      className="cell-input cell-num"
-                      inputMode="decimal"
-                      value={r.noCu}
-                      onChange={(e) => updateRow(i, "noCu", e.target.value)}
-                    />
-                  </td>
                   <td className="cell-computed">{formatMoney(doanhThu, { blankZero: true })}</td>
                   <td className="col-computed col-hom-nay-tra">
                     <input
@@ -1011,7 +997,6 @@ export default function App() {
               <td className="col-num-medium">{formatMoney(totals.suoi5k, { blankZero: false })}</td>
               <td className="col-num-tight">{formatMoney(totals.nuocNgot10k, { blankZero: false })}</td>
               <td className="col-num-medium">{formatMoney(totals.doAn, { blankZero: false })}</td>
-              <td>{formatMoney(totals.noCu, { blankZero: false })}</td>
               <td className="cell-computed">{formatMoney(totals.doanhThu, { blankZero: false })}</td>
               <td className="col-computed col-hom-nay-tra">
                 {formatMoney(totals.homNayTra, { blankZero: false })}
@@ -1024,8 +1009,9 @@ export default function App() {
       </div>
 
       <p className="hint">
-        Doanh thu = Sân + Cuốn cán + Cầu + Suối + Nước ngọt + Đồ ăn + Nợ cũ. Còn nợ = Doanh
-        thu − Hôm nay trả. Lưu trữ: MongoDB (cùng biến <code>MONGODB_URI</code>, <code>MONGODB_DB</code>{" "}
+        Doanh thu = Sân + Cuốn cán + Cầu + Suối + Nước ngọt + Đồ ăn. Còn nợ = Doanh thu − Hôm nay trả. Theo
+        dõi / đối soát nợ theo từng người: mục <Link to="/thanh-vien">Danh bạ</Link> → bấm họ tên. Lưu trữ:
+        MongoDB (cùng biến <code>MONGODB_URI</code>, <code>MONGODB_DB</code>{" "}
         với backend KHKT), collection <code>bang_doanh_thu_sheets</code>. Tuần lọc theo chuẩn ISO (thứ
         Hai đầu tuần). Cột <strong>Sân</strong> / <strong>Cuốn cán</strong> / <strong>Cầu</strong> /{" "}
         <strong>Suối</strong> / <strong>Nước ngọt</strong> / <strong>Đồ ăn</strong>: hover — panel hiện{" "}

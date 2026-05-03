@@ -13,7 +13,6 @@ const PRODUCT_ROWS = [
   { key: "suoi5k", label: "Suối (5k)" },
   { key: "nuocNgot10k", label: "Nước ngọt (10k)" },
   { key: "doAn", label: "Đồ ăn" },
-  { key: "noCu", label: "Nợ cũ" },
 ];
 
 /** Khớp `CAU_STEPS` và BE `LEDGER_PRICE_STEPS_CAU`. */
@@ -429,9 +428,7 @@ export default function AggregateReport() {
                       ? "Không phải 1 lần ± = 1 quả — số lần / 1 quả theo từng mức: chỉnh src/cauShuttleRates.js (±6 đang 4 lần = 1 quả)"
                       : key === "doAn"
                         ? "Quy ước 1 lần ± khớp bước = 1 suất — tổng = cộng các mức (xem ô bên)"
-                        : key === "noCu"
-                          ? "Tổng nợ cũ trong kỳ — không chia đơn vị"
-                          : denom
+                        : denom
                             ? `Tổng tiền ÷ ${denom} (đơn một lần bấm ±${denom})`
                             : "—";
 

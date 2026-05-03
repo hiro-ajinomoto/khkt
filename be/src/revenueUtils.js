@@ -10,7 +10,6 @@ export const emptyRow = () => ({
   suoi5k: "",
   nuocNgot10k: "",
   doAn: "",
-  noCu: "",
   homNayTra: "",
   ghiChu: "",
 });
@@ -42,8 +41,7 @@ function computeRow(r) {
     parseMoney(r.cau) +
     parseMoney(r.suoi5k) +
     parseMoney(r.nuocNgot10k) +
-    parseMoney(r.doAn) +
-    parseMoney(r.noCu);
+    parseMoney(r.doAn);
   const conNo = doanhThu - parseMoney(r.homNayTra);
   return { doanhThu, conNo };
 }
@@ -55,7 +53,6 @@ export function computeTotals(rows) {
   let suoi5k = 0;
   let nuocNgot10k = 0;
   let doAn = 0;
-  let noCu = 0;
   let doanhThu = 0;
   let homNayTra = 0;
   let conNo = 0;
@@ -68,12 +65,21 @@ export function computeTotals(rows) {
     suoi5k += parseMoney(r.suoi5k);
     nuocNgot10k += parseMoney(r.nuocNgot10k);
     doAn += parseMoney(r.doAn);
-    noCu += parseMoney(r.noCu);
     doanhThu += derived[i].doanhThu;
     homNayTra += parseMoney(r.homNayTra);
     conNo += derived[i].conNo;
   }
-  return { san, cuonCan, cau, suoi5k, nuocNgot10k, doAn, noCu, doanhThu, homNayTra, conNo };
+  return {
+    san,
+    cuonCan,
+    cau,
+    suoi5k,
+    nuocNgot10k,
+    doAn,
+    doanhThu,
+    homNayTra,
+    conNo,
+  };
 }
 
 /** @param {string} reportDate YYYY-MM-DD */
@@ -145,12 +151,14 @@ export const HISTORY_LINE_FIELDS = [
   { key: "suoi5k", label: "Suối" },
   { key: "nuocNgot10k", label: "Nước ngọt" },
   { key: "doAn", label: "Đồ ăn" },
-  { key: "noCu", label: "Nợ cũ" },
 ];
 
 /** Ledger: đọc / ghi các dòng chi tiết theo từng lần bán (không gộp ô thành 1 giá duy nhất trong lịch sử). */
 export function emptyCellLedger() {
-  return Array.from({ length: ROW_COUNT }, () => /** @type {Record<string, { amount: number; at: Date }[]>} */ ({}));
+  return Array.from(
+    { length: ROW_COUNT },
+    () => /** @type {Record<string, { amount: number; at: Date }[]>} */ ({}),
+  );
 }
 
 /** @returns {number} */
@@ -236,7 +244,13 @@ export function syncRowsStringsFromLedger(rows, ledger) {
 }
 
 /** Bù phiếu cũ: có số trong `rows`, chưa có dòng trong ledger → một dòng synth. */
-export function fillMissingLedgerFromRows(ledger, rows, docFallback, sheetUpdatedAt, serverNow = new Date()) {
+export function fillMissingLedgerFromRows(
+  ledger,
+  rows,
+  docFallback,
+  sheetUpdatedAt,
+  serverNow = new Date(),
+) {
   const lb = ledger.map((row) =>
     typeof row === "object" && row && !Array.isArray(row) ? { ...row } : {},
   );
@@ -271,7 +285,8 @@ export function pruneLedgerZeroRows(ledger, rows) {
     );
   }
   return ledger.map((row, i) => {
-    const o = typeof row === "object" && row && !Array.isArray(row) ? { ...row } : {};
+    const o =
+      typeof row === "object" && row && !Array.isArray(row) ? { ...row } : {};
     for (const { key } of HISTORY_LINE_FIELDS) {
       if (parseMoney(rn[i][key]) <= 0) delete o[key];
     }
@@ -289,7 +304,13 @@ export function pruneLedgerZeroRows(ledger, rows) {
  * @param {Date} when
  * @param {Date | null | undefined} legacySheetUpdatedAt  `updatedAt` của phiếu trước khi lưu
  */
-export function mergeCellTimes(prevRows, prevCellTimes, newRows, when, legacySheetUpdatedAt) {
+export function mergeCellTimes(
+  prevRows,
+  prevCellTimes,
+  newRows,
+  when,
+  legacySheetUpdatedAt,
+) {
   const now = when instanceof Date ? when : new Date(when);
   const fallbackTime =
     legacySheetUpdatedAt instanceof Date
@@ -300,7 +321,9 @@ export function mergeCellTimes(prevRows, prevCellTimes, newRows, when, legacyShe
 
   const next = Array.from({ length: ROW_COUNT }, (_, i) => {
     const prev = prevCellTimes?.[i];
-    return prev && typeof prev === "object" && !Array.isArray(prev) ? { ...prev } : {};
+    return prev && typeof prev === "object" && !Array.isArray(prev)
+      ? { ...prev }
+      : {};
   });
 
   for (let i = 0; i < ROW_COUNT; i++) {
@@ -342,7 +365,8 @@ function historyRecordedAt(doc, rowIndex, key) {
     if (!Number.isNaN(d.getTime())) return d;
   }
   if (doc.updatedAt != null) {
-    const u = doc.updatedAt instanceof Date ? doc.updatedAt : new Date(doc.updatedAt);
+    const u =
+      doc.updatedAt instanceof Date ? doc.updatedAt : new Date(doc.updatedAt);
     if (!Number.isNaN(u.getTime())) return u;
   }
   return null;
@@ -355,7 +379,9 @@ function historyRecordedAt(doc, rowIndex, key) {
 export function buildPersonHistory(rowIndex, docs) {
   const items = [];
   let totalPaid = 0;
-  const sorted = [...docs].sort((a, b) => String(a.reportDate).localeCompare(String(b.reportDate)));
+  const sorted = [...docs].sort((a, b) =>
+    String(a.reportDate).localeCompare(String(b.reportDate)),
+  );
 
   for (const doc of sorted) {
     const row = doc.rows?.[rowIndex];
@@ -369,7 +395,9 @@ export function buildPersonHistory(rowIndex, docs) {
         for (let lineIx = 0; lineIx < ledgerLines.length; lineIx++) {
           const entry = ledgerLines[lineIx];
           const amount =
-            entry && typeof entry.amount === "number" && Number.isFinite(entry.amount)
+            entry &&
+            typeof entry.amount === "number" &&
+            Number.isFinite(entry.amount)
               ? roundLedgerAmt(entry.amount)
               : roundLedgerAmt(parseMoney(entry?.amount));
           if (amount <= 0) continue;
@@ -442,7 +470,9 @@ export function buildPersonHistory(rowIndex, docs) {
     return (a._lineIx ?? 0) - (b._lineIx ?? 0);
   });
 
-  const outward = items.map(({ _fieldIx: _omit, _lineIx: _omitLi, ...rest }) => rest);
+  const outward = items.map(
+    ({ _fieldIx: _omit, _lineIx: _omitLi, ...rest }) => rest,
+  );
 
   const grandTotal = outward.reduce((s, x) => s + x.amount, 0);
   return { ten, items: outward, grandTotal, totalPaid };
@@ -463,7 +493,9 @@ export const LEDGER_PRICE_STEPS_DO_AN = Object.freeze([5, 6, 7, 8, 9, 10]);
 
 function normalizeLedgerLineAmount(amount) {
   const n =
-    typeof amount === "number" && Number.isFinite(amount) ? amount : parseMoney(String(amount ?? ""));
+    typeof amount === "number" && Number.isFinite(amount)
+      ? amount
+      : parseMoney(String(amount ?? ""));
   return Math.round(Math.abs(n) * 100) / 100;
 }
 
@@ -521,7 +553,6 @@ export function aggregateSheetsInsight(docs) {
     suoi5k: 0,
     nuocNgot10k: 0,
     doAn: 0,
-    noCu: 0,
     doanhThu: 0,
     homNayTra: 0,
     conNo: 0,
@@ -551,7 +582,6 @@ export function aggregateSheetsInsight(docs) {
     sumMoney.suoi5k += t.suoi5k;
     sumMoney.nuocNgot10k += t.nuocNgot10k;
     sumMoney.doAn += t.doAn;
-    sumMoney.noCu += t.noCu;
     sumMoney.doanhThu += t.doanhThu;
     sumMoney.homNayTra += t.homNayTra;
     sumMoney.conNo += t.conNo;
@@ -574,14 +604,22 @@ export function aggregateSheetsInsight(docs) {
   for (const { key } of HISTORY_LINE_FIELDS) impliedUnits[key] = null;
 
   impliedUnits.san =
-    sumMoney.san > 0 ? Math.round((sumMoney.san / IMPLIED_UNIT_PRICE.san) * 100) / 100 : null;
+    sumMoney.san > 0
+      ? Math.round((sumMoney.san / IMPLIED_UNIT_PRICE.san) * 100) / 100
+      : null;
   impliedUnits.cuonCan =
-    sumMoney.cuonCan > 0 ? Math.round((sumMoney.cuonCan / IMPLIED_UNIT_PRICE.cuonCan) * 100) / 100 : null;
+    sumMoney.cuonCan > 0
+      ? Math.round((sumMoney.cuonCan / IMPLIED_UNIT_PRICE.cuonCan) * 100) / 100
+      : null;
   impliedUnits.suoi5k =
-    sumMoney.suoi5k > 0 ? Math.round((sumMoney.suoi5k / IMPLIED_UNIT_PRICE.suoi5k) * 100) / 100 : null;
+    sumMoney.suoi5k > 0
+      ? Math.round((sumMoney.suoi5k / IMPLIED_UNIT_PRICE.suoi5k) * 100) / 100
+      : null;
   impliedUnits.nuocNgot10k =
     sumMoney.nuocNgot10k > 0
-      ? Math.round((sumMoney.nuocNgot10k / IMPLIED_UNIT_PRICE.nuocNgot10k) * 100) / 100
+      ? Math.round(
+          (sumMoney.nuocNgot10k / IMPLIED_UNIT_PRICE.nuocNgot10k) * 100,
+        ) / 100
       : null;
 
   return {

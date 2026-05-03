@@ -43,7 +43,10 @@ function parsePeriodFilter(query) {
     return {
       ok: false,
       status: 400,
-      body: { error: "day_requires_month", hint: "Thêm month= (và year=) khi dùng day= (ngày trong tháng 1–31)." },
+      body: {
+        error: "day_requires_month",
+        hint: "Thêm month= (và year=) khi dùng day= (ngày trong tháng 1–31).",
+      },
     };
   }
 
@@ -73,7 +76,10 @@ function parsePeriodFilter(query) {
         return {
           ok: false,
           status: 400,
-          body: { error: "invalid_day_for_month", hint: `Tháng ${month}/${year} có tối đa ${dim} ngày.` },
+          body: {
+            error: "invalid_day_for_month",
+            hint: `Tháng ${month}/${year} có tối đa ${dim} ngày.`,
+          },
         };
       }
       return {
@@ -89,15 +95,27 @@ function parsePeriodFilter(query) {
     if (cwProvided) {
       const calendarWeek = parseInt(String(cwRaw), 10);
       if (!Number.isFinite(calendarWeek) || calendarWeek < 1) {
-        return { ok: false, status: 400, body: { error: "invalid_calendar_week" } };
+        return {
+          ok: false,
+          status: 400,
+          body: { error: "invalid_calendar_week" },
+        };
       }
       const slice = getCalendarWeekSlice(year, month, calendarWeek);
       if (!slice) {
-        return { ok: false, status: 400, body: { error: "invalid_calendar_week_range" } };
+        return {
+          ok: false,
+          status: 400,
+          body: { error: "invalid_calendar_week_range" },
+        };
       }
       return {
         ok: true,
-        filter: { year, month, day: { $gte: slice.startDay, $lte: slice.endDay } },
+        filter: {
+          year,
+          month,
+          day: { $gte: slice.startDay, $lte: slice.endDay },
+        },
         scope: "month_calendar_week",
         year,
         month,
@@ -114,7 +132,10 @@ function parsePeriodFilter(query) {
     return {
       ok: false,
       status: 400,
-      body: { error: "calendar_week_requires_month", hint: "Thêm month= (tháng 1–12) khi dùng calendarWeek=." },
+      body: {
+        error: "calendar_week_requires_month",
+        hint: "Thêm month= (tháng 1–12) khi dùng calendarWeek=.",
+      },
     };
   }
 
@@ -123,7 +144,13 @@ function parsePeriodFilter(query) {
     if (!Number.isFinite(week) || week < 1 || week > 53) {
       return { ok: false, status: 400, body: { error: "invalid_week" } };
     }
-    return { ok: true, filter: { isoWeekYear: year, isoWeek: week }, scope: "week", year, isoWeek: week };
+    return {
+      ok: true,
+      filter: { isoWeekYear: year, isoWeek: week },
+      scope: "week",
+      year,
+      isoWeek: week,
+    };
   }
   return { ok: true, filter: { year }, scope: "year", year };
 }
@@ -172,8 +199,7 @@ revenueRouter.get("/aggregate", async (req, res) => {
   if (pf.scope === "year") {
     return res.status(400).json({
       error: "aggregate_requires_month_or_week",
-      hint:
-        "Thêm month= (và tuỳ chọn day=D cho một ngày, hoặc calendarWeek= cho tuần trong tháng) hoặc week= (tuần ISO; year= là năm ISO tuần).",
+      hint: "Thêm month= (và tuỳ chọn day=D cho một ngày, hoặc calendarWeek= cho tuần trong tháng) hoặc week= (tuần ISO; year= là năm ISO tuần).",
     });
   }
 
@@ -217,14 +243,17 @@ revenueRouter.get("/sheets/:reportDate", async (req, res) => {
       reportDate,
       ...meta,
       rows: Array.from({ length: ROW_COUNT }, () => emptyRow()),
-      totals: computeTotals(Array.from({ length: ROW_COUNT }, () => emptyRow())),
+      totals: computeTotals(
+        Array.from({ length: ROW_COUNT }, () => emptyRow()),
+      ),
       cellLedger: emptyCellLedger(),
       createdAt: null,
       updatedAt: null,
     });
   }
   const rowsNormalized = normalizeRows(Array.isArray(doc.rows) ? doc.rows : []);
-  const rowsSafe = rowsNormalized ?? Array.from({ length: ROW_COUNT }, () => emptyRow());
+  const rowsSafe =
+    rowsNormalized ?? Array.from({ length: ROW_COUNT }, () => emptyRow());
   res.json({
     reportDate: doc.reportDate,
     year: doc.year,
@@ -235,7 +264,9 @@ revenueRouter.get("/sheets/:reportDate", async (req, res) => {
     rows: rowsSafe,
     totals: computeTotals(rowsSafe),
     cellLedger:
-      doc.cellLedger != null ? normalizeCellLedger(doc.cellLedger, new Date()) : emptyCellLedger(),
+      doc.cellLedger != null
+        ? normalizeCellLedger(doc.cellLedger, new Date())
+        : emptyCellLedger(),
     createdAt: doc.createdAt ?? null,
     updatedAt: doc.updatedAt ?? null,
   });
@@ -245,14 +276,30 @@ revenueRouter.get("/sheets/:reportDate", async (req, res) => {
 revenueRouter.get("/history/:stt", async (req, res) => {
   const stt = parseInt(String(req.params.stt), 10);
   if (!Number.isFinite(stt) || stt < 1 || stt > ROW_COUNT) {
-    return res.status(400).json({ error: "invalid_stt", min: 1, max: ROW_COUNT });
+    return res
+      .status(400)
+      .json({ error: "invalid_stt", min: 1, max: ROW_COUNT });
   }
   const rowIndex = stt - 1;
   const coll = getSheetsCollection();
   const docs = await coll
-    .find({}, { projection: { reportDate: 1, rows: 1, updatedAt: 1, cellTimes: 1, cellLedger: 1 } })
+    .find(
+      {},
+      {
+        projection: {
+          reportDate: 1,
+          rows: 1,
+          updatedAt: 1,
+          cellTimes: 1,
+          cellLedger: 1,
+        },
+      },
+    )
     .toArray();
-  const { ten, items, grandTotal, totalPaid } = buildPersonHistory(rowIndex, docs);
+  const { ten, items, grandTotal, totalPaid } = buildPersonHistory(
+    rowIndex,
+    docs,
+  );
   res.json({ stt, ten, items, grandTotal, totalPaid });
 });
 
@@ -271,15 +318,25 @@ revenueRouter.put("/sheets/:reportDate", async (req, res) => {
   const coll = getSheetsCollection();
   const existing = await coll.findOne({ reportDate });
 
-  const bodyLedgerProvided = req.body != null && Array.isArray(req.body.cellLedger);
+  const bodyLedgerProvided =
+    req.body != null && Array.isArray(req.body.cellLedger);
 
   let ledger;
   if (bodyLedgerProvided) {
     ledger = normalizeCellLedger(req.body.cellLedger, now);
     ledger = pruneLedgerZeroRows(ledger, rowsInput);
   } else {
-    ledger = pruneLedgerZeroRows(normalizeCellLedger(existing?.cellLedger, now), rowsInput);
-    ledger = fillMissingLedgerFromRows(ledger, rowsInput, existing, existing?.updatedAt, now);
+    ledger = pruneLedgerZeroRows(
+      normalizeCellLedger(existing?.cellLedger, now),
+      rowsInput,
+    );
+    ledger = fillMissingLedgerFromRows(
+      ledger,
+      rowsInput,
+      existing,
+      existing?.updatedAt,
+      now,
+    );
   }
 
   const rowsSynced = syncRowsStringsFromLedger(rowsInput, ledger);
@@ -318,7 +375,10 @@ revenueRouter.put("/sheets/:reportDate", async (req, res) => {
     isoWeek: doc.isoWeek,
     rows: doc.rows,
     totals: doc.totals,
-    cellLedger: doc.cellLedger != null ? normalizeCellLedger(doc.cellLedger, new Date()) : emptyCellLedger(),
+    cellLedger:
+      doc.cellLedger != null
+        ? normalizeCellLedger(doc.cellLedger, new Date())
+        : emptyCellLedger(),
     createdAt: doc.createdAt ?? null,
     updatedAt: doc.updatedAt ?? null,
   });
