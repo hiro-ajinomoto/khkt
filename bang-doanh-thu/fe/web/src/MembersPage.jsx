@@ -159,7 +159,7 @@ export default function MembersPage() {
         </div>
         <p className="members-intro">
           Quản lý họ tên, biệt danh và số điện thoại dùng cho gợi ý ô Tên trên bảng doanh thu. Bấm{" "}
-          <strong>họ tên</strong> để xem nợ cộng dồn (ghi nợ từ hover ô Còn nợ trên phiếu).
+          <strong>họ tên</strong> để xem nợ cộng dồn (ghi nợ khi bấm ô Còn nợ trên phiếu).
         </p>
         <div className="members-toolbar">
           <button type="button" className="members-btn members-btn--primary" onClick={openCreate} disabled={busy}>

@@ -210,7 +210,7 @@ export default function MemberDebtPage() {
           {typeof totals.ghi === "number" && totals.ghi > 0 ? (
             <>
               {" · "}
-              Ghi nhận số nợ (hover): <strong>{formatMoney(totals.ghi, { blankZero: false })}</strong>
+                Ghi nhận số nợ (bấm ô Còn nợ): <strong>{formatMoney(totals.ghi, { blankZero: false })}</strong>
             </>
           ) : null}
         </p>

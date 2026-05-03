@@ -185,7 +185,7 @@ peopleRouter.get("/:id/debt", async (req, res) => {
     debtLedgerTotals,
     help: {
       conNo:
-        "«Còn nợ» trên phiếu = (Doanh thu − Hôm nay trả) + nếu có điều chỉnh cộng/trừ (loại cong/tru). Hover ô Còn nợ → Ghi nợ: lưu đúng số đang hiển thị vào lịch sử (không đổi số trong ô). Tổng theo người = các dòng trùng tên trên phiếu trong năm. Trừ nợ: form trên trang này (có thời điểm server, lưu vào phiếu mới nhất có dòng trùng tên).",
+        "«Còn nợ» trên phiếu = (Doanh thu − Hôm nay trả) + nếu có điều chỉnh cộng/trừ (loại cong/tru). Bấm ô Còn nợ → Ghi nợ: lưu đúng số đang hiển thị vào lịch sử (không đổi số trong ô). Tổng theo người = các dòng trùng tên trên phiếu trong năm. Trừ nợ: form trên trang này (có thời điểm server, lưu vào phiếu mới nhất có dòng trùng tên).",
     },
   });
 });

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, useSearchParams } from "react-router-dom";
 import { getISOWeek, getISOWeekYear } from "date-fns";
 import { formatMoney, formatViDate, formatViDateTime, parseMoney } from "./formatMoney.js";
@@ -14,8 +15,6 @@ const SUOI_STEP = 5;
 const NUOC_NGOT_STEP = 10;
 const CAU_STEPS = [6, 7, 7.5, 8];
 const DO_AN_STEPS = [5, 6, 7, 8, 9, 10];
-/** Giữ panel mở thêm sau khi chuột rời (ms), để kịp bấm +/−. */
-const HOVER_HOLD_MS = 500;
 
 /** Ô có sổ dòng chi tiết (đối chứng khách — mỗi lần +/− / nhập tạo dòng riêng). */
 const HISTORY_FIELD_LIST = ["san", "cuonCan", "cau", "suoi5k", "nuocNgot10k", "doAn"];
@@ -264,7 +263,7 @@ function normalizeRowsFromApi(raw) {
   });
 }
 
-/** Ô tiền: hover mở panel +/− dưới ô (tên cột / tên người; + trên, − dưới mỗi bước). `step` hoặc `steps`. */
+/** Ô tiền: bấm / focus ô nhập mở panel cộng/trừ neo dưới ô (giao diện như hover cũ). `step` hoặc `steps`. */
 function HoverStepperCell({
   rowIndex,
   field,
@@ -278,99 +277,156 @@ function HoverStepperCell({
   onBump,
   onChangeField,
 }) {
+  const wrapRef = useRef(null);
+  const panelRef = useRef(null);
+  const blurTimerRef = useRef(null);
   const hasName = Boolean(ten.trim());
   const multi = Array.isArray(steps) && steps.length > 0;
   const stepsList = multi ? steps : [step];
-  const [holdOpen, setHoldOpen] = useState(false);
-  const holdTimerRef = useRef(null);
-
-  const cancelHoldTimer = () => {
-    if (holdTimerRef.current != null) {
-      clearTimeout(holdTimerRef.current);
-      holdTimerRef.current = null;
-    }
-  };
-
-  useEffect(() => () => cancelHoldTimer(), []);
-
-  const handleStepperEnter = () => {
-    cancelHoldTimer();
-    setHoldOpen(true);
-  };
-
-  const handleStepperLeave = () => {
-    cancelHoldTimer();
-    holdTimerRef.current = window.setTimeout(() => {
-      setHoldOpen(false);
-      holdTimerRef.current = null;
-    }, HOVER_HOLD_MS);
-  };
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0, minW: 184 });
 
   const ariaSteps =
     multi && steps.length > 0 ? steps.map((s) => `±${String(s).replace(".", ",")}`).join(", ") : `mỗi lần ${String(step).replace(".", ",")}`;
   const panelMany = multi && stepsList.length >= 6;
 
+  const reposition = useCallback(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const minW = Math.max(r.width, 184);
+    let left = r.left;
+    const vw = window.innerWidth;
+    if (left + minW > vw - 8) left = Math.max(8, vw - 8 - minW);
+    setPos({ top: r.bottom + 4, left, minW });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    reposition();
+    window.addEventListener("scroll", reposition, true);
+    window.addEventListener("resize", reposition);
+    return () => {
+      window.removeEventListener("scroll", reposition, true);
+      window.removeEventListener("resize", reposition);
+    };
+  }, [open, reposition]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e) => {
+      const t = e.target;
+      if (!(t instanceof Node)) return;
+      if (panelRef.current?.contains(t)) return;
+      if (wrapRef.current?.contains(t)) return;
+      setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  const clearBlurTimer = () => {
+    if (blurTimerRef.current != null) {
+      window.clearTimeout(blurTimerRef.current);
+      blurTimerRef.current = null;
+    }
+  };
+
+  useEffect(() => () => clearBlurTimer(), []);
+
+  const onInputFocus = () => {
+    clearBlurTimer();
+    setOpen(true);
+    requestAnimationFrame(() => reposition());
+  };
+
+  const onInputBlur = () => {
+    clearBlurTimer();
+    blurTimerRef.current = window.setTimeout(() => setOpen(false), 160);
+  };
+
   return (
     <td className={tdClassName}>
-      <div
-        className={`cell-stepper${holdOpen ? " cell-stepper--hold" : ""}`}
-        onMouseEnter={handleStepperEnter}
-        onMouseLeave={handleStepperLeave}
-      >
+      <div ref={wrapRef} className={`cell-stepper${open ? " cell-stepper--open" : ""}`}>
         <input
           className="cell-input cell-num cell-stepper-input"
           inputMode="numeric"
           value={value}
           onChange={(e) => onChangeField(rowIndex, field, e.target.value)}
+          onFocus={onInputFocus}
+          onBlur={onInputBlur}
+          onClick={() => {
+            setOpen(true);
+            requestAnimationFrame(() => reposition());
+          }}
         />
-        <div
-          className={`cell-stepper-panel${multi ? " cell-stepper-panel--multi" : ""}${
-            panelMany ? " cell-stepper-panel--many-steps" : ""
-          }`}
-        >
-          <div className="cell-stepper-headline">
-            <div className="cell-stepper-column-title">{columnTitle}</div>
-            <div
-              className={`cell-stepper-name${hasName ? "" : " cell-stepper-name--empty"}`}
-              title={hasName ? ten.trim() : undefined}
-            >
-              {hasName ? ten.trim() : "Chưa nhập tên"}
-            </div>
-          </div>
+      </div>
+      {open &&
+        createPortal(
           <div
-            className={`cell-stepper-actions${multi ? " cell-stepper-actions--multi" : ""}`}
+            ref={panelRef}
+            className={`cell-stepper-panel cell-stepper-panel--floating${multi ? " cell-stepper-panel--multi" : ""}${
+              panelMany ? " cell-stepper-panel--many-steps" : ""
+            }`}
+            style={{ top: pos.top, left: pos.left, minWidth: pos.minW }}
             role="group"
             aria-label={`${columnTitle}, ${groupLabel}: ${ariaSteps}`}
           >
-            {stepsList.map((s) => (
-              <div key={`${field}-${String(s)}`} className="cell-stepper-pair" role="group" aria-label={`Bước ${String(s).replace(".", ",")}`}>
-                <button
-                  type="button"
-                  className="cell-stepper-btn cell-stepper-btn--plus"
-                  onClick={() => onBump(rowIndex, field, s)}
-                  aria-label={`Cộng ${String(s).replace(".", ",")}`}
-                >
-                  <span className="cell-stepper-glyph" aria-hidden>
-                    +
-                  </span>
-                  <span className="cell-stepper-num">{String(s).replace(".", ",")}</span>
-                </button>
-                <button
-                  type="button"
-                  className="cell-stepper-btn cell-stepper-btn--minus"
-                  onClick={() => onBump(rowIndex, field, -s)}
-                  aria-label={`Trừ ${String(s).replace(".", ",")}`}
-                >
-                  <span className="cell-stepper-glyph" aria-hidden>
-                    −
-                  </span>
-                  <span className="cell-stepper-num">{String(s).replace(".", ",")}</span>
-                </button>
+            <div className="cell-stepper-headline">
+              <div className="cell-stepper-column-title">{columnTitle}</div>
+              <div
+                className={`cell-stepper-name${hasName ? "" : " cell-stepper-name--empty"}`}
+                title={hasName ? ten.trim() : undefined}
+              >
+                {hasName ? ten.trim() : "Chưa nhập tên"}
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
+            </div>
+            <div
+              className={`cell-stepper-actions${multi ? " cell-stepper-actions--multi" : ""}`}
+              role="group"
+              aria-label={`${columnTitle}: ${ariaSteps}`}
+            >
+              {stepsList.map((s) => (
+                <div key={`${field}-${String(s)}`} className="cell-stepper-pair" role="group" aria-label={`Bước ${String(s).replace(".", ",")}`}>
+                  <button
+                    type="button"
+                    className="cell-stepper-btn cell-stepper-btn--plus"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => onBump(rowIndex, field, s)}
+                    aria-label={`Cộng ${String(s).replace(".", ",")}`}
+                  >
+                    <span className="cell-stepper-glyph" aria-hidden>
+                      +
+                    </span>
+                    <span className="cell-stepper-num">{String(s).replace(".", ",")}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="cell-stepper-btn cell-stepper-btn--minus"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => onBump(rowIndex, field, -s)}
+                    aria-label={`Trừ ${String(s).replace(".", ",")}`}
+                  >
+                    <span className="cell-stepper-glyph" aria-hidden>
+                      −
+                    </span>
+                    <span className="cell-stepper-num">{String(s).replace(".", ",")}</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>,
+          document.body,
+        )}
     </td>
   );
 }
@@ -1063,19 +1119,15 @@ export default function App() {
 
       <p className="hint">
         Doanh thu = Sân + Cuốn cán + Cầu + Suối + Nước ngọt + Đồ ăn. Còn nợ hiển thị = Doanh thu − Hôm nay trả + (nếu có)
-        điều chỉnh <strong>cộng/trừ</strong> trên phiếu. Hover ô Còn nợ → <strong>Ghi nợ</strong> lưu đúng số đang hiển thị
-        (lịch sử Danh bạ, không đổi số trong ô). Tổng theo từng người: <Link to="/thanh-vien">Danh bạ</Link>{" "}
+        điều chỉnh <strong>cộng/trừ</strong> trên phiếu. Bấm <strong>Còn nợ</strong> — panel <strong>Ghi nợ</strong> hiện dưới ô (lịch sử
+        Danh bạ, không đổi số trong ô). Tổng theo từng người: <Link to="/thanh-vien">Danh bạ</Link>{" "}
         → bấm họ tên (tên dòng cần trùng chuẩn danh bạ). Lưu trữ:
         MongoDB (cùng biến <code>MONGODB_URI</code>, <code>MONGODB_DB</code>{" "}
         với backend KHKT), collection <code>bang_doanh_thu_sheets</code>. Tuần lọc theo chuẩn ISO (thứ
         Hai đầu tuần). Cột <strong>Sân</strong> / <strong>Cuốn cán</strong> / <strong>Cầu</strong> /{" "}
-        <strong>Suối</strong> / <strong>Nước ngọt</strong> / <strong>Đồ ăn</strong>: hover — panel hiện{" "}
-        <strong>dưới ô</strong> (tên cột + tên người; <strong>+</strong> trên, <strong>−</strong> dưới mỗi
-        bước); rời chuột
-        giữ ~<strong>
-          {HOVER_HOLD_MS / 1000}s
-        </strong>
-        ; bước <strong>{SAN_STEP}</strong> / <strong>{CUON_CAN_STEP}</strong> /{" "}
+        <strong>Suối</strong> / <strong>Nước ngọt</strong> / <strong>Đồ ăn</strong>: bấm hoặc focus ô tiền — panel{" "}
+        <strong>cộng / trừ</strong> hiện <strong>ngay dưới ô</strong> (như trước; đóng: bấm ra ngoài hoặc Esc). Bước{" "}
+        <strong>{SAN_STEP}</strong> / <strong>{CUON_CAN_STEP}</strong> /{" "}
         <strong>6·7·7,5·8</strong> (cầu) / <strong>{SUOI_STEP}</strong> / <strong>{NUOC_NGOT_STEP}</strong> /{" "}
         <strong>5·6·7·8·9·10</strong> (đồ ăn). Bấm <strong>STT</strong> để xem{" "}
         <strong>lịch sử mua hàng</strong> theo dòng đó (tab mới).

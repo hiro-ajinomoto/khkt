@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { formatMoney } from "./formatMoney.js";
-
-const HOVER_HOLD_MS = 500;
 
 function roundAmt(n) {
   if (!Number.isFinite(n)) return 0;
@@ -72,71 +71,114 @@ export function normalizeApiConNoLedger(raw) {
  * }} props
  */
 export default function ConNoLedgerHoverCell({ rowIndex, ten, doanhThu, effectiveConNo, onGhiNo }) {
-  const [holdOpen, setHoldOpen] = useState(false);
+  const anchorRef = useRef(null);
+  const panelRef = useRef(null);
+  const [open, setOpen] = useState(false);
   const [justCommitted, setJustCommitted] = useState(false);
-  const holdTimerRef = useRef(null);
-
-  const cancelHoldTimer = () => {
-    if (holdTimerRef.current != null) {
-      clearTimeout(holdTimerRef.current);
-      holdTimerRef.current = null;
-    }
-  };
-
-  useEffect(() => () => cancelHoldTimer(), []);
+  const [pos, setPos] = useState({ top: 0, left: 0, minW: 200 });
 
   useEffect(() => {
     setJustCommitted(false);
   }, [effectiveConNo]);
 
-  const handleEnter = () => {
-    cancelHoldTimer();
-    setHoldOpen(true);
-  };
-
-  const handleLeave = () => {
-    cancelHoldTimer();
-    holdTimerRef.current = window.setTimeout(() => {
-      setHoldOpen(false);
-      setJustCommitted(false);
-      holdTimerRef.current = null;
-    }, HOVER_HOLD_MS);
-  };
+  useEffect(() => {
+    if (!open) setJustCommitted(false);
+  }, [open]);
 
   const n = roundAmt(effectiveConNo);
   const recorded = justCommitted;
 
+  const reposition = useCallback(() => {
+    const el = anchorRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const minW = Math.max(200, r.width);
+    let left = r.right - minW;
+    const vw = window.innerWidth;
+    if (left < 8) left = 8;
+    if (left + minW > vw - 8) left = Math.max(8, vw - 8 - minW);
+    setPos({ top: r.bottom + 4, left, minW });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    reposition();
+    window.addEventListener("scroll", reposition, true);
+    window.addEventListener("resize", reposition);
+    return () => {
+      window.removeEventListener("scroll", reposition, true);
+      window.removeEventListener("resize", reposition);
+    };
+  }, [open, reposition]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e) => {
+      const t = e.target;
+      if (!(t instanceof Node)) return;
+      if (panelRef.current?.contains(t)) return;
+      if (anchorRef.current?.contains(t)) return;
+      setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
   return (
-    <td className={`cell-remaining cell-conno-hover${holdOpen ? " cell-conno-hover--open" : ""}`}>
-      <div className="cell-conno-wrap" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
-        <span
-          className="cell-conno-display"
-          title="Hover → Ghi nợ: lưu đúng số đang hiển thị (Danh bạ), không đổi số trong ô"
-        >
-          {formatMoney(effectiveConNo, { blankZero: doanhThu === 0 && effectiveConNo === 0 })}
-        </span>
-        <div className="cell-conno-panel" role="region" aria-label={`Ghi nợ dòng ${rowIndex + 1}`}>
-          <div className="cell-conno-form cell-conno-form--minimal">
-            <button
-              type="button"
-              className={`cell-conno-add-btn${recorded ? " cell-conno-add-btn--recorded" : ""}`}
-              disabled={n <= 0 || recorded}
-              onClick={() => {
-                if (n <= 0 || recorded) return;
-                onGhiNo(n);
-                setJustCommitted(true);
-              }}
-              aria-label={
-                recorded
-                  ? `Đã ghi nợ ${formatMoney(n, { blankZero: false })} — dòng ${rowIndex + 1}`
-                  : `Ghi nợ ${formatMoney(n, { blankZero: false })} — dòng ${rowIndex + 1}${ten.trim() ? `, ${ten.trim()}` : ""}`
-              }
-            >
-              {recorded ? "Đã ghi nợ" : "Ghi nợ"}
-            </button>
-          </div>
-        </div>
-      </div>
+    <td className={`cell-remaining cell-conno-cell${open ? " cell-conno--open" : ""}`}>
+      <button
+        ref={anchorRef}
+        type="button"
+        className="cell-conno-trigger"
+        onClick={() => {
+          setOpen(true);
+          requestAnimationFrame(() => reposition());
+        }}
+        title="Bấm để ghi nợ (Danh bạ)"
+      >
+        {formatMoney(effectiveConNo, { blankZero: doanhThu === 0 && effectiveConNo === 0 })}
+      </button>
+      {open &&
+        createPortal(
+          <div
+            ref={panelRef}
+            className="cell-conno-panel cell-conno-panel--floating"
+            style={{ top: pos.top, left: pos.left, minWidth: pos.minW }}
+            role="region"
+            aria-label={`Ghi nợ dòng ${rowIndex + 1}`}
+          >
+            <div className="cell-conno-form cell-conno-form--minimal">
+              <button
+                type="button"
+                className={`cell-conno-add-btn${recorded ? " cell-conno-add-btn--recorded" : ""}`}
+                disabled={n <= 0 || recorded}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  if (n <= 0 || recorded) return;
+                  onGhiNo(n);
+                  setJustCommitted(true);
+                }}
+                aria-label={
+                  recorded
+                    ? `Đã ghi nợ ${formatMoney(n, { blankZero: false })} — dòng ${rowIndex + 1}`
+                    : `Ghi nợ ${formatMoney(n, { blankZero: false })} — dòng ${rowIndex + 1}${ten.trim() ? `, ${ten.trim()}` : ""}`
+                }
+              >
+                {recorded ? "Đã ghi nợ" : "Ghi nợ"}
+              </button>
+            </div>
+          </div>,
+          document.body,
+        )}
     </td>
   );
 }

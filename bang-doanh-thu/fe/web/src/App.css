@@ -289,9 +289,8 @@
   min-width: 100%;
 }
 
-.revenue-table tbody tr:has(.cell-stepper:hover),
-.revenue-table tbody tr:has(.cell-stepper:focus-within),
-.revenue-table tbody tr:has(.cell-stepper--hold) {
+.revenue-table tbody tr:has(.cell-stepper--open),
+.revenue-table tbody tr:has(.cell-conno--open) {
   position: relative;
   z-index: 8;
 }
@@ -389,93 +388,50 @@
   font-size: inherit;
 }
 
-.cell-stepper-panel {
-  position: absolute;
-  z-index: 35;
-  left: 0;
-  right: auto;
-  top: calc(100% + 3px);
-  bottom: auto;
-  transform: none;
-  margin: 0;
-
+/** Panel neo dưới ô (portal + position:fixed), giao diện như hover cũ */
+.cell-stepper-panel--floating {
+  position: fixed;
+  z-index: 4000;
+  box-sizing: border-box;
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
   gap: 0.55rem;
-  min-width: 11.5rem;
-  max-width: min(20rem, 78vw);
   padding: 0.38rem 0.5rem;
-
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   box-shadow: 0 6px 20px rgb(15 23 42 / 11%);
-
-  max-height: 0;
-  opacity: 0;
-  visibility: hidden;
-  overflow: hidden;
-  pointer-events: none;
-  transition:
-    max-height 0.22s ease,
-    opacity 0.16s ease,
-    visibility 0.16s ease;
-}
-
-.cell-stepper:hover .cell-stepper-panel,
-.cell-stepper:focus-within .cell-stepper-panel,
-.cell-stepper.cell-stepper--hold .cell-stepper-panel {
-  max-height: 8rem;
-  opacity: 1;
-  visibility: visible;
+  max-width: min(34rem, calc(100vw - 1rem));
   pointer-events: auto;
 }
 
-.cell-stepper-panel--multi {
+.cell-stepper-panel--floating.cell-stepper-panel--multi {
   min-width: 12.5rem;
-  max-width: min(20rem, 92vw);
 }
 
-.cell-stepper:hover .cell-stepper-panel--multi,
-.cell-stepper:focus-within .cell-stepper-panel--multi,
-.cell-stepper.cell-stepper--hold .cell-stepper-panel--multi {
-  max-height: 6.35rem;
-}
-
-/* Đồ ăn: 6 mức ± — tên một dòng, hàng nút có thể xuống dòng */
-.cell-stepper-panel--many-steps.cell-stepper-panel--multi {
+.cell-stepper-panel--floating.cell-stepper-panel--many-steps.cell-stepper-panel--multi {
   flex-direction: column;
   align-items: stretch;
   gap: 0.4rem;
-  min-width: 13rem;
-  max-width: min(34rem, 96vw);
+  max-height: min(12rem, 55vh);
+  overflow-y: auto;
 }
 
-.cell-stepper-panel--many-steps .cell-stepper-headline {
-  flex-shrink: 0;
-}
-
-.cell-stepper:hover .cell-stepper-panel--many-steps.cell-stepper-panel--multi,
-.cell-stepper:focus-within .cell-stepper-panel--many-steps.cell-stepper-panel--multi,
-.cell-stepper.cell-stepper--hold .cell-stepper-panel--many-steps.cell-stepper-panel--multi {
-  max-height: 12rem;
-}
-
-.cell-stepper-panel--many-steps .cell-stepper-actions--multi {
+.cell-stepper-panel--floating.cell-stepper-panel--many-steps .cell-stepper-actions--multi {
   flex-wrap: wrap;
   max-width: none;
   justify-content: flex-start;
   row-gap: 0.35rem;
 }
 
-.cell-stepper-panel--many-steps .cell-stepper-actions--multi .cell-stepper-pair {
+.cell-stepper-panel--floating.cell-stepper-panel--many-steps .cell-stepper-pair {
   flex: 0 1 auto;
   min-width: 2rem;
 }
 
-.cell-stepper-panel--many-steps .cell-stepper-actions--multi .cell-stepper-btn {
+.cell-stepper-panel--floating.cell-stepper-panel--many-steps .cell-stepper-btn {
   min-width: 2.15rem;
   padding: 0.18rem 0.2rem;
 }
@@ -1471,47 +1427,39 @@
   margin-bottom: 0.35rem;
 }
 
-.revenue-table tbody tr:has(.cell-conno-wrap:hover),
-.revenue-table tbody tr:has(.cell-conno-wrap:focus-within),
-.revenue-table tbody tr:has(.cell-conno-hover--open) {
-  z-index: 4;
-}
-
-.cell-conno-hover {
-  position: relative;
+.cell-conno-cell {
   vertical-align: top;
 }
 
-.cell-conno-wrap {
-  position: relative;
-  min-height: 1.5rem;
+.cell-conno-trigger {
+  display: block;
+  width: 100%;
+  text-align: right;
+  font: inherit;
+  padding: 0.1rem 0.15rem;
+  margin: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  border-radius: 4px;
 }
 
-.cell-conno-display {
-  display: inline-block;
-  cursor: help;
-  padding: 0.1rem 0;
+.cell-conno-trigger:hover {
+  background: rgb(241 245 249 / 0.85);
 }
 
-.cell-conno-panel {
-  display: none;
-  position: absolute;
-  right: 0;
-  top: 100%;
-  margin-top: 2px;
-  z-index: 50;
+.cell-conno-panel--floating {
+  position: fixed;
+  z-index: 4000;
+  box-sizing: border-box;
   background: #fff;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
   padding: 0.45rem 0.5rem;
   font-size: 0.82rem;
-}
-
-.cell-conno-wrap:hover .cell-conno-panel,
-.cell-conno-wrap:focus-within .cell-conno-panel,
-.cell-conno-hover--open .cell-conno-panel {
-  display: block;
+  pointer-events: auto;
 }
 
 .cell-conno-form--minimal {
