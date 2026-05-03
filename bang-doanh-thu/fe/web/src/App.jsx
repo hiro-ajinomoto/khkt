@@ -10,6 +10,7 @@ const CUON_CAN_STEP = 10;
 const SUOI_STEP = 5;
 const NUOC_NGOT_STEP = 10;
 const CAU_STEPS = [6, 7, 7.5, 8];
+const DO_AN_STEPS = [5, 6, 7, 8, 9, 10];
 /** Giữ panel mở thêm sau khi chuột rời (ms), để kịp bấm +/−. */
 const HOVER_HOLD_MS = 500;
 
@@ -315,6 +316,7 @@ function HoverStepperCell({
 
   const ariaSteps =
     multi && steps.length > 0 ? steps.map((s) => `±${String(s).replace(".", ",")}`).join(", ") : `mỗi lần ${String(step).replace(".", ",")}`;
+  const panelMany = multi && stepsList.length >= 6;
 
   return (
     <td className={tdClassName}>
@@ -329,7 +331,11 @@ function HoverStepperCell({
           value={value}
           onChange={(e) => onChangeField(rowIndex, field, e.target.value)}
         />
-        <div className={`cell-stepper-panel${multi ? " cell-stepper-panel--multi" : ""}`}>
+        <div
+          className={`cell-stepper-panel${multi ? " cell-stepper-panel--multi" : ""}${
+            panelMany ? " cell-stepper-panel--many-steps cell-stepper-panel--anchored-below" : ""
+          }`}
+        >
           <div
             className={`cell-stepper-name${hasName ? "" : " cell-stepper-name--empty"}`}
             title={hasName ? ten.trim() : undefined}
@@ -799,7 +805,22 @@ export default function App() {
       </header>
 
       <div className="table-wrap">
-        <table className="revenue-table">
+        <table className="revenue-table revenue-sheet">
+          <colgroup>
+            <col className="col-w-equal" />
+            <col className="col-w-wide" />
+            <col className="col-w-equal" />
+            <col className="col-w-equal" />
+            <col className="col-w-equal" />
+            <col className="col-w-equal" />
+            <col className="col-w-equal" />
+            <col className="col-w-equal" />
+            <col className="col-w-equal" />
+            <col className="col-w-equal" />
+            <col className="col-w-equal" />
+            <col className="col-w-equal" />
+            <col className="col-w-wide" />
+          </colgroup>
           <thead>
             <tr>
               <th className="col-stt">STT</th>
@@ -895,14 +916,17 @@ export default function App() {
                     onBump={bumpMoneyField}
                     onChangeField={updateRow}
                   />
-                  <td>
-                    <input
-                      className="cell-input cell-num"
-                      inputMode="decimal"
-                      value={r.doAn}
-                      onChange={(e) => updateRow(i, "doAn", e.target.value)}
-                    />
-                  </td>
+                  <HoverStepperCell
+                    rowIndex={i}
+                    field="doAn"
+                    value={r.doAn}
+                    steps={DO_AN_STEPS}
+                    ten={r.ten}
+                    tdClassName="col-num-medium col-stepper-td"
+                    groupLabel="Chỉnh đồ ăn"
+                    onBump={bumpMoneyField}
+                    onChangeField={updateRow}
+                  />
                   <td>
                     <input
                       className="cell-input cell-num"
@@ -940,7 +964,7 @@ export default function App() {
               <td className="col-num-medium">{formatMoney(totals.cau, { blankZero: false })}</td>
               <td className="col-num-medium">{formatMoney(totals.suoi5k, { blankZero: false })}</td>
               <td className="col-num-tight">{formatMoney(totals.nuocNgot10k, { blankZero: false })}</td>
-              <td>{formatMoney(totals.doAn, { blankZero: false })}</td>
+              <td className="col-num-medium">{formatMoney(totals.doAn, { blankZero: false })}</td>
               <td>{formatMoney(totals.noCu, { blankZero: false })}</td>
               <td className="cell-computed">{formatMoney(totals.doanhThu, { blankZero: false })}</td>
               <td className="col-computed col-hom-nay-tra">
@@ -958,13 +982,14 @@ export default function App() {
         thu − Hôm nay trả. Lưu trữ: MongoDB (cùng biến <code>MONGODB_URI</code>, <code>MONGODB_DB</code>{" "}
         với backend KHKT), collection <code>bang_doanh_thu_sheets</code>. Tuần lọc theo chuẩn ISO (thứ
         Hai đầu tuần). Cột <strong>Sân</strong> / <strong>Cuốn cán</strong> / <strong>Cầu</strong> /{" "}
-        <strong>Suối</strong> / <strong>Nước ngọt</strong>: hover — thanh <strong>bên trái ô</strong> (tên trong
-        thanh; <strong>+</strong> trên, <strong>−</strong> dưới); rời chuột giữ ~<strong>
+        <strong>Suối</strong> / <strong>Nước ngọt</strong> / <strong>Đồ ăn</strong>: hover — thanh{" "}
+        <strong>bên trái ô</strong> (tên trong thanh; <strong>+</strong> trên, <strong>−</strong> dưới); rời chuột
+        giữ ~<strong>
           {HOVER_HOLD_MS / 1000}s
         </strong>
         ; bước <strong>{SAN_STEP}</strong> / <strong>{CUON_CAN_STEP}</strong> /{" "}
-        <strong>6·7·7,5·8</strong> (cầu) /{" "}
-        <strong>{SUOI_STEP}</strong> / <strong>{NUOC_NGOT_STEP}</strong>. Bấm <strong>STT</strong> để xem{" "}
+        <strong>6·7·7,5·8</strong> (cầu) / <strong>{SUOI_STEP}</strong> / <strong>{NUOC_NGOT_STEP}</strong> /{" "}
+        <strong>5·6·7·8·9·10</strong> (đồ ăn). Bấm <strong>STT</strong> để xem{" "}
         <strong>lịch sử mua hàng</strong> theo dòng đó (tab mới).
       </p>
 

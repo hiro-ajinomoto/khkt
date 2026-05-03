@@ -232,10 +232,28 @@
 }
 
 .revenue-table {
-  width: max-content;
-  min-width: 100%;
   border-collapse: collapse;
   font-size: 0.8125rem;
+}
+
+/** Bảng doanh thu chính: trải đều chiều ngang; Tên / Ghi chú rộng gấp ~3 các cột còn lại. */
+.revenue-table.revenue-sheet {
+  table-layout: fixed;
+  width: 100%;
+}
+
+/** 11 cột cùng độ rộng (STT … Còn nợ): 64% chia đều. Tên + Ghi chú: mỗi cột 18%. */
+.revenue-table.revenue-sheet col.col-w-equal {
+  width: calc(64% / 11);
+}
+
+.revenue-table.revenue-sheet col.col-w-wide {
+  width: 18%;
+}
+
+.revenue-table.history-table {
+  width: max-content;
+  min-width: 100%;
 }
 
 .revenue-table tbody tr:has(.cell-stepper:hover),
@@ -263,14 +281,35 @@
   z-index: 1;
 }
 
-.col-stt {
-  width: 2.15rem;
+.revenue-table.revenue-sheet > thead > tr > th {
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.22;
+}
+
+.revenue-sheet .name-cell-wrap {
+  min-width: 0;
+}
+
+.revenue-sheet td .cell-input,
+.revenue-sheet td .cell-text {
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+.revenue-sheet .cell-computed,
+.revenue-sheet .cell-remaining {
+  min-width: 0 !important;
+  white-space: normal;
+}
+
+.revenue-sheet th,
+.revenue-sheet td {
+  min-width: 0;
 }
 
 .col-name-narrow {
-  width: 11.5rem;
-  min-width: 10.5rem;
-  max-width: 16rem;
+  min-width: 0;
 }
 
 .col-name-narrow .cell-text {
@@ -279,9 +318,6 @@
 }
 
 .col-num-tight {
-  width: 2.85rem;
-  min-width: 2.85rem;
-  max-width: 3.15rem;
   padding-left: 0.15rem !important;
   padding-right: 0.15rem !important;
 }
@@ -299,9 +335,6 @@
 
 .revenue-table th.col-stepper-head-san,
 .revenue-table td.col-stepper-td--san {
-  width: 5.35rem;
-  min-width: 5.35rem;
-  max-width: 5.85rem;
   padding: 0.22rem 0.28rem !important;
   vertical-align: middle;
   overflow: visible;
@@ -358,6 +391,18 @@
     visibility 0.16s ease;
 }
 
+/* Ô có nhiều bước (đồ ăn ±5…±10): không mở panel sang trái — tránh đè lên cột Tên của dòng và ô bên trái */
+.cell-stepper-panel.cell-stepper-panel--anchored-below {
+  right: auto;
+  left: 0;
+  top: calc(100% + 3px);
+  bottom: auto;
+  transform: none;
+  margin-top: 0;
+  margin-right: 0;
+  z-index: 35;
+}
+
 .cell-stepper:hover .cell-stepper-panel,
 .cell-stepper:focus-within .cell-stepper-panel,
 .cell-stepper.cell-stepper--hold .cell-stepper-panel {
@@ -376,6 +421,42 @@
 .cell-stepper:focus-within .cell-stepper-panel--multi,
 .cell-stepper.cell-stepper--hold .cell-stepper-panel--multi {
   max-height: 5.5rem;
+}
+
+/* Đồ ăn: 6 mức ± — tên một dòng, hàng nút có thể xuống dòng */
+.cell-stepper-panel--many-steps.cell-stepper-panel--multi {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.4rem;
+  min-width: 13rem;
+  max-width: min(34rem, 96vw);
+}
+
+.cell-stepper-panel--many-steps .cell-stepper-name {
+  flex: unset;
+}
+
+.cell-stepper:hover .cell-stepper-panel--many-steps.cell-stepper-panel--multi,
+.cell-stepper:focus-within .cell-stepper-panel--many-steps.cell-stepper-panel--multi,
+.cell-stepper.cell-stepper--hold .cell-stepper-panel--many-steps.cell-stepper-panel--multi {
+  max-height: 11rem;
+}
+
+.cell-stepper-panel--many-steps .cell-stepper-actions--multi {
+  flex-wrap: wrap;
+  max-width: none;
+  justify-content: flex-start;
+  row-gap: 0.35rem;
+}
+
+.cell-stepper-panel--many-steps .cell-stepper-actions--multi .cell-stepper-pair {
+  flex: 0 1 auto;
+  min-width: 2rem;
+}
+
+.cell-stepper-panel--many-steps .cell-stepper-actions--multi .cell-stepper-btn {
+  min-width: 2.15rem;
+  padding: 0.18rem 0.2rem;
 }
 
 .cell-stepper-name {
@@ -518,10 +599,8 @@
 }
 
 /* Cầu, Suối: hẹp hơn col-num-wide, vẫn đủ ô nhập */
+/* Cầu, Suối, Đồ ăn — độ rộng theo colgroup */
 .col-num-medium {
-  width: 4.35rem;
-  min-width: 4.35rem;
-  max-width: 4.85rem;
   padding-left: 0.12rem !important;
   padding-right: 0.12rem !important;
 }
@@ -550,16 +629,7 @@
   padding: 0.2rem 0.2rem !important;
 }
 
-.col-note {
-  width: 5rem;
-  min-width: 4.25rem;
-  max-width: 6.25rem;
-}
-
 .col-hom-nay-tra {
-  width: 3.85rem;
-  min-width: 3.5rem;
-  max-width: 4.25rem;
   padding-left: 0.1rem !important;
   padding-right: 0.1rem !important;
 }
