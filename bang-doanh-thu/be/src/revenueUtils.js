@@ -29,6 +29,12 @@ export function parseMoney(v) {
   return Number.isFinite(n) ? n : 0;
 }
 
+/** Một dòng ledger: tối đa 2 chữ thập phân (vd. cầu 7,5). */
+function roundLedgerAmt(n) {
+  if (!Number.isFinite(n)) return 0;
+  return Math.round(Math.abs(n) * 100) / 100;
+}
+
 function computeRow(r) {
   const doanhThu =
     parseMoney(r.san) +
@@ -120,10 +126,15 @@ export function sumLedgerEntries(entries) {
   let s = 0;
   for (const e of entries) {
     if (!e || typeof e !== "object") continue;
-    const a = typeof e.amount === "number" && Number.isFinite(e.amount) ? Math.round(Math.abs(e.amount)) : 0;
+    let a = 0;
+    if (typeof e.amount === "number" && Number.isFinite(e.amount)) {
+      a = roundLedgerAmt(e.amount);
+    } else if (typeof e.amount === "string" && e.amount.trim() !== "") {
+      a = roundLedgerAmt(parseMoney(e.amount));
+    }
     if (a > 0) s += a;
   }
-  return s;
+  return roundLedgerAmt(s);
 }
 
 function coerceLedgerDate(v, serverNow) {
@@ -152,12 +163,11 @@ export function normalizeCellLedger(raw, serverNow = new Date()) {
       const lines = [];
       for (const e of arr) {
         if (!e || typeof e !== "object") continue;
-        let amount =
-          typeof e.amount === "number" && Number.isFinite(e.amount)
-            ? Math.round(Math.abs(e.amount))
-            : 0;
-        if (typeof e.amount === "string" && e.amount.trim() !== "") {
-          amount = Math.round(parseMoney(e.amount));
+        let amount = 0;
+        if (typeof e.amount === "number" && Number.isFinite(e.amount)) {
+          amount = roundLedgerAmt(e.amount);
+        } else if (typeof e.amount === "string" && e.amount.trim() !== "") {
+          amount = roundLedgerAmt(parseMoney(e.amount));
           if (!Number.isFinite(amount) || amount < 0) amount = 0;
         }
         if (amount <= 0) continue;
@@ -213,7 +223,7 @@ export function fillMissingLedgerFromRows(ledger, rows, docFallback, sheetUpdate
         docFallback?.cellTimes?.[i]?.[key],
         coerceLedgerDate(fallback, serverNow),
       );
-      lb[i][key] = [{ amount: n, at: atGuess }];
+      lb[i][key] = [{ amount: roundLedgerAmt(n), at: atGuess }];
     }
   }
   return lb;
@@ -327,8 +337,8 @@ export function buildPersonHistory(rowIndex, docs) {
           const entry = ledgerLines[lineIx];
           const amount =
             entry && typeof entry.amount === "number" && Number.isFinite(entry.amount)
-              ? Math.round(Math.abs(entry.amount))
-              : parseMoney(entry?.amount);
+              ? roundLedgerAmt(entry.amount)
+              : roundLedgerAmt(parseMoney(entry?.amount));
           if (amount <= 0) continue;
 
           let recordedAt = null;

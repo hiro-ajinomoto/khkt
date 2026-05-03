@@ -9,7 +9,7 @@ const SAN_STEP = 15;
 const CUON_CAN_STEP = 10;
 const SUOI_STEP = 5;
 const NUOC_NGOT_STEP = 10;
-const CAU_STEPS = [6, 7, 8];
+const CAU_STEPS = [6, 7, 7.5, 8];
 /** Giữ panel mở thêm sau khi chuột rời (ms), để kịp bấm +/−. */
 const HOVER_HOLD_MS = 500;
 
@@ -27,17 +27,25 @@ function cloneLedger(ledger) {
   );
 }
 
+/** Một dòng ledger: tối đa 2 chữ thập phân (vd. cầu 7,5). */
+function roundLedgerAmt(n) {
+  if (!Number.isFinite(n)) return 0;
+  return Math.round(Math.abs(n) * 100) / 100;
+}
+
+const LEDGER_EPS = 1e-4;
+
 function sumLines(lines) {
   if (!Array.isArray(lines)) return 0;
   let s = 0;
   for (const e of lines) {
     const a =
       typeof e?.amount === "number" && Number.isFinite(e.amount)
-        ? Math.round(Math.abs(e.amount))
-        : parseMoney(String(e?.amount ?? ""));
-    if (Number.isFinite(a) && a > 0) s += a;
+        ? roundLedgerAmt(e.amount)
+        : roundLedgerAmt(parseMoney(String(e?.amount ?? "")));
+    if (a > LEDGER_EPS) s += a;
   }
-  return s;
+  return roundLedgerAmt(s);
 }
 
 /** Đồng bộ tổng ô tiền từ các dòng ledger (logic giống BE). */
@@ -52,7 +60,7 @@ function mergeLedgerIntoRows(baseRows, ledger) {
         continue;
       }
       const sumv = sumLines(ln);
-      nr[i][key] = sumv <= 0 ? "" : String(sumv);
+      nr[i][key] = sumv <= LEDGER_EPS ? "" : String(sumv);
     }
   }
   return nr;
@@ -73,9 +81,9 @@ function normalizeApiLedger(raw) {
         if (!e || typeof e !== "object") continue;
         let amt =
           typeof e.amount === "number" && Number.isFinite(e.amount)
-            ? Math.round(Math.abs(e.amount))
-            : parseMoney(String(e.amount ?? ""));
-        if (!Number.isFinite(amt) || amt <= 0) continue;
+            ? roundLedgerAmt(e.amount)
+            : roundLedgerAmt(parseMoney(String(e.amount ?? "")));
+        if (!Number.isFinite(amt) || amt <= LEDGER_EPS) continue;
         let atStr = "";
         const ar = "at" in e ? e.at : null;
         if (typeof ar === "string" && ar.trim() !== "") atStr = ar;
@@ -114,7 +122,7 @@ function fillLedgerGaps(rows, ledger, updatedAtIso) {
       if (Array.isArray(cur) && cur.length > 0) continue;
       const n = parseMoney(rows[i][key]);
       if (n <= 0) continue;
-      lb[i][key] = [{ amount: n, at: fb }];
+      lb[i][key] = [{ amount: roundLedgerAmt(n), at: fb }];
     }
   }
   return lb;
@@ -129,34 +137,38 @@ function bumpHistoryLedger(rowsPrev, ledgerPrev, rowIndex, field, delta) {
       ? linesWas.map((e) => ({
           amount:
             typeof e.amount === "number" && Number.isFinite(e.amount)
-              ? Math.round(e.amount)
-              : parseMoney(String(e.amount ?? "")),
+              ? roundLedgerAmt(e.amount)
+              : roundLedgerAmt(parseMoney(String(e.amount ?? ""))),
           at: typeof e.at === "string" ? e.at : new Date().toISOString(),
         }))
       : [];
 
-  if (delta > 0) {
-    lines.push({ amount: Math.round(delta), at: new Date().toISOString() });
-  } else if (delta < 0) {
+  const d = roundLedgerAmt(delta);
+  if (d > LEDGER_EPS) {
+    lines.push({ amount: d, at: new Date().toISOString() });
+  } else if (d < -LEDGER_EPS) {
     if (lines.length === 0) {
-      const fallback = parseMoney(rowsPrev[rowIndex][field]);
-      if (fallback > 0) {
+      const fallback = roundLedgerAmt(parseMoney(rowsPrev[rowIndex][field]));
+      if (fallback > LEDGER_EPS) {
         lines = [{ amount: fallback, at: new Date().toISOString() }];
       }
     }
-    let rem = Math.round(Math.abs(delta));
-    while (rem > 0 && lines.length > 0) {
+    let rem = roundLedgerAmt(Math.abs(delta));
+    while (rem > LEDGER_EPS && lines.length > 0) {
       const last = lines[lines.length - 1];
-      const amt = typeof last.amount === "number" ? Math.round(last.amount) : parseMoney(String(last.amount));
-      if (!(amt > 0)) {
+      const amt =
+        typeof last.amount === "number" && Number.isFinite(last.amount)
+          ? roundLedgerAmt(last.amount)
+          : roundLedgerAmt(parseMoney(String(last.amount)));
+      if (!(amt > LEDGER_EPS)) {
         lines.pop();
         continue;
       }
-      if (amt <= rem) {
-        rem -= amt;
+      if (amt <= rem + LEDGER_EPS) {
+        rem = roundLedgerAmt(rem - amt);
         lines.pop();
       } else {
-        lines[lines.length - 1] = { ...last, amount: amt - rem };
+        lines[lines.length - 1] = { ...last, amount: roundLedgerAmt(amt - rem) };
         rem = 0;
       }
     }
@@ -174,11 +186,11 @@ function bumpHistoryLedger(rowsPrev, ledgerPrev, rowIndex, field, delta) {
 
 function manualHistoryLedger(rowsPrev, ledgerPrev, rowIndex, field, rawStr) {
   const ledgerNext = cloneLedger(ledgerPrev);
-  const n = parseMoney(rawStr);
-  if (n <= 0) {
+  const n = roundLedgerAmt(parseMoney(rawStr));
+  if (n <= LEDGER_EPS) {
     delete ledgerNext[rowIndex][field];
   } else {
-    ledgerNext[rowIndex][field] = [{ amount: Math.round(n), at: new Date().toISOString() }];
+    ledgerNext[rowIndex][field] = [{ amount: n, at: new Date().toISOString() }];
   }
   const rowsOut = mergeLedgerIntoRows(rowsPrev, ledgerNext);
   return { rows: rowsOut, ledger: ledgerNext };
@@ -221,7 +233,7 @@ function normalizeQuickPhone(raw) {
 
 function formatConNo(conNo, doanhThu) {
   if (doanhThu === 0 && conNo === 0) return "";
-  return new Intl.NumberFormat("vi-VN").format(Math.round(conNo));
+  return formatMoney(conNo, { blankZero: false });
 }
 
 function todayISODate() {
@@ -302,7 +314,7 @@ function HoverStepperCell({
   };
 
   const ariaSteps =
-    multi && steps.length > 0 ? steps.map((s) => `±${s}`).join(", ") : `mỗi lần ${step}`;
+    multi && steps.length > 0 ? steps.map((s) => `±${String(s).replace(".", ",")}`).join(", ") : `mỗi lần ${String(step).replace(".", ",")}`;
 
   return (
     <td className={tdClassName}>
@@ -330,28 +342,28 @@ function HoverStepperCell({
             aria-label={`${groupLabel}: ${ariaSteps}`}
           >
             {stepsList.map((s) => (
-              <div key={s} className="cell-stepper-pair" role="group" aria-label={`Bước ${s}`}>
+              <div key={`${field}-${String(s)}`} className="cell-stepper-pair" role="group" aria-label={`Bước ${String(s).replace(".", ",")}`}>
                 <button
                   type="button"
                   className="cell-stepper-btn cell-stepper-btn--plus"
                   onClick={() => onBump(rowIndex, field, s)}
-                  aria-label={`Cộng ${s}`}
+                  aria-label={`Cộng ${String(s).replace(".", ",")}`}
                 >
                   <span className="cell-stepper-glyph" aria-hidden>
                     +
                   </span>
-                  <span className="cell-stepper-num">{s}</span>
+                  <span className="cell-stepper-num">{String(s).replace(".", ",")}</span>
                 </button>
                 <button
                   type="button"
                   className="cell-stepper-btn cell-stepper-btn--minus"
                   onClick={() => onBump(rowIndex, field, -s)}
-                  aria-label={`Trừ ${s}`}
+                  aria-label={`Trừ ${String(s).replace(".", ",")}`}
                 >
                   <span className="cell-stepper-glyph" aria-hidden>
                     −
                   </span>
-                  <span className="cell-stepper-num">{s}</span>
+                  <span className="cell-stepper-num">{String(s).replace(".", ",")}</span>
                 </button>
               </div>
             ))}
@@ -950,7 +962,8 @@ export default function App() {
         thanh; <strong>+</strong> trên, <strong>−</strong> dưới); rời chuột giữ ~<strong>
           {HOVER_HOLD_MS / 1000}s
         </strong>
-        ; bước <strong>{SAN_STEP}</strong> / <strong>{CUON_CAN_STEP}</strong> / <strong>6·7·8</strong> (cầu) /{" "}
+        ; bước <strong>{SAN_STEP}</strong> / <strong>{CUON_CAN_STEP}</strong> /{" "}
+        <strong>6·7·7,5·8</strong> (cầu) /{" "}
         <strong>{SUOI_STEP}</strong> / <strong>{NUOC_NGOT_STEP}</strong>. Bấm <strong>STT</strong> để xem{" "}
         <strong>lịch sử mua hàng</strong> theo dòng đó (tab mới).
       </p>

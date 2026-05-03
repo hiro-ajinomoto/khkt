@@ -1,7 +1,11 @@
 export function formatMoney(n, { blankZero = true } = {}) {
   if (!Number.isFinite(n)) return "";
   if (n === 0 && blankZero) return "";
-  return new Intl.NumberFormat("vi-VN").format(Math.round(n));
+  const rounded = Math.round(n * 100) / 100;
+  return new Intl.NumberFormat("vi-VN", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(rounded);
 }
 
 export function formatViDate(iso) {
