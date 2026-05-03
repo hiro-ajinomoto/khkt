@@ -282,6 +282,7 @@ function HoverStepperCell({
   steps,
   ten,
   tdClassName,
+  columnTitle,
   groupLabel,
   onBump,
   onChangeField,
@@ -336,16 +337,19 @@ function HoverStepperCell({
             panelMany ? " cell-stepper-panel--many-steps cell-stepper-panel--anchored-below" : ""
           }`}
         >
-          <div
-            className={`cell-stepper-name${hasName ? "" : " cell-stepper-name--empty"}`}
-            title={hasName ? ten.trim() : undefined}
-          >
-            {hasName ? ten.trim() : "Chưa nhập tên"}
+          <div className="cell-stepper-headline">
+            <div className="cell-stepper-column-title">{columnTitle}</div>
+            <div
+              className={`cell-stepper-name${hasName ? "" : " cell-stepper-name--empty"}`}
+              title={hasName ? ten.trim() : undefined}
+            >
+              {hasName ? ten.trim() : "Chưa nhập tên"}
+            </div>
           </div>
           <div
             className={`cell-stepper-actions${multi ? " cell-stepper-actions--multi" : ""}`}
             role="group"
-            aria-label={`${groupLabel}: ${ariaSteps}`}
+            aria-label={`${columnTitle}, ${groupLabel}: ${ariaSteps}`}
           >
             {stepsList.map((s) => (
               <div key={`${field}-${String(s)}`} className="cell-stepper-pair" role="group" aria-label={`Bước ${String(s).replace(".", ",")}`}>
@@ -868,6 +872,7 @@ export default function App() {
                     step={SAN_STEP}
                     ten={r.ten}
                     tdClassName="col-num-tight col-stepper-td col-stepper-td--san"
+                    columnTitle="Sân"
                     groupLabel="Chỉnh sân"
                     onBump={bumpMoneyField}
                     onChangeField={updateRow}
@@ -879,6 +884,7 @@ export default function App() {
                     step={CUON_CAN_STEP}
                     ten={r.ten}
                     tdClassName="col-num-tight col-stepper-td"
+                    columnTitle="Cuốn cán"
                     groupLabel="Chỉnh cuốn cán"
                     onBump={bumpMoneyField}
                     onChangeField={updateRow}
@@ -890,6 +896,7 @@ export default function App() {
                     steps={CAU_STEPS}
                     ten={r.ten}
                     tdClassName="col-num-medium col-stepper-td"
+                    columnTitle="Cầu"
                     groupLabel="Chỉnh cầu"
                     onBump={bumpMoneyField}
                     onChangeField={updateRow}
@@ -901,6 +908,7 @@ export default function App() {
                     step={SUOI_STEP}
                     ten={r.ten}
                     tdClassName="col-num-medium col-stepper-td"
+                    columnTitle="Suối"
                     groupLabel="Chỉnh suối"
                     onBump={bumpMoneyField}
                     onChangeField={updateRow}
@@ -912,6 +920,7 @@ export default function App() {
                     step={NUOC_NGOT_STEP}
                     ten={r.ten}
                     tdClassName="col-num-tight col-stepper-td"
+                    columnTitle="Nước ngọt"
                     groupLabel="Chỉnh nước ngọt"
                     onBump={bumpMoneyField}
                     onChangeField={updateRow}
@@ -923,6 +932,7 @@ export default function App() {
                     steps={DO_AN_STEPS}
                     ten={r.ten}
                     tdClassName="col-num-medium col-stepper-td"
+                    columnTitle="Đồ ăn"
                     groupLabel="Chỉnh đồ ăn"
                     onBump={bumpMoneyField}
                     onChangeField={updateRow}

@@ -406,7 +406,7 @@
 .cell-stepper:hover .cell-stepper-panel,
 .cell-stepper:focus-within .cell-stepper-panel,
 .cell-stepper.cell-stepper--hold .cell-stepper-panel {
-  max-height: 7rem;
+  max-height: 8rem;
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
@@ -420,7 +420,7 @@
 .cell-stepper:hover .cell-stepper-panel--multi,
 .cell-stepper:focus-within .cell-stepper-panel--multi,
 .cell-stepper.cell-stepper--hold .cell-stepper-panel--multi {
-  max-height: 5.5rem;
+  max-height: 6.35rem;
 }
 
 /* Đồ ăn: 6 mức ± — tên một dòng, hàng nút có thể xuống dòng */
@@ -432,14 +432,14 @@
   max-width: min(34rem, 96vw);
 }
 
-.cell-stepper-panel--many-steps .cell-stepper-name {
-  flex: unset;
+.cell-stepper-panel--many-steps .cell-stepper-headline {
+  flex-shrink: 0;
 }
 
 .cell-stepper:hover .cell-stepper-panel--many-steps.cell-stepper-panel--multi,
 .cell-stepper:focus-within .cell-stepper-panel--many-steps.cell-stepper-panel--multi,
 .cell-stepper.cell-stepper--hold .cell-stepper-panel--many-steps.cell-stepper-panel--multi {
-  max-height: 11rem;
+  max-height: 12rem;
 }
 
 .cell-stepper-panel--many-steps .cell-stepper-actions--multi {
@@ -459,8 +459,34 @@
   padding: 0.18rem 0.2rem;
 }
 
-.cell-stepper-name {
+.cell-stepper-headline {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.12rem;
+}
+
+.cell-stepper-column-title {
+  align-self: flex-start;
+  max-width: 100%;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1.22;
+  color: #3730a3;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0.1rem 0.42rem;
+  border-radius: 999px;
+  background: #eef2ff;
+  border: 1px solid rgb(165 180 252 / 55%);
+}
+
+.cell-stepper-name {
   min-width: 0;
   font-size: 0.72rem;
   font-weight: 600;
