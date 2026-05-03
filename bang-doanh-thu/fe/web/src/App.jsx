@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getISOWeek, getISOWeekYear } from "date-fns";
 import { formatMoney, formatViDate, formatViDateTime } from "./formatMoney.js";
+import { NameSuggestInput } from "./NameSuggestInput.jsx";
 import "./App.css";
 
 const ROW_COUNT = 18;
@@ -210,6 +211,14 @@ function parseMoney(v) {
   return Number.isFinite(n) ? n : 0;
 }
 
+/** Chuẩn hoá SĐT (VN) như backend — được phép có +84 hoặc khoảng trắng. */
+function normalizeQuickPhone(raw) {
+  let s = String(raw ?? "").replace(/[\s().-]/g, "");
+  if (s.startsWith("+84")) s = "0" + s.slice(3);
+  else if (s.startsWith("84") && /^84\d+$/.test(s) && s.length >= 10) s = "0" + s.slice(2);
+  return s.replace(/\D/g, "").slice(0, 15);
+}
+
 function formatConNo(conNo, doanhThu) {
   if (doanhThu === 0 && conNo === 0) return "";
   return new Intl.NumberFormat("vi-VN").format(Math.round(conNo));
@@ -373,6 +382,14 @@ export default function App() {
   const [mongoTimestamps, setMongoTimestamps] = useState({ createdAt: null, updatedAt: null });
   /** Chi tiết từng lần bán (ghi Mongo `cellLedger`) */
   const [cellLedger, setCellLedger] = useState(emptyClientLedger);
+
+  const [quickName, setQuickName] = useState("");
+  const [quickNick, setQuickNick] = useState("");
+  const [quickPhone, setQuickPhone] = useState("");
+  const [quickBusy, setQuickBusy] = useState(false);
+  const [quickMsg, setQuickMsg] = useState(
+    /** @type {{ type: "ok" | "err"; text: string } | null} */ (null),
+  );
 
   const saveTimerRef = useRef(null);
 
@@ -549,6 +566,54 @@ export default function App() {
     setRows(blank);
     setCellLedger(blankLed);
     persist(reportDate, blank, blankLed);
+  }
+
+  async function handleQuickRegister(e) {
+    e.preventDefault();
+    setQuickMsg(null);
+    const name = quickName.trim().replace(/\s+/g, " ");
+    const nickname = quickNick.trim();
+    const phone = normalizeQuickPhone(quickPhone);
+    if (!name) {
+      setQuickMsg({ type: "err", text: "Nhập họ tên." });
+      return;
+    }
+    if (phone.length < 9 || phone.length > 12) {
+      setQuickMsg({ type: "err", text: "Số điện thoại cần 9–12 chữ số (vd. 0912345678)." });
+      return;
+    }
+    setQuickBusy(true);
+    try {
+      const r = await fetch("/api/revenue/people", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, nickname, phone }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (r.status === 409) {
+        setQuickMsg({ type: "err", text: "Tên này đã có trong danh bạ." });
+        return;
+      }
+      if (r.status === 400 && j.error === "invalid_phone") {
+        setQuickMsg({ type: "err", text: "Số điện thoại không hợp lệ." });
+        return;
+      }
+      if (!r.ok) {
+        setQuickMsg({ type: "err", text: "Không lưu được." });
+        return;
+      }
+      setQuickMsg({
+        type: "ok",
+        text: `Đã lưu «${j.name ?? name}». Gõ ô Tên trên bảng để gợi ý — có biệt danh và SĐT.`,
+      });
+      setQuickName("");
+      setQuickNick("");
+      setQuickPhone("");
+    } catch {
+      setQuickMsg({ type: "err", text: "Mất kết nối API." });
+    } finally {
+      setQuickBusy(false);
+    }
   }
 
   function onListModeChange(mode) {
@@ -735,7 +800,7 @@ export default function App() {
               <th>Đồ ăn</th>
               <th>Nợ cũ</th>
               <th className="col-computed">Doanh thu</th>
-              <th className="col-computed">Hôm nay trả</th>
+              <th className="col-computed col-hom-nay-tra th-compact">Hôm nay trả</th>
               <th>Còn nợ</th>
               <th className="col-note">Ghi chú</th>
             </tr>
@@ -757,11 +822,10 @@ export default function App() {
                     </a>
                   </td>
                   <td className="col-name-narrow">
-                    <input
-                      className="cell-input cell-text"
+                    <NameSuggestInput
+                      rowIndex={i}
                       value={r.ten}
-                      onChange={(e) => updateRow(i, "ten", e.target.value)}
-                      placeholder="—"
+                      onChange={(v) => updateRow(i, "ten", v)}
                     />
                   </td>
                   <HoverStepperCell
@@ -836,7 +900,7 @@ export default function App() {
                     />
                   </td>
                   <td className="cell-computed">{formatMoney(doanhThu, { blankZero: true })}</td>
-                  <td className="col-computed">
+                  <td className="col-computed col-hom-nay-tra">
                     <input
                       className="cell-input cell-num"
                       inputMode="decimal"
@@ -845,7 +909,7 @@ export default function App() {
                     />
                   </td>
                   <td className="cell-remaining">{formatConNo(conNo, doanhThu)}</td>
-                  <td>
+                  <td className="col-note">
                     <input
                       className="cell-input cell-text"
                       value={r.ghiChu}
@@ -867,11 +931,11 @@ export default function App() {
               <td>{formatMoney(totals.doAn, { blankZero: false })}</td>
               <td>{formatMoney(totals.noCu, { blankZero: false })}</td>
               <td className="cell-computed">{formatMoney(totals.doanhThu, { blankZero: false })}</td>
-              <td className="col-computed">
+              <td className="col-computed col-hom-nay-tra">
                 {formatMoney(totals.homNayTra, { blankZero: false })}
               </td>
               <td>{formatMoney(totals.conNo, { blankZero: false })}</td>
-              <td />
+              <td className="col-note" />
             </tr>
           </tbody>
         </table>
@@ -890,6 +954,73 @@ export default function App() {
         <strong>{SUOI_STEP}</strong> / <strong>{NUOC_NGOT_STEP}</strong>. Bấm <strong>STT</strong> để xem{" "}
         <strong>lịch sử mua hàng</strong> theo dòng đó (tab mới).
       </p>
+
+      <section className="quick-register" aria-labelledby="quick-register-heading">
+        <h2 id="quick-register-heading" className="quick-register-title">
+          Đăng ký nhanh vào danh bạ
+        </h2>
+        <p className="quick-register-lead">
+          Chỉ cần tên, biệt danh (tuỳ chọn) và số điện thoại. Sau đó gõ ô <strong>Tên</strong> trong bảng sẽ
+          gợi ý; có thể gõ một phần số để tìm.
+        </p>
+        <form className="quick-register-form" onSubmit={handleQuickRegister}>
+          <label className="quick-register-field">
+            <span>Tên</span>
+            <input
+              type="text"
+              name="quick-name"
+              autoComplete="name"
+              value={quickName}
+              onChange={(e) => setQuickName(e.target.value)}
+              placeholder="Họ và tên"
+              maxLength={200}
+              disabled={quickBusy}
+            />
+          </label>
+          <label className="quick-register-field">
+            <span>Biệt danh</span>
+            <input
+              type="text"
+              name="quick-nickname"
+              autoComplete="nickname"
+              value={quickNick}
+              onChange={(e) => setQuickNick(e.target.value)}
+              placeholder="Tuỳ chọn — vd. Béo"
+              maxLength={200}
+              disabled={quickBusy}
+            />
+          </label>
+          <label className="quick-register-field">
+            <span>Số điện thoại</span>
+            <input
+              type="tel"
+              name="quick-phone"
+              inputMode="tel"
+              autoComplete="tel"
+              value={quickPhone}
+              onChange={(e) => setQuickPhone(e.target.value)}
+              placeholder="0912 345 678 hoặc +84…"
+              maxLength={22}
+              disabled={quickBusy}
+            />
+          </label>
+          <div className="quick-register-submit-wrap">
+            <button type="submit" className="quick-register-submit" disabled={quickBusy}>
+              {quickBusy ? "Đang lưu…" : "Đăng ký"}
+            </button>
+          </div>
+        </form>
+        {quickMsg ? (
+          <p
+            className={
+              quickMsg.type === "ok" ? "quick-register-msg quick-register-msg--ok" : "quick-register-msg quick-register-msg--err"
+            }
+            role="status"
+          >
+            {quickMsg.text}
+          </p>
+        ) : null}
+      </section>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { getSheetsCollection } from "./db.js";
+import { peopleRouter } from "./peopleRouter.js";
 import {
   buildPersonHistory,
   computeTotals,
@@ -16,6 +17,8 @@ import {
 } from "./revenueUtils.js";
 
 export const revenueRouter = Router();
+
+revenueRouter.use("/people", peopleRouter);
 
 /** GET /api/revenue/sheets?year=2026&month=5 | &week=18 (tuần ISO, isoWeekYear = year) */
 revenueRouter.get("/sheets", async (req, res) => {
