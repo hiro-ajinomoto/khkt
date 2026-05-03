@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { getISOWeek, getISOWeekYear } from "date-fns";
 import { formatMoney } from "./formatMoney.js";
 import { getCalendarWeekSpansInMonth } from "./calendarSpans.js";
+import { getCauClicksPerQua } from "./cauShuttleRates.js";
 import "./App.css";
 
 const PRODUCT_ROWS = [
@@ -15,7 +16,12 @@ const PRODUCT_ROWS = [
   { key: "noCu", label: "Nợ cũ" },
 ];
 
-/** @typedef {{ meta: Record<string, unknown>; sheetCount: number; sumMoney: Record<string, number>; ledgerTxnCount: Record<string, number>; legacyCellCount: Record<string, number>; impliedUnits: Record<string, number | null>; impliedUnitPrices: Record<string, number> }} Agg */
+/** Khớp `CAU_STEPS` và BE `LEDGER_PRICE_STEPS_CAU`. */
+const CAU_PRICE_STEPS = [6, 7, 7.5, 8];
+/** Khớp `DO_AN_STEPS` và BE `LEDGER_PRICE_STEPS_DO_AN`. */
+const DO_AN_PRICE_STEPS = [5, 6, 7, 8, 9, 10];
+
+/** @typedef {{ meta: Record<string, unknown>; sheetCount: number; sumMoney: Record<string, number>; ledgerTxnCount: Record<string, number>; legacyCellCount: Record<string, number>; ledgerTierTxnCount?: Record<string, Record<string, number>>; impliedUnits: Record<string, number | null>; impliedUnitPrices: Record<string, number> }} Agg */
 
 function fmtUnits(n) {
   if (n == null || n === "") return "—";
@@ -24,6 +30,95 @@ function fmtUnits(n) {
     minimumFractionDigits: Number.isInteger(n) ? 0 : 2,
     maximumFractionDigits: 2,
   }).format(n);
+}
+
+/** Hiển thị nhãn bước giá Vi (7,5 thay cho 7.5). */
+function fmtPriceStep(step) {
+  if (Number.isInteger(step)) return String(step);
+  return String(step).replace(".", ",");
+}
+
+/** @param {Record<string, number> | undefined} tiers */
+function sumKnownTierTxns(tiers, stepOrder) {
+  if (!tiers || typeof tiers !== "object") return 0;
+  return stepOrder.reduce((s, step) => s + (Number(tiers[String(step)]) || 0), 0);
+}
+
+/**
+ * Mỗi mức giá một dòng trong danh sách (cầu).
+ * @param {Record<string, number> | undefined} tiers
+ * @returns {import("react").JSX.Element[]}
+ */
+function cauTierRows(tiers, stepOrder) {
+  /** @type {import("react").JSX.Element[]} */
+  const out = [];
+  if (!tiers || typeof tiers !== "object") return out;
+  for (const s of stepOrder) {
+    const n = Number(tiers[String(s)]) || 0;
+    if (n <= 0) continue;
+    const perQua = getCauClicksPerQua(s);
+    const qua = n / perQua;
+    out.push(
+      <li key={`cau-${String(s)}`} className="aggregate-tier-stack-row">
+        <span className="aggregate-tier-stack-step">±{fmtPriceStep(s)}:</span>{" "}
+        <span className="aggregate-tier-stack-metric">
+          {n.toLocaleString("vi-VN")} lần → ≈ <strong>{fmtUnits(qua)} quả</strong>
+        </span>
+        <span className="aggregate-tier-stack-rule"> ({perQua} lần = 1 quả)</span>
+      </li>,
+    );
+  }
+  const ot = tiers.other;
+  if (typeof ot === "number" && ot > 0) {
+    out.push(
+      <li key="cau-other" className="aggregate-tier-stack-row aggregate-tier-stack-row--muted">
+        {ot.toLocaleString("vi-VN")} lần không khớp bước ± (không quy được số quả)
+      </li>,
+    );
+  }
+  return out;
+}
+
+/**
+ * @param {Record<string, number> | undefined} tiers
+ * @returns {import("react").JSX.Element[]}
+ */
+function doAnTierRows(tiers, stepOrder) {
+  /** @type {import("react").JSX.Element[]} */
+  const out = [];
+  if (!tiers || typeof tiers !== "object") return out;
+  for (const s of stepOrder) {
+    const n = Number(tiers[String(s)]) || 0;
+    if (n <= 0) continue;
+    out.push(
+      <li key={`doAn-${String(s)}`} className="aggregate-tier-stack-row">
+        <span className="aggregate-tier-stack-step">±{fmtPriceStep(s)}:</span>{" "}
+        <strong>{n.toLocaleString("vi-VN")} suất</strong>
+        <span className="aggregate-tier-stack-rule"> (1 lần ± = 1 suất)</span>
+      </li>,
+    );
+  }
+  const ot = tiers.other;
+  if (typeof ot === "number" && ot > 0) {
+    out.push(
+      <li key="doAn-other" className="aggregate-tier-stack-row aggregate-tier-stack-row--muted">
+        {ot.toLocaleString("vi-VN")} lần không khớp bước ±
+      </li>,
+    );
+  }
+  return out;
+}
+
+/** Quả (ước) từ các mức đã nhận dạng; không tính `other`. */
+function sumEstimatedCauQua(tiers, stepOrder) {
+  if (!tiers || typeof tiers !== "object") return 0;
+  let sum = 0;
+  for (const s of stepOrder) {
+    const n = Number(tiers[String(s)]) || 0;
+    if (n <= 0) continue;
+    sum += n / getCauClicksPerQua(s);
+  }
+  return sum;
 }
 
 export default function AggregateReport() {
@@ -125,12 +220,15 @@ export default function AggregateReport() {
         <h1 className="sheet-title aggregate-title">Tổng hợp doanh thu theo kỳ</h1>
         <p className="aggregate-intro">
           Gộp tất cả phiếu ngày trong kỳ: <strong>tổng tiền</strong> theo mặt hàng,{" "}
-          <strong>số lần bán qua ±</strong> (mỗi dòng trong sổ chi tiết = một lần), và ô nhập không có chi tiết
-          (phiếu cũ). Với đơn giá cố định (±{data?.impliedUnitPrices?.san ?? 15} sân · ±
+          <strong>số lần bán qua ±</strong> (mỗi dòng trong sổ chi tiết = một lần vào đúng mức tiền), và ô nhập không
+          có chi tiết (phiếu cũ). Với đơn giá cố định (±{data?.impliedUnitPrices?.san ?? 15} sân · ±
           {data?.impliedUnitPrices?.cuonCan ?? 10} cuốn · ±{data?.impliedUnitPrices?.suoi5k ?? 5} suối · ±
-          {data?.impliedUnitPrices?.nuocNgot10k ?? 10} NN) có{" "}
-          <strong>số đơn vị ước lượng</strong>; <strong>cầu</strong> và <strong>đồ ăn</strong> có nhiều mức giá
-          — đối chiếu chủ yếu bằng tổng tiền và số lần bấm ±.
+          {data?.impliedUnitPrices?.nuocNgot10k ?? 10} NN) có <strong>số đơn vị ước lượng</strong>. Với{" "}
+          <strong>cầu</strong>, mỗi lần ± chỉ là <strong>một phần thanh toán theo bước</strong> — cần{" "}
+          <strong>đủ N lần</strong> (theo mức giá) mới tương đương <strong>1 quả</strong>; số N chỉnh trong{" "}
+          <code className="aggregate-code-ref">src/cauShuttleRates.js</code> (hiện <strong>4 lần ±6k = 1 quả</strong>).
+          <strong> Đồ ăn</strong> đang giữ <strong>mỗi lần ± khớp bước = 1 suất</strong>. Phần chỉ gõ tay không chia theo mức
+          được.
         </p>
 
         <div className="aggregate-toolbar">
@@ -261,9 +359,9 @@ export default function AggregateReport() {
                   const denom = /** @type {number | undefined} */ (data.impliedUnitPrices?.[key]);
                   const note =
                     key === "cau"
-                      ? "Giá ±6·7·7,5·8 — chỉ có lần bán và tổng tiền"
+                      ? "Không phải 1 lần ± = 1 quả — số lần / 1 quả theo từng mức: chỉnh src/cauShuttleRates.js (±6 đang 4 lần = 1 quả)"
                       : key === "doAn"
-                        ? "Giá ±5…10 — chỉ có lần bán và tổng tiền"
+                        ? "Quy ước 1 lần ± khớp bước = 1 suất — tổng = cộng các mức (xem ô bên)"
                         : key === "noCu"
                           ? "Tổng nợ cũ trong kỳ — không chia đơn vị"
                           : denom
@@ -274,6 +372,26 @@ export default function AggregateReport() {
                     ["san", "cuonCan", "suoi5k", "nuocNgot10k"].includes(key) ? data.impliedUnits?.[key] : null
                   );
 
+                  const tierRows =
+                    key === "cau"
+                      ? cauTierRows(data.ledgerTierTxnCount?.cau, CAU_PRICE_STEPS)
+                      : key === "doAn"
+                        ? doAnTierRows(data.ledgerTierTxnCount?.doAn, DO_AN_PRICE_STEPS)
+                        : [];
+                  const cauClicksKnown =
+                    key === "cau"
+                      ? sumKnownTierTxns(data.ledgerTierTxnCount?.cau, CAU_PRICE_STEPS)
+                      : null;
+                  const cauQuaEstimated =
+                    key === "cau"
+                      ? sumEstimatedCauQua(data.ledgerTierTxnCount?.cau, CAU_PRICE_STEPS)
+                      : null;
+
+                  const tierSumSuat =
+                    key === "doAn"
+                      ? sumKnownTierTxns(data.ledgerTierTxnCount?.doAn, DO_AN_PRICE_STEPS)
+                      : null;
+
                   return (
                     <tr key={key}>
                       <td>
@@ -282,8 +400,43 @@ export default function AggregateReport() {
                       <td className="cell-num-report">{formatMoney(data.sumMoney?.[key] ?? 0, { blankZero: false })}</td>
                       <td>{(data.ledgerTxnCount?.[key] ?? 0).toLocaleString("vi-VN")}</td>
                       <td>{(data.legacyCellCount?.[key] ?? 0).toLocaleString("vi-VN")}</td>
-                      <td className="cell-num-report">
-                        {["san", "cuonCan", "suoi5k", "nuocNgot10k"].includes(key) ? fmtUnits(imp) : "—"}
+                      <td className="aggregate-tier-units-cell">
+                        {tierRows.length > 0 ? (
+                          <>
+                            <ul
+                              className="aggregate-tier-row-list"
+                              aria-label={key === "cau" ? "Cầu theo mức giá" : "Đồ ăn theo mức giá"}
+                            >
+                              {tierRows}
+                            </ul>
+                            {key === "cau" &&
+                            typeof cauClicksKnown === "number" &&
+                            cauClicksKnown > 0 &&
+                            Number.isFinite(cauQuaEstimated) &&
+                            cauQuaEstimated > 0 ? (
+                              <div className="aggregate-tier-total-line">
+                                <strong>Tổng quả (ước):</strong> ≈ {fmtUnits(cauQuaEstimated)} quả ·{" "}
+                                <span className="aggregate-tier-subdued">
+                                  {cauClicksKnown.toLocaleString("vi-VN")} lần vào các mức đã nhận dạng
+                                </span>
+                              </div>
+                            ) : null}
+                            {key === "doAn" &&
+                            typeof tierSumSuat === "number" &&
+                            tierSumSuat > 0 ? (
+                              <div className="aggregate-tier-total-line">
+                                <strong>Tổng {DO_AN_PRICE_STEPS.length} mức giá (đồ ăn):</strong>{" "}
+                                {tierSumSuat.toLocaleString("vi-VN")}{" "}
+                                <span className="aggregate-tier-unit-name">suất</span>
+                                {" (1 lần ± đúng bước = 1 suất)"}
+                              </div>
+                            ) : null}
+                          </>
+                        ) : ["san", "cuonCan", "suoi5k", "nuocNgot10k"].includes(key) ? (
+                          <span className="cell-num-report">{fmtUnits(imp)}</span>
+                        ) : (
+                          "—"
+                        )}
                       </td>
                       <td className="aggregate-notes-cell">{note}</td>
                     </tr>
@@ -315,10 +468,12 @@ export default function AggregateReport() {
             <p>
               <strong>* Ước đơn vị</strong> chỉ có nghĩa nếu mọi lần bán đều đúng bước cố định (±
               {data.impliedUnitPrices?.san ?? 15} sân, ±{data.impliedUnitPrices?.cuonCan ?? 10} cuốn, ±
-              {data.impliedUnitPrices?.suoi5k ?? 5} suối, ±{data.impliedUnitPrices?.nuocNgot10k ?? 10} NN).{" "}
-              <strong>Gõ tay</strong> một số vào ô mà không dùng ± vẫn đúng tiền nhưng chỉ được đếm ở cột{' '}
-              <em>Chỉ gõ tay</em> (ưu độ chính xác tổng tiền, không chia đơn vị). So với kiểm kê thực tế phải tự nhớ cả các
-              mức giá khác và trả khách sau phiếu.
+              {data.impliedUnitPrices?.suoi5k ?? 5} suối, ±{data.impliedUnitPrices?.nuocNgot10k ?? 10} NN). Với{" "}
+              <strong>cầu</strong>, tổng <strong>số quả là ước</strong>: cộng theo đúng{' '}
+              <strong>bao nhiêu lần ± / 1 quả</strong> tại từng mức (đang cấu hình trong{" "}
+              <code className="aggregate-code-ref">src/cauShuttleRates.js</code>). Với <strong>đồ ăn</strong>, hiện vẫn{" "}
+              <strong>1 lần ± đúng bước = 1 suất</strong>. Dòng sổ không khớp bước ± không quy vào số quả / suất này.{" "}
+              <strong>Gõ tay</strong> vào ô không dùng ± chỉ phản ánh ở tổng tiền và cột <em>Chỉ gõ tay</em>.
             </p>
           </footer>
         </>

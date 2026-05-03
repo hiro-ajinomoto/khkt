@@ -456,6 +456,59 @@ const IMPLIED_UNIT_PRICE = {
   nuocNgot10k: 10,
 };
 
+/** Khớp bước giá ô Cầu (web App.jsx `CAU_STEPS`). */
+export const LEDGER_PRICE_STEPS_CAU = Object.freeze([6, 7, 7.5, 8]);
+/** Khớp bước giá ô Đồ ăn (web `DO_AN_STEPS`). */
+export const LEDGER_PRICE_STEPS_DO_AN = Object.freeze([5, 6, 7, 8, 9, 10]);
+
+function normalizeLedgerLineAmount(amount) {
+  const n =
+    typeof amount === "number" && Number.isFinite(amount) ? amount : parseMoney(String(amount ?? ""));
+  return Math.round(Math.abs(n) * 100) / 100;
+}
+
+/**
+ * Chuẩn hóa một dòng ± về một bước giá trong `steps`; null nếu không khớp (gõ tay / sai bước).
+ * @param {number[]} steps
+ */
+function classifyLedgerTxnByPriceStep(amount, steps) {
+  const aNorm = normalizeLedgerLineAmount(amount);
+  const cents = Math.round(aNorm * 100);
+  for (const s of steps) {
+    const sc = Math.round(Math.abs(Number(s)) * 100);
+    if (sc === cents) return s;
+  }
+  return null;
+}
+
+/**
+ * Đếm số **dòng sổ** (mỗi lần ± = 1) theo đúng đơn vị tiền từng bước.
+ * Khóa là chuỗi (vd. "7.5"); `other` = dòng không khớp bước nào.
+ * @returns {Record<string, number>}
+ */
+function emptyTierBuckets(steps) {
+  /** @type {Record<string, number>} */
+  const o = {};
+  for (const s of steps) o[String(s)] = 0;
+  o.other = 0;
+  return o;
+}
+
+/**
+ * @param {Record<string, number>} buckets
+ */
+function mergeTierBuckets(buckets, ledger, fieldKey, steps) {
+  for (let i = 0; i < ROW_COUNT; i++) {
+    const entries = ledger[i]?.[fieldKey];
+    if (!Array.isArray(entries)) continue;
+    for (const e of entries) {
+      const matched = classifyLedgerTxnByPriceStep(e?.amount, steps);
+      if (matched == null) buckets.other += 1;
+      else buckets[String(matched)] += 1;
+    }
+  }
+}
+
 /**
  * Gộp tất cả phiếu trong kỳ để đối chiếu tiền vs "số lần bán" từ ledger.
  * @param {Array<{ rows?: unknown; cellLedger?: unknown }>} docs — nên chứa đủ rows + cellLedger
@@ -483,6 +536,9 @@ export function aggregateSheetsInsight(docs) {
     legacyCellCount[key] = 0;
   }
 
+  const tierBucketsCau = emptyTierBuckets(LEDGER_PRICE_STEPS_CAU);
+  const tierBucketsDoAn = emptyTierBuckets(LEDGER_PRICE_STEPS_DO_AN);
+
   const serverNow = new Date();
   for (const doc of docs) {
     const rows = normalizeRows(Array.isArray(doc.rows) ? doc.rows : []);
@@ -508,6 +564,9 @@ export function aggregateSheetsInsight(docs) {
         else if (parseMoney(rows[i]?.[key]) > 0) legacyCellCount[key] += 1;
       }
     }
+
+    mergeTierBuckets(tierBucketsCau, ledger, "cau", LEDGER_PRICE_STEPS_CAU);
+    mergeTierBuckets(tierBucketsDoAn, ledger, "doAn", LEDGER_PRICE_STEPS_DO_AN);
   }
 
   /** @type {Record<string, number | null>} */
@@ -530,6 +589,10 @@ export function aggregateSheetsInsight(docs) {
     sumMoney,
     ledgerTxnCount,
     legacyCellCount,
+    ledgerTierTxnCount: {
+      cau: tierBucketsCau,
+      doAn: tierBucketsDoAn,
+    },
     impliedUnits,
     impliedUnitPrices: { ...IMPLIED_UNIT_PRICE },
   };
