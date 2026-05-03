@@ -1591,6 +1591,134 @@
   color: #475569;
 }
 
+.member-debt-balance-card {
+  margin: 0 0 1.25rem;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  border: 1px solid #bae6fd;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  max-width: 28rem;
+}
+
+.member-debt-balance-card-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #0369a1;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.member-debt-balance-card-value {
+  margin: 0.35rem 0 0.25rem;
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #0c4a6e;
+  line-height: 1.15;
+}
+
+.member-debt-balance-card-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #475569;
+  line-height: 1.35;
+}
+
+.member-debt-tru-panel {
+  margin: 0 0 1.25rem;
+  padding: 1rem 1.1rem;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  max-width: 40rem;
+}
+
+.member-debt-tru-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.member-debt-tru-intro {
+  margin: 0 0 0.85rem;
+  font-size: 0.86rem;
+  color: #475569;
+  line-height: 1.45;
+}
+
+.member-debt-tru-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.65rem 0.75rem;
+}
+
+.member-debt-tru-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.82rem;
+  color: #475569;
+}
+
+.member-debt-tru-field--grow {
+  flex: 1 1 12rem;
+  min-width: 10rem;
+}
+
+.member-debt-tru-input {
+  font: inherit;
+  font-size: 0.92rem;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  min-width: 8rem;
+}
+
+.member-debt-tru-submit {
+  background: #b45309;
+  color: #fff;
+  border: none;
+  padding: 0.45rem 0.85rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.member-debt-tru-submit:hover:not(:disabled) {
+  background: #92400e;
+}
+
+.member-debt-tru-submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.member-debt-tru-msg {
+  margin: 0.65rem 0 0;
+  font-size: 0.86rem;
+  color: #b91c1c;
+}
+
+.member-debt-tru-msg--ok {
+  color: #15803d;
+}
+
+.member-debt-empty-history {
+  margin: 0 0 0.5rem;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.member-debt-month-footer {
+  background: #f8fafc;
+  font-weight: 600;
+}
+
+.member-debt-month-footer td {
+  border-top: 2px solid #cbd5e1;
+}
+
 .member-debt-year-total {
   margin: 0.5rem 0 1rem;
   font-size: 0.95rem;

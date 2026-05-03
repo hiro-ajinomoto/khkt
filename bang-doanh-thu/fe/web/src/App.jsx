@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { getISOWeek, getISOWeekYear } from "date-fns";
-import { formatMoney, formatViDate, formatViDateTime } from "./formatMoney.js";
+import { formatMoney, formatViDate, formatViDateTime, parseMoney } from "./formatMoney.js";
 import { NameSuggestInput } from "./NameSuggestInput.jsx";
 import ConNoLedgerHoverCell, { emptyClientConNoLedger, normalizeApiConNoLedger } from "./ConNoLedgerHoverCell.jsx";
 import { getCalendarWeekSpansInMonth } from "./calendarSpans.js";
@@ -211,20 +211,6 @@ const emptyRow = () => ({
   homNayTra: "",
   ghiChu: "",
 });
-
-function parseMoney(v) {
-  if (v === "" || v == null) return 0;
-  let s = String(v).replace(/\s/g, "").trim();
-  if (!s) return 0;
-  if (/^(\d{1,3})(\.\d{3})+$/.test(s)) {
-    return Number(s.replace(/\./g, "")) || 0;
-  }
-  if (/^\d+,\d+$/.test(s)) {
-    return Number(s.replace(",", ".")) || 0;
-  }
-  const n = Number(s.replace(/,/g, ""));
-  return Number.isFinite(n) ? n : 0;
-}
 
 /** Chuẩn hoá SĐT (VN) như backend — được phép có +84 hoặc khoảng trắng. */
 function normalizeQuickPhone(raw) {

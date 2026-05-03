@@ -4,6 +4,14 @@ import { getPeopleCollection, getSheetsCollection } from "./db.js";
 import {
   aggregatePersonConNoLedgerLines,
   aggregatePersonDebtByYearMonth,
+  computeRow,
+  computeTotals,
+  emptyConNoLedger,
+  normalizeConNoLedger,
+  normalizeRows,
+  parseMoney,
+  ROW_COUNT,
+  sumConNoLedgerNetForRow,
 } from "./revenueUtils.js";
 
 export const peopleRouter = Router();
@@ -177,8 +185,143 @@ peopleRouter.get("/:id/debt", async (req, res) => {
     debtLedgerTotals,
     help: {
       conNo:
-        "«Còn nợ» trên phiếu = (Doanh thu − Hôm nay trả) + nếu có điều chỉnh cộng/trừ (loại cong/tru). Hover ô Còn nợ → Ghi nợ: lưu đúng số đang hiển thị vào lịch sử (không đổi số trong ô). Tổng theo người = các dòng trùng tên trên phiếu trong năm.",
+        "«Còn nợ» trên phiếu = (Doanh thu − Hôm nay trả) + nếu có điều chỉnh cộng/trừ (loại cong/tru). Hover ô Còn nợ → Ghi nợ: lưu đúng số đang hiển thị vào lịch sử (không đổi số trong ô). Tổng theo người = các dòng trùng tên trên phiếu trong năm. Trừ nợ: form trên trang này (có thời điểm server, lưu vào phiếu mới nhất có dòng trùng tên).",
     },
+  });
+});
+
+/**
+ * POST /api/revenue/people/:id/debt/tru
+ * body: { amount, note?, year? } — ghi trả nợ (kind tru) có thời điểm server; cập nhật phiếu mới nhất có dòng trùng tên.
+ */
+peopleRouter.post("/:id/debt/tru", async (req, res) => {
+  let oid;
+  try {
+    oid = new ObjectId(String(req.params.id));
+  } catch {
+    return res.status(400).json({ error: "invalid_id" });
+  }
+
+  const rawYear = parseInt(String(req.body?.year ?? req.query.year ?? ""), 10);
+  const year =
+    Number.isFinite(rawYear) && rawYear >= 2000 && rawYear <= 2100
+      ? rawYear
+      : new Date().getFullYear();
+
+  const rawAmt = req.body?.amount;
+  let amount =
+    typeof rawAmt === "number" && Number.isFinite(rawAmt) ? rawAmt : parseMoney(String(rawAmt ?? ""));
+  amount = Math.round(Math.abs(amount) * 100) / 100;
+  if (!(amount > 0)) {
+    return res.status(400).json({ error: "invalid_amount" });
+  }
+
+  const note =
+    typeof req.body?.note === "string" ? req.body.note.trim().slice(0, 500) : "";
+
+  const peopleColl = getPeopleCollection();
+  const person = await peopleColl.findOne(
+    { _id: oid },
+    { projection: { name: 1, nameNorm: 1 } },
+  );
+  if (!person) {
+    return res.status(404).json({ error: "not_found" });
+  }
+
+  const nameNorm = person.nameNorm || normalizePersonKey(person.name);
+
+  const sheetsColl = getSheetsCollection();
+  const sheetDocs = await sheetsColl
+    .find(
+      { year },
+      {
+        projection: {
+          rows: 1,
+          reportDate: 1,
+          conNoLedger: 1,
+          year: 1,
+        },
+      },
+    )
+    .sort({ reportDate: -1 })
+    .toArray();
+
+  /** @type {{ doc: (typeof sheetDocs)[0]; rowIdx: number } | null} */
+  let chosen = null;
+  for (const doc of sheetDocs) {
+    const rows = normalizeRows(doc.rows);
+    if (!rows) continue;
+    const cnNorm = normalizeConNoLedger(doc.conNoLedger);
+    let bestLocal = null;
+    for (let i = 0; i < ROW_COUNT; i++) {
+      if (normalizePersonKey(rows[i].ten) !== nameNorm) continue;
+      const { conNo: base } = computeRow(rows[i]);
+      const adj = sumConNoLedgerNetForRow(cnNorm[i] || []);
+      const conNo = Math.round((base + adj) * 100) / 100;
+      if (!bestLocal || conNo > bestLocal.conNo) {
+        bestLocal = { rowIdx: i, conNo };
+      }
+    }
+    if (bestLocal) {
+      chosen = { doc, rowIdx: bestLocal.rowIdx };
+      break;
+    }
+  }
+
+  if (!chosen) {
+    return res.status(400).json({
+      error: "no_sheet_row",
+      message:
+        "Chưa có dòng trùng tên trên phiếu trong năm này. Thêm người trên bảng doanh thu trước.",
+    });
+  }
+
+  const now = new Date();
+  const rows = normalizeRows(chosen.doc.rows);
+  if (!rows) {
+    return res.status(500).json({ error: "invalid_sheet" });
+  }
+
+  const padded = emptyConNoLedger();
+  const rawLed = chosen.doc.conNoLedger;
+  if (Array.isArray(rawLed)) {
+    for (let i = 0; i < ROW_COUNT; i++) {
+      const arr = rawLed[i];
+      if (!Array.isArray(arr)) continue;
+      for (const e of arr) {
+        if (!e || typeof e !== "object") continue;
+        padded[i].push({
+          kind: e.kind,
+          amount: e.amount,
+          at: e.at,
+          note: e.note,
+        });
+      }
+    }
+  }
+  padded[chosen.rowIdx].push({
+    kind: "tru",
+    amount,
+    at: now,
+    note,
+  });
+
+  const conNoLedger = normalizeConNoLedger(padded, now);
+  const totals = computeTotals(rows, conNoLedger);
+
+  await sheetsColl.updateOne(
+    { _id: chosen.doc._id },
+    { $set: { conNoLedger, totals, updatedAt: now } },
+  );
+
+  res.json({
+    ok: true,
+    year,
+    reportDate: chosen.doc.reportDate,
+    stt: chosen.rowIdx + 1,
+    amount,
+    at: now.toISOString(),
+    note,
   });
 });
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { formatMoney, formatViDateTime } from "./formatMoney.js";
+import { formatMoney, formatViDateTime, parseMoney } from "./formatMoney.js";
 import "./App.css";
 
 /** @typedef {{ id: string; name: string; nickname: string; phone: string }} Person */
@@ -14,6 +14,11 @@ export default function MemberDebtPage() {
   const [payload, setPayload] = useState(/** @type {Record<string, unknown> | null} */ (null));
   const [err, setErr] = useState(/** @type {string | null} */ (null));
   const [busy, setBusy] = useState(true);
+
+  const [truAmount, setTruAmount] = useState("");
+  const [truNote, setTruNote] = useState("");
+  const [truBusy, setTruBusy] = useState(false);
+  const [truMsg, setTruMsg] = useState(/** @type {{ type: "ok" | "err"; text: string } | null} */ (null));
 
   const load = useCallback(async () => {
     if (!personId) return;
@@ -50,6 +55,53 @@ export default function MemberDebtPage() {
   const months = Array.isArray(payload?.months) ? payload.months : [];
   const debtLines = Array.isArray(payload?.debtLedgerLines) ? /** @type {LedgerLine[]} */ (payload.debtLedgerLines) : [];
   const totals = payload?.debtLedgerTotals;
+  const yearTotalConNo = typeof payload?.yearTotalConNo === "number" ? payload.yearTotalConNo : 0;
+
+  async function submitTruNo(e) {
+    e.preventDefault();
+    if (!personId || truBusy) return;
+    setTruMsg(null);
+    const amt = Math.round(parseMoney(truAmount) * 100) / 100;
+    if (!(amt > 0)) {
+      setTruMsg({ type: "err", text: "Nhập số tiền trừ nợ lớn hơn 0." });
+      return;
+    }
+    setTruBusy(true);
+    try {
+      const r = await fetch(`/api/revenue/people/${encodeURIComponent(personId)}/debt/tru`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: amt, note: truNote.trim(), year }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (r.status === 400 && j.error === "no_sheet_row") {
+        setTruMsg({ type: "err", text: String(j.message || "Chưa có dòng trùng tên trên phiếu.") });
+        return;
+      }
+      if (r.status === 400 && j.error === "invalid_amount") {
+        setTruMsg({ type: "err", text: "Số tiền không hợp lệ." });
+        return;
+      }
+      if (!r.ok) {
+        setTruMsg({ type: "err", text: "Không lưu được trừ nợ." });
+        return;
+      }
+      const atStr = typeof j.at === "string" ? j.at : "";
+      setTruMsg({
+        type: "ok",
+        text: `Đã trừ nợ ${formatMoney(amt, { blankZero: false })} · ${atStr ? formatViDateTime(atStr) : ""}${j.reportDate ? ` · phiếu ${j.reportDate}` : ""}`,
+      });
+      setTruAmount("");
+      setTruNote("");
+      await load();
+    } catch {
+      setTruMsg({ type: "err", text: "Mất kết nối API." });
+    } finally {
+      setTruBusy(false);
+    }
+  }
+
+  const monthLineSum = months.reduce((s, m) => s + (typeof m.lineCount === "number" ? m.lineCount : 0), 0);
 
   return (
     <div className="app app--members">
@@ -90,6 +142,60 @@ export default function MemberDebtPage() {
         </div>
       </header>
 
+      {!busy && payload && (
+        <section className="member-debt-balance-card" aria-label="Tổng còn nợ">
+          <div className="member-debt-balance-card-label">Tổng còn nợ (năm {payload.year})</div>
+          <div className="member-debt-balance-card-value">{formatMoney(yearTotalConNo, { blankZero: false })}</div>
+          <p className="member-debt-balance-card-hint">
+            Tổng các dòng trùng tên trên phiếu trong năm (đã gồm trả / trừ nợ trên phiếu).
+          </p>
+        </section>
+      )}
+
+      {!busy && personId && (
+        <section className="member-debt-tru-panel" aria-label="Trừ nợ">
+          <h2 className="member-debt-tru-title">Trừ nợ (trả nợ)</h2>
+          <p className="member-debt-tru-intro">
+            Ghi một lần trừ nợ: hệ thống lưu <strong>thời điểm giao dịch</strong> (theo giờ máy chủ) và hiển thị trong
+            bảng lịch sử dưới đây (loại «Trả nợ»). Số «Còn nợ» tổng và theo tháng sẽ cập nhật.
+          </p>
+          <form className="member-debt-tru-form" onSubmit={submitTruNo}>
+            <label className="member-debt-tru-field">
+              <span>Số tiền trừ</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
+                placeholder="vd. 50000 hoặc 50.000"
+                value={truAmount}
+                onChange={(e) => setTruAmount(e.target.value)}
+                disabled={truBusy}
+                className="member-debt-tru-input"
+              />
+            </label>
+            <label className="member-debt-tru-field member-debt-tru-field--grow">
+              <span>Ghi chú (tuỳ chọn)</span>
+              <input
+                type="text"
+                maxLength={500}
+                value={truNote}
+                onChange={(e) => setTruNote(e.target.value)}
+                disabled={truBusy}
+                className="member-debt-tru-input"
+              />
+            </label>
+            <button type="submit" className="members-btn member-debt-tru-submit" disabled={truBusy}>
+              {truBusy ? "Đang lưu…" : "Ghi trừ nợ"}
+            </button>
+          </form>
+          {truMsg && (
+            <p className={truMsg.type === "ok" ? "member-debt-tru-msg member-debt-tru-msg--ok" : "member-debt-tru-msg"}>
+              {truMsg.text}
+            </p>
+          )}
+        </section>
+      )}
+
       {payload?.help?.conNo && <p className="members-intro member-debt-help">{String(payload.help.conNo)}</p>}
 
       {err && <p className="mongo-warn">{err}</p>}
@@ -97,58 +203,64 @@ export default function MemberDebtPage() {
 
       {!busy && payload && totals && (
         <p className="member-debt-year-total">
-          Tổng «Còn nợ» (phiếu + ghi nợ) trong năm {payload.year}:{" "}
-          <strong>{formatMoney(/** @type {number} */ (payload.yearTotalConNo), { blankZero: false })}</strong>
-          <span className="member-debt-year-total-note">
-            {" "}
-            · Đã ghi thêm nợ: <strong>{formatMoney(totals.cong, { blankZero: false })}</strong>
-            {" · "}
-            Đã ghi trả: <strong>{formatMoney(totals.tru, { blankZero: false })}</strong>
-            {typeof totals.ghi === "number" && totals.ghi > 0 ? (
-              <>
-                {" · "}
-                Ghi nhận số nợ (hover): <strong>{formatMoney(totals.ghi, { blankZero: false })}</strong>
-              </>
-            ) : null}
-          </span>
+          Chi tiết sổ (năm {payload.year}): Đã ghi thêm nợ{" "}
+          <strong>{formatMoney(totals.cong, { blankZero: false })}</strong>
+          {" · "}
+          Đã ghi trả / trừ: <strong>{formatMoney(totals.tru, { blankZero: false })}</strong>
+          {typeof totals.ghi === "number" && totals.ghi > 0 ? (
+            <>
+              {" · "}
+              Ghi nhận số nợ (hover): <strong>{formatMoney(totals.ghi, { blankZero: false })}</strong>
+            </>
+          ) : null}
         </p>
       )}
 
-      {!busy && debtLines.length > 0 && (
+      {!busy && (
         <div className="table-wrap members-table-wrap">
           <h2 className="aggregate-section-title" style={{ marginBottom: "0.5rem" }}>
             Lịch sử ghi nợ / trả nợ / ghi nhận (cộng dồn theo tên)
           </h2>
-          <table className="revenue-table members-table">
-            <thead>
-              <tr>
-                <th>Thời điểm</th>
-                <th>Ngày phiếu</th>
-                <th>STT</th>
-                <th>Loại</th>
-                <th className="cell-num-report">Số tiền</th>
-                <th>Ghi chú</th>
-              </tr>
-            </thead>
-            <tbody>
-              {debtLines.map((ln, i) => (
-                <tr key={`${ln.at}-${i}`}>
-                  <td className="members-meta">{formatViDateTime(ln.at)}</td>
-                  <td>
-                    <Link to={`/?date=${encodeURIComponent(ln.reportDate)}`}>{ln.reportDate}</Link>
-                  </td>
-                  <td>{ln.stt}</td>
-                  <td>
-                    {ln.kind === "cong" ? "Ghi nợ" : ln.kind === "tru" ? "Trả nợ" : ln.kind === "ghi" ? "Ghi nhận" : ln.kind}
-                  </td>
-                  <td className="cell-num-report">
-                    {formatMoney(ln.kind === "tru" ? -ln.amount : ln.amount, { blankZero: false })}
-                  </td>
-                  <td>{ln.note || "—"}</td>
+          {debtLines.length === 0 ? (
+            <p className="members-intro member-debt-empty-history">Chưa có dòng lịch sử trong năm {year}.</p>
+          ) : (
+            <table className="revenue-table members-table">
+              <thead>
+                <tr>
+                  <th>Thời điểm</th>
+                  <th>Ngày phiếu</th>
+                  <th>STT</th>
+                  <th>Loại</th>
+                  <th className="cell-num-report">Số tiền</th>
+                  <th>Ghi chú</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {debtLines.map((ln, i) => (
+                  <tr key={`${ln.at}-${i}`}>
+                    <td className="members-meta">{formatViDateTime(ln.at)}</td>
+                    <td>
+                      <Link to={`/?date=${encodeURIComponent(ln.reportDate)}`}>{ln.reportDate}</Link>
+                    </td>
+                    <td>{ln.stt}</td>
+                    <td>
+                      {ln.kind === "cong"
+                        ? "Ghi nợ"
+                        : ln.kind === "tru"
+                          ? "Trả nợ"
+                          : ln.kind === "ghi"
+                            ? "Ghi nhận"
+                            : ln.kind}
+                    </td>
+                    <td className="cell-num-report">
+                      {formatMoney(ln.kind === "tru" ? -ln.amount : ln.amount, { blankZero: false })}
+                    </td>
+                    <td>{ln.note || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
 
@@ -172,15 +284,28 @@ export default function MemberDebtPage() {
                 </td>
               </tr>
             ) : (
-              months.map((m) => (
-                <tr key={`${m.year}-${m.month}`}>
-                  <td>
-                    Tháng {m.month}/{m.year}
-                  </td>
-                  <td className="cell-num-report">{m.lineCount}</td>
-                  <td className="cell-num-report">{formatMoney(m.totalConNo, { blankZero: false })}</td>
-                </tr>
-              ))
+              <>
+                {months.map((m) => (
+                  <tr key={`${m.year}-${m.month}`}>
+                    <td>
+                      Tháng {m.month}/{m.year}
+                    </td>
+                    <td className="cell-num-report">{m.lineCount}</td>
+                    <td className="cell-num-report">{formatMoney(m.totalConNo, { blankZero: false })}</td>
+                  </tr>
+                ))}
+                {months.length > 0 && !busy && payload && (
+                  <tr className="member-debt-month-footer">
+                    <td>
+                      <strong>Tổng cả năm</strong>
+                    </td>
+                    <td className="cell-num-report">{monthLineSum}</td>
+                    <td className="cell-num-report">
+                      <strong>{formatMoney(yearTotalConNo, { blankZero: false })}</strong>
+                    </td>
+                  </tr>
+                )}
+              </>
             )}
           </tbody>
         </table>

@@ -1,3 +1,18 @@
+/** Giống backend — nhập ô tiền (vd. 1.000.000 / 50000). */
+export function parseMoney(v) {
+  if (v === "" || v == null) return 0;
+  let s = String(v).replace(/\s/g, "").trim();
+  if (!s) return 0;
+  if (/^(\d{1,3})(\.\d{3})+$/.test(s)) {
+    return Number(s.replace(/\./g, "")) || 0;
+  }
+  if (/^\d+,\d+$/.test(s)) {
+    return Number(s.replace(",", ".")) || 0;
+  }
+  const n = Number(s.replace(/,/g, ""));
+  return Number.isFinite(n) ? n : 0;
+}
+
 export function formatMoney(n, { blankZero = true } = {}) {
   if (!Number.isFinite(n)) return "";
   if (n === 0 && blankZero) return "";
