@@ -554,6 +554,43 @@ a.header-nav-link.header-nav-link--secondary[aria-current="page"] {
   gap: 0.5rem;
 }
 
+.sheet-add-row-slot td {
+  border-top: 1px dashed rgba(125, 180, 255, 0.45);
+  border-bottom: 1px dashed rgba(125, 180, 255, 0.45);
+  background: rgba(248, 250, 252, 0.65);
+}
+
+.sheet-add-row-cell--lead {
+  text-align: left;
+  padding: 0.2rem 0.35rem 0.2rem 0.4rem !important;
+  vertical-align: middle;
+}
+
+.sheet-add-row-filler {
+  padding: 0 !important;
+  vertical-align: middle;
+  background: rgba(248, 250, 252, 0.65);
+}
+
+.sheet-add-row-btn {
+  min-width: 2.1rem;
+  min-height: 2rem;
+  padding: 0.15rem 0.45rem;
+  font-size: 1.2rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 140, 80, 0.45);
+  background: linear-gradient(135deg, rgba(255, 224, 130, 0.88), rgba(255, 173, 120, 0.78));
+  color: #7c2d12;
+  box-shadow: 0 1px 6px rgba(255, 122, 47, 0.18);
+}
+
+.sheet-add-row-btn:hover {
+  filter: brightness(1.05);
+}
+
 .btn-ghost {
   font: inherit;
   font-size: 0.875rem;

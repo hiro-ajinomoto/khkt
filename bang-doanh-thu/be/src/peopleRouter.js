@@ -10,7 +10,6 @@ import {
   normalizeConNoLedger,
   normalizeRows,
   parseMoney,
-  ROW_COUNT,
   sumConNoLedgerNetForRow,
 } from "./revenueUtils.js";
 
@@ -251,9 +250,9 @@ peopleRouter.post("/:id/debt/tru", async (req, res) => {
   for (const doc of sheetDocs) {
     const rows = normalizeRows(doc.rows);
     if (!rows) continue;
-    const cnNorm = normalizeConNoLedger(doc.conNoLedger);
+    const cnNorm = normalizeConNoLedger(doc.conNoLedger, new Date(), rows.length);
     let bestLocal = null;
-    for (let i = 0; i < ROW_COUNT; i++) {
+    for (let i = 0; i < rows.length; i++) {
       if (normalizePersonKey(rows[i].ten) !== nameNorm) continue;
       const { conNo: base } = computeRow(rows[i]);
       const adj = sumConNoLedgerNetForRow(cnNorm[i] || []);
@@ -282,10 +281,10 @@ peopleRouter.post("/:id/debt/tru", async (req, res) => {
     return res.status(500).json({ error: "invalid_sheet" });
   }
 
-  const padded = emptyConNoLedger();
+  const padded = emptyConNoLedger(rows.length);
   const rawLed = chosen.doc.conNoLedger;
   if (Array.isArray(rawLed)) {
-    for (let i = 0; i < ROW_COUNT; i++) {
+    for (let i = 0; i < padded.length && i < rawLed.length; i++) {
       const arr = rawLed[i];
       if (!Array.isArray(arr)) continue;
       for (const e of arr) {
@@ -306,7 +305,7 @@ peopleRouter.post("/:id/debt/tru", async (req, res) => {
     note,
   });
 
-  const conNoLedger = normalizeConNoLedger(padded, now);
+  const conNoLedger = normalizeConNoLedger(padded, now, rows.length);
   const totals = computeTotals(rows, conNoLedger);
 
   await sheetsColl.updateOne(

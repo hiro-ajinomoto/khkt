@@ -19,6 +19,9 @@ import {
   pruneLedgerZeroRows,
   syncRowsStringsFromLedger,
   ROW_COUNT,
+  ROW_COUNT_DEFAULT,
+  ROW_COUNT_MAX,
+  ROW_COUNT_MIN,
 } from "./revenueUtils.js";
 
 export const revenueRouter = Router();
@@ -241,27 +244,27 @@ revenueRouter.get("/sheets/:reportDate", async (req, res) => {
   const coll = getSheetsCollection();
   const doc = await coll.findOne({ reportDate });
   if (!doc) {
+    const blankRows = Array.from({ length: ROW_COUNT_DEFAULT }, () => emptyRow());
+    const blankCn = emptyConNoLedger(ROW_COUNT_DEFAULT);
     return res.json({
       reportDate,
       ...meta,
-      rows: Array.from({ length: ROW_COUNT }, () => emptyRow()),
-      totals: computeTotals(
-        Array.from({ length: ROW_COUNT }, () => emptyRow()),
-        emptyConNoLedger(),
-      ),
-      cellLedger: emptyCellLedger(),
-      conNoLedger: emptyConNoLedger(),
+      rows: blankRows,
+      totals: computeTotals(blankRows, blankCn),
+      cellLedger: emptyCellLedger(ROW_COUNT_DEFAULT),
+      conNoLedger: blankCn,
       createdAt: null,
       updatedAt: null,
     });
   }
   const rowsNormalized = normalizeRows(Array.isArray(doc.rows) ? doc.rows : []);
   const rowsSafe =
-    rowsNormalized ?? Array.from({ length: ROW_COUNT }, () => emptyRow());
+    rowsNormalized ?? Array.from({ length: ROW_COUNT_DEFAULT }, () => emptyRow());
+  const rowLen = rowsSafe.length;
   const conNoLedgerSafe =
     doc.conNoLedger != null
-      ? normalizeConNoLedger(doc.conNoLedger, new Date())
-      : emptyConNoLedger();
+      ? normalizeConNoLedger(doc.conNoLedger, new Date(), rowLen)
+      : emptyConNoLedger(rowLen);
   res.json({
     reportDate: doc.reportDate,
     year: doc.year,
@@ -273,8 +276,8 @@ revenueRouter.get("/sheets/:reportDate", async (req, res) => {
     totals: computeTotals(rowsSafe, conNoLedgerSafe),
     cellLedger:
       doc.cellLedger != null
-        ? normalizeCellLedger(doc.cellLedger, new Date())
-        : emptyCellLedger(),
+        ? normalizeCellLedger(doc.cellLedger, new Date(), rowLen)
+        : emptyCellLedger(rowLen),
     conNoLedger: conNoLedgerSafe,
     createdAt: doc.createdAt ?? null,
     updatedAt: doc.updatedAt ?? null,
@@ -320,9 +323,14 @@ revenueRouter.put("/sheets/:reportDate", async (req, res) => {
 
   const rowsInput = normalizeRows(req.body?.rows);
   if (!rowsInput) {
-    return res.status(400).json({ error: "invalid_rows", expect: ROW_COUNT });
+    return res.status(400).json({
+      error: "invalid_rows",
+      minRows: ROW_COUNT_MIN,
+      maxRows: ROW_COUNT_MAX,
+    });
   }
 
+  const rowLen = rowsInput.length;
   const now = new Date();
   const coll = getSheetsCollection();
   const existing = await coll.findOne({ reportDate });
@@ -332,11 +340,11 @@ revenueRouter.put("/sheets/:reportDate", async (req, res) => {
 
   let ledger;
   if (bodyLedgerProvided) {
-    ledger = normalizeCellLedger(req.body.cellLedger, now);
+    ledger = normalizeCellLedger(req.body.cellLedger, now, rowLen);
     ledger = pruneLedgerZeroRows(ledger, rowsInput);
   } else {
     ledger = pruneLedgerZeroRows(
-      normalizeCellLedger(existing?.cellLedger, now),
+      normalizeCellLedger(existing?.cellLedger, now, rowLen),
       rowsInput,
     );
     ledger = fillMissingLedgerFromRows(
@@ -353,8 +361,8 @@ revenueRouter.put("/sheets/:reportDate", async (req, res) => {
   const bodyConNoLedgerProvided =
     req.body != null && Array.isArray(req.body.conNoLedger);
   const conNoLedger = bodyConNoLedgerProvided
-    ? normalizeConNoLedger(req.body.conNoLedger, now)
-    : normalizeConNoLedger(existing?.conNoLedger, now);
+    ? normalizeConNoLedger(req.body.conNoLedger, now, rowLen)
+    : normalizeConNoLedger(existing?.conNoLedger, now, rowLen);
 
   const totals = computeTotals(rowsSynced, conNoLedger);
 
@@ -384,10 +392,12 @@ revenueRouter.put("/sheets/:reportDate", async (req, res) => {
   );
 
   const doc = await coll.findOne({ reportDate });
+  const rowsOut = normalizeRows(Array.isArray(doc.rows) ? doc.rows : []) ?? [];
+  const outLen = rowsOut.length;
   const conNoOut =
     doc.conNoLedger != null
-      ? normalizeConNoLedger(doc.conNoLedger, new Date())
-      : emptyConNoLedger();
+      ? normalizeConNoLedger(doc.conNoLedger, new Date(), outLen)
+      : emptyConNoLedger(outLen);
   res.json({
     reportDate: doc.reportDate,
     year: doc.year,
@@ -395,11 +405,11 @@ revenueRouter.put("/sheets/:reportDate", async (req, res) => {
     isoWeekYear: doc.isoWeekYear,
     isoWeek: doc.isoWeek,
     rows: doc.rows,
-    totals: doc.totals ?? computeTotals(normalizeRows(doc.rows) ?? [], conNoOut),
+    totals: doc.totals ?? computeTotals(rowsOut, conNoOut),
     cellLedger:
       doc.cellLedger != null
-        ? normalizeCellLedger(doc.cellLedger, new Date())
-        : emptyCellLedger(),
+        ? normalizeCellLedger(doc.cellLedger, new Date(), outLen)
+        : emptyCellLedger(outLen),
     conNoLedger: conNoOut,
     createdAt: doc.createdAt ?? null,
     updatedAt: doc.updatedAt ?? null,

@@ -7,7 +7,7 @@ import BrandBlock from "./BrandBlock.jsx";
 import { formatMoney, formatViDateTime, parseMoney } from "./formatMoney.js";
 import { NameSuggestInput } from "./NameSuggestInput.jsx";
 import ConNoLedgerHoverCell, { emptyClientConNoLedger, normalizeApiConNoLedger } from "./ConNoLedgerHoverCell.jsx";
-import { ROW_COUNT } from "./sheetConstants.js";
+import { ROW_COUNT_DEFAULT, ROW_COUNT_MAX, sheetRowCountFromLength } from "./sheetConstants.js";
 import "./App.css";
 const SAN_STEP = 15;
 const CUON_CAN_STEP = 10;
@@ -20,14 +20,17 @@ const DO_AN_STEPS = [5, 6, 7, 8, 9, 10];
 const HISTORY_FIELD_LIST = ["san", "cuonCan", "cau", "suoi5k", "nuocNgot10k", "doAn"];
 const HISTORY_KEYS = new Set(HISTORY_FIELD_LIST);
 
-function emptyClientLedger() {
-  return Array.from({ length: ROW_COUNT }, () => ({}));
+function emptyClientLedger(rowCount = ROW_COUNT_DEFAULT) {
+  const n = sheetRowCountFromLength(rowCount);
+  return Array.from({ length: n }, () => ({}));
 }
 
 function cloneLedger(ledger) {
-  return structuredClone(
-    ledger && typeof ledger === "object" ? ledger : emptyClientLedger(),
-  );
+  const len =
+    Array.isArray(ledger) && ledger.length > 0
+      ? sheetRowCountFromLength(ledger.length)
+      : ROW_COUNT_DEFAULT;
+  return structuredClone(ledger && typeof ledger === "object" ? ledger : emptyClientLedger(len));
 }
 
 /** Một dòng ledger: tối đa 2 chữ thập phân (vd. cầu 7,5). */
@@ -54,7 +57,7 @@ function sumLines(lines) {
 /** Đồng bộ tổng ô tiền từ các dòng ledger (logic giống BE). */
 function mergeLedgerIntoRows(baseRows, ledger) {
   const nr = baseRows.map((r) => ({ ...r }));
-  for (let i = 0; i < ROW_COUNT; i++) {
+  for (let i = 0; i < nr.length; i++) {
     for (const key of HISTORY_FIELD_LIST) {
       const ln = ledger[i]?.[key];
       const count = Array.isArray(ln) ? ln.length : 0;
@@ -69,10 +72,14 @@ function mergeLedgerIntoRows(baseRows, ledger) {
   return nr;
 }
 
-function normalizeApiLedger(raw) {
-  const out = emptyClientLedger();
+function normalizeApiLedger(raw, rowCount) {
+  const n =
+    rowCount != null && Number.isFinite(rowCount)
+      ? sheetRowCountFromLength(rowCount)
+      : sheetRowCountFromLength(Array.isArray(raw) ? raw.length : 0);
+  const out = emptyClientLedger(n);
   if (!Array.isArray(raw)) return out;
-  for (let i = 0; i < ROW_COUNT; i++) {
+  for (let i = 0; i < n; i++) {
     const blob = raw[i];
     if (!blob || typeof blob !== "object" || Array.isArray(blob)) continue;
     for (const key of HISTORY_FIELD_LIST) {
@@ -119,7 +126,7 @@ function fillLedgerGaps(rows, ledger, updatedAtIso) {
       : new Date().toISOString();
 
   const lb = cloneLedger(ledger);
-  for (let i = 0; i < ROW_COUNT; i++) {
+  for (let i = 0; i < rows.length; i++) {
     for (const key of HISTORY_FIELD_LIST) {
       const cur = lb[i][key];
       if (Array.isArray(cur) && cur.length > 0) continue;
@@ -252,7 +259,8 @@ function computeRow(r) {
 
 function normalizeRowsFromApi(raw) {
   const allowed = new Set(Object.keys(emptyRow()));
-  return Array.from({ length: ROW_COUNT }, (_, i) => {
+  const n = sheetRowCountFromLength(Array.isArray(raw) ? raw.length : 0);
+  return Array.from({ length: n }, (_, i) => {
     const o = emptyRow();
     const r = Array.isArray(raw) ? raw[i] : undefined;
     if (!r || typeof r !== "object") return o;
@@ -435,7 +443,7 @@ export default function App() {
   const now = useMemo(() => new Date(), []);
   const [searchParams, setSearchParams] = useSearchParams();
   const [reportDate, setReportDate] = useState(initialReportDateFromSearch);
-  const [rows, setRows] = useState(() => Array.from({ length: ROW_COUNT }, () => emptyRow()));
+  const [rows, setRows] = useState(() => Array.from({ length: ROW_COUNT_DEFAULT }, () => emptyRow()));
   const [hydrated, setHydrated] = useState(false);
   const [loadError, setLoadError] = useState(null);
   const [mongoOk, setMongoOk] = useState(null);
@@ -444,8 +452,8 @@ export default function App() {
   const [filterMonth, setFilterMonth] = useState(now.getMonth() + 1);
   const [sheetList, setSheetList] = useState([]);
   /** Chi tiết từng lần bán (ghi Mongo `cellLedger`) */
-  const [cellLedger, setCellLedger] = useState(emptyClientLedger);
-  const [conNoLedger, setConNoLedger] = useState(() => emptyClientConNoLedger());
+  const [cellLedger, setCellLedger] = useState(() => emptyClientLedger(ROW_COUNT_DEFAULT));
+  const [conNoLedger, setConNoLedger] = useState(() => emptyClientConNoLedger(ROW_COUNT_DEFAULT));
 
   const [quickRegisterOpen, setQuickRegisterOpen] = useState(false);
   const [quickName, setQuickName] = useState("");
@@ -496,6 +504,21 @@ export default function App() {
     [setSearchParams],
   );
 
+  const addSheetRow = useCallback(() => {
+    setRows((prev) => {
+      if (prev.length >= ROW_COUNT_MAX) return prev;
+      return [...prev, emptyRow()];
+    });
+    setCellLedger((prev) => {
+      if (prev.length >= ROW_COUNT_MAX) return prev;
+      return [...prev, {}];
+    });
+    setConNoLedger((prev) => {
+      if (prev.length >= ROW_COUNT_MAX) return prev;
+      return [...prev, []];
+    });
+  }, []);
+
   useEffect(() => {
     const ac = new AbortController();
     (async () => {
@@ -504,20 +527,20 @@ export default function App() {
         if (!r.ok) throw new Error("load_failed");
         const data = await r.json();
         const rowsNorm = normalizeRowsFromApi(data.rows);
-        let led = normalizeApiLedger(data.cellLedger);
+        let led = normalizeApiLedger(data.cellLedger, rowsNorm.length);
         led = fillLedgerGaps(rowsNorm, led, data.updatedAt);
         const merged = mergeLedgerIntoRows(rowsNorm, led);
         setRows(merged);
         setCellLedger(led);
-        setConNoLedger(normalizeApiConNoLedger(data.conNoLedger));
+        setConNoLedger(normalizeApiConNoLedger(data.conNoLedger, rowsNorm.length));
         setHydrated(true);
         setLoadError(null);
       } catch (e) {
         if (e.name === "AbortError") return;
         setLoadError("Không tải được phiếu từ server.");
-        setCellLedger(emptyClientLedger());
-        setConNoLedger(emptyClientConNoLedger());
-        setRows(Array.from({ length: ROW_COUNT }, () => emptyRow()));
+        setCellLedger(emptyClientLedger(ROW_COUNT_DEFAULT));
+        setConNoLedger(emptyClientConNoLedger(ROW_COUNT_DEFAULT));
+        setRows(Array.from({ length: ROW_COUNT_DEFAULT }, () => emptyRow()));
         setHydrated(true);
       }
     })();
@@ -645,6 +668,124 @@ export default function App() {
     return { san, cuonCan, cau, suoi5k, nuocNgot10k, doAn, doanhThu, homNayTra, conNo };
   }, [rows, derived]);
 
+  /** Một dòng dữ liệu phiếu (STT + ô nhập). */
+  function renderSheetDataRow(r, i) {
+    const { doanhThu, conNo } = derived[i];
+    return (
+      <tr key={`row-${i}`}>
+        <td className="cell-stt">
+          <a
+            className="cell-stt-link"
+            href={`/lich-su/${i + 1}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Mở lịch sử mua hàng (tab mới)"
+          >
+            {i + 1}
+          </a>
+        </td>
+        <td className="col-name-narrow">
+          <NameSuggestInput rowIndex={i} value={r.ten} onChange={(v) => updateRow(i, "ten", v)} />
+        </td>
+        <HoverStepperCell
+          rowIndex={i}
+          field="san"
+          value={r.san}
+          step={SAN_STEP}
+          ten={r.ten}
+          tdClassName="col-num-tight col-stepper-td col-stepper-td--san"
+          columnTitle="Sân"
+          groupLabel="Chỉnh sân"
+          onBump={bumpMoneyField}
+          onChangeField={updateRow}
+        />
+        <HoverStepperCell
+          rowIndex={i}
+          field="cuonCan"
+          value={r.cuonCan}
+          step={CUON_CAN_STEP}
+          ten={r.ten}
+          tdClassName="col-num-tight col-stepper-td"
+          columnTitle="Cuốn cán"
+          groupLabel="Chỉnh cuốn cán"
+          onBump={bumpMoneyField}
+          onChangeField={updateRow}
+        />
+        <HoverStepperCell
+          rowIndex={i}
+          field="cau"
+          value={r.cau}
+          steps={CAU_STEPS}
+          ten={r.ten}
+          tdClassName="col-num-medium col-stepper-td"
+          columnTitle="Cầu"
+          groupLabel="Chỉnh cầu"
+          onBump={bumpMoneyField}
+          onChangeField={updateRow}
+        />
+        <HoverStepperCell
+          rowIndex={i}
+          field="suoi5k"
+          value={r.suoi5k}
+          step={SUOI_STEP}
+          ten={r.ten}
+          tdClassName="col-num-medium col-stepper-td"
+          columnTitle="Suối"
+          groupLabel="Chỉnh suối"
+          onBump={bumpMoneyField}
+          onChangeField={updateRow}
+        />
+        <HoverStepperCell
+          rowIndex={i}
+          field="nuocNgot10k"
+          value={r.nuocNgot10k}
+          step={NUOC_NGOT_STEP}
+          ten={r.ten}
+          tdClassName="col-num-tight col-stepper-td"
+          columnTitle="Nước ngọt"
+          groupLabel="Chỉnh nước ngọt"
+          onBump={bumpMoneyField}
+          onChangeField={updateRow}
+        />
+        <HoverStepperCell
+          rowIndex={i}
+          field="doAn"
+          value={r.doAn}
+          steps={DO_AN_STEPS}
+          ten={r.ten}
+          tdClassName="col-num-medium col-stepper-td"
+          columnTitle="Đồ ăn"
+          groupLabel="Chỉnh đồ ăn"
+          onBump={bumpMoneyField}
+          onChangeField={updateRow}
+        />
+        <td className="cell-computed">{formatMoney(doanhThu, { blankZero: true })}</td>
+        <td className="col-computed col-hom-nay-tra">
+          <input
+            className="cell-input cell-num"
+            inputMode="decimal"
+            value={r.homNayTra}
+            onChange={(e) => updateRow(i, "homNayTra", e.target.value)}
+          />
+        </td>
+        <ConNoLedgerHoverCell
+          rowIndex={i}
+          ten={r.ten}
+          doanhThu={doanhThu}
+          effectiveConNo={conNo}
+          onGhiNo={(amount) => appendGhiNoLine(i, amount)}
+        />
+        <td className="col-note">
+          <input
+            className="cell-input cell-text"
+            value={r.ghiChu}
+            onChange={(e) => updateRow(i, "ghiChu", e.target.value)}
+          />
+        </td>
+      </tr>
+    );
+  }
+
   function updateRow(i, field, value) {
     if (HISTORY_KEYS.has(field)) {
       const { rows: nr, ledger: nl } = manualHistoryLedger(rows, cellLedger, i, field, value);
@@ -692,9 +833,9 @@ export default function App() {
 
   function clearAll() {
     if (!window.confirm("Xóa toàn bộ dữ liệu trong bảng (và lưu lên server)?")) return;
-    const blank = Array.from({ length: ROW_COUNT }, () => emptyRow());
-    const blankLed = emptyClientLedger();
-    const blankConNo = emptyClientConNoLedger();
+    const blank = Array.from({ length: ROW_COUNT_DEFAULT }, () => emptyRow());
+    const blankLed = emptyClientLedger(ROW_COUNT_DEFAULT);
+    const blankConNo = emptyClientConNoLedger(ROW_COUNT_DEFAULT);
     setRows(blank);
     setCellLedger(blankLed);
     setConNoLedger(blankConNo);
@@ -878,126 +1019,27 @@ export default function App() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((r, i) => {
-              const { doanhThu, conNo } = derived[i];
-              return (
-                <tr key={i}>
-                  <td className="cell-stt">
-                    <a
-                      className="cell-stt-link"
-                      href={`/lich-su/${i + 1}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title="Mở lịch sử mua hàng (tab mới)"
-                    >
-                      {i + 1}
-                    </a>
-                  </td>
-                  <td className="col-name-narrow">
-                    <NameSuggestInput
-                      rowIndex={i}
-                      value={r.ten}
-                      onChange={(v) => updateRow(i, "ten", v)}
-                    />
-                  </td>
-                  <HoverStepperCell
-                    rowIndex={i}
-                    field="san"
-                    value={r.san}
-                    step={SAN_STEP}
-                    ten={r.ten}
-                    tdClassName="col-num-tight col-stepper-td col-stepper-td--san"
-                    columnTitle="Sân"
-                    groupLabel="Chỉnh sân"
-                    onBump={bumpMoneyField}
-                    onChangeField={updateRow}
-                  />
-                  <HoverStepperCell
-                    rowIndex={i}
-                    field="cuonCan"
-                    value={r.cuonCan}
-                    step={CUON_CAN_STEP}
-                    ten={r.ten}
-                    tdClassName="col-num-tight col-stepper-td"
-                    columnTitle="Cuốn cán"
-                    groupLabel="Chỉnh cuốn cán"
-                    onBump={bumpMoneyField}
-                    onChangeField={updateRow}
-                  />
-                  <HoverStepperCell
-                    rowIndex={i}
-                    field="cau"
-                    value={r.cau}
-                    steps={CAU_STEPS}
-                    ten={r.ten}
-                    tdClassName="col-num-medium col-stepper-td"
-                    columnTitle="Cầu"
-                    groupLabel="Chỉnh cầu"
-                    onBump={bumpMoneyField}
-                    onChangeField={updateRow}
-                  />
-                  <HoverStepperCell
-                    rowIndex={i}
-                    field="suoi5k"
-                    value={r.suoi5k}
-                    step={SUOI_STEP}
-                    ten={r.ten}
-                    tdClassName="col-num-medium col-stepper-td"
-                    columnTitle="Suối"
-                    groupLabel="Chỉnh suối"
-                    onBump={bumpMoneyField}
-                    onChangeField={updateRow}
-                  />
-                  <HoverStepperCell
-                    rowIndex={i}
-                    field="nuocNgot10k"
-                    value={r.nuocNgot10k}
-                    step={NUOC_NGOT_STEP}
-                    ten={r.ten}
-                    tdClassName="col-num-tight col-stepper-td"
-                    columnTitle="Nước ngọt"
-                    groupLabel="Chỉnh nước ngọt"
-                    onBump={bumpMoneyField}
-                    onChangeField={updateRow}
-                  />
-                  <HoverStepperCell
-                    rowIndex={i}
-                    field="doAn"
-                    value={r.doAn}
-                    steps={DO_AN_STEPS}
-                    ten={r.ten}
-                    tdClassName="col-num-medium col-stepper-td"
-                    columnTitle="Đồ ăn"
-                    groupLabel="Chỉnh đồ ăn"
-                    onBump={bumpMoneyField}
-                    onChangeField={updateRow}
-                  />
-                  <td className="cell-computed">{formatMoney(doanhThu, { blankZero: true })}</td>
-                  <td className="col-computed col-hom-nay-tra">
-                    <input
-                      className="cell-input cell-num"
-                      inputMode="decimal"
-                      value={r.homNayTra}
-                      onChange={(e) => updateRow(i, "homNayTra", e.target.value)}
-                    />
-                  </td>
-                  <ConNoLedgerHoverCell
-                    rowIndex={i}
-                    ten={r.ten}
-                    doanhThu={doanhThu}
-                    effectiveConNo={conNo}
-                    onGhiNo={(amount) => appendGhiNoLine(i, amount)}
-                  />
-                  <td className="col-note">
-                    <input
-                      className="cell-input cell-text"
-                      value={r.ghiChu}
-                      onChange={(e) => updateRow(i, "ghiChu", e.target.value)}
-                    />
-                  </td>
-                </tr>
-              );
-            })}
+            {rows.length > 0 && (
+              <>
+                {rows.map((r, i) => renderSheetDataRow(r, i))}
+                {rows.length < ROW_COUNT_MAX && (
+                  <tr key="sheet-add-slot" className="sheet-add-row-slot">
+                    <td className="cell-stt sheet-add-row-cell sheet-add-row-cell--lead">
+                      <button
+                        type="button"
+                        className="sheet-add-row-btn"
+                        onClick={addSheetRow}
+                        title="Thêm hàng"
+                        aria-label="Thêm hàng"
+                      >
+                        +
+                      </button>
+                    </td>
+                    <td colSpan={11} className="sheet-add-row-filler" aria-hidden="true" />
+                  </tr>
+                )}
+              </>
+            )}
             <tr className="row-total">
               <td className="cell-stt" colSpan={2}>
                 Tổng

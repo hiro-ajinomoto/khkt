@@ -1,6 +1,17 @@
 import { getISOWeek, getISOWeekYear, parseISO } from "date-fns";
 
-export const ROW_COUNT = 30;
+export const ROW_COUNT_MIN = 15;
+export const ROW_COUNT_DEFAULT = 15;
+/** Tối đa dòng / phiếu (chuẩn hoá & API; khớp `sheetConstants.js`). */
+export const ROW_COUNT_MAX = 60;
+/** STT tối đa (history API, v.v.). */
+export const ROW_COUNT = ROW_COUNT_MAX;
+
+export function sheetRowCountFromLength(len) {
+  const n = Number.isFinite(len) ? Math.floor(len) : 0;
+  if (n < 1) return ROW_COUNT_DEFAULT;
+  return Math.min(ROW_COUNT_MAX, Math.max(ROW_COUNT_MIN, n));
+}
 
 export const emptyRow = () => ({
   ten: "",
@@ -61,7 +72,8 @@ export function computeTotals(rows, conNoLedgerRaw = null) {
   let homNayTra = 0;
   let conNo = 0;
   const derived = rows.map((r) => computeRow(r));
-  const cnNorm = conNoLedgerRaw != null ? normalizeConNoLedger(conNoLedgerRaw) : null;
+  const cnNorm =
+    conNoLedgerRaw != null ? normalizeConNoLedger(conNoLedgerRaw, new Date(), rows.length) : null;
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
     san += parseMoney(r.san);
@@ -138,7 +150,8 @@ export function getCalendarWeekSlice(year, month1based, weekIndex1based) {
 export function normalizeRows(raw) {
   if (!Array.isArray(raw)) return null;
   const allowed = new Set(Object.keys(emptyRow()));
-  return Array.from({ length: ROW_COUNT }, (_, i) => {
+  const n = sheetRowCountFromLength(raw.length);
+  return Array.from({ length: n }, (_, i) => {
     const r = raw[i];
     const o = emptyRow();
     if (!r || typeof r !== "object") return o;
@@ -160,9 +173,10 @@ export const HISTORY_LINE_FIELDS = [
 ];
 
 /** Ledger: đọc / ghi các dòng chi tiết theo từng lần bán (không gộp ô thành 1 giá duy nhất trong lịch sử). */
-export function emptyCellLedger() {
+export function emptyCellLedger(rowCount = ROW_COUNT_DEFAULT) {
+  const n = sheetRowCountFromLength(rowCount);
   return Array.from(
-    { length: ROW_COUNT },
+    { length: n },
     () => /** @type {Record<string, { amount: number; at: Date }[]>} */ ({}),
   );
 }
@@ -197,10 +211,14 @@ function coerceLedgerDate(v, serverNow) {
  * @param {unknown} raw
  * @param {Date} [serverNow]
  */
-export function normalizeCellLedger(raw, serverNow = new Date()) {
-  const out = emptyCellLedger();
+export function normalizeCellLedger(raw, serverNow = new Date(), rowCount) {
+  const n =
+    rowCount != null && Number.isFinite(rowCount)
+      ? sheetRowCountFromLength(rowCount)
+      : sheetRowCountFromLength(Array.isArray(raw) ? raw.length : 0);
+  const out = emptyCellLedger(n);
   if (!Array.isArray(raw)) return out;
-  for (let i = 0; i < ROW_COUNT; i++) {
+  for (let i = 0; i < n; i++) {
     const blob = raw[i];
     if (!blob || typeof blob !== "object" || Array.isArray(blob)) continue;
     for (const { key } of HISTORY_LINE_FIELDS) {
@@ -235,9 +253,10 @@ function roundConNoLedgerAmt(n) {
 }
 
 /** Mỗi hàng: các dòng ghi nợ (+) / trả nợ (−) điều chỉnh cột «Còn nợ» hiển thị. */
-export function emptyConNoLedger() {
+export function emptyConNoLedger(rowCount = ROW_COUNT_DEFAULT) {
+  const n = sheetRowCountFromLength(rowCount);
   return Array.from(
-    { length: ROW_COUNT },
+    { length: n },
     () => /** @type {Array<{ kind: string; amount: number; at: Date; note: string }>} */ ([]),
   );
 }
@@ -265,10 +284,14 @@ export function sumConNoLedgerNetForRow(lines) {
  * @param {unknown} raw
  * @param {Date} [serverNow]
  */
-export function normalizeConNoLedger(raw, serverNow = new Date()) {
-  const out = emptyConNoLedger();
+export function normalizeConNoLedger(raw, serverNow = new Date(), rowCount) {
+  const n =
+    rowCount != null && Number.isFinite(rowCount)
+      ? sheetRowCountFromLength(rowCount)
+      : sheetRowCountFromLength(Array.isArray(raw) ? raw.length : 0);
+  const out = emptyConNoLedger(n);
   if (!Array.isArray(raw)) return out;
-  for (let i = 0; i < ROW_COUNT; i++) {
+  for (let i = 0; i < n; i++) {
     const arr = raw[i];
     if (!Array.isArray(arr)) continue;
     const lines = [];
@@ -311,7 +334,7 @@ export function normalizeConNoLedger(raw, serverNow = new Date()) {
 export function syncRowsStringsFromLedger(rows, ledger) {
   const base = normalizeRows(rows);
   if (!base) return rows;
-  for (let i = 0; i < ROW_COUNT; i++) {
+  for (let i = 0; i < base.length; i++) {
     for (const { key } of HISTORY_LINE_FIELDS) {
       const entries = ledger[i]?.[key];
       const count = Array.isArray(entries) ? entries.length : 0;
@@ -340,7 +363,10 @@ export function fillMissingLedgerFromRows(
   const rowsNorm = normalizeRows(rows);
   if (!rowsNorm) return lb;
 
-  for (let i = 0; i < ROW_COUNT; i++) {
+  while (lb.length < rowsNorm.length) lb.push({});
+  if (lb.length > rowsNorm.length) lb.length = rowsNorm.length;
+
+  for (let i = 0; i < rowsNorm.length; i++) {
     for (const { key } of HISTORY_LINE_FIELDS) {
       const cur = lb[i]?.[key];
       if (Array.isArray(cur) && cur.length > 0) continue;
@@ -364,7 +390,8 @@ export function pruneLedgerZeroRows(ledger, rows) {
       typeof row === "object" && row && !Array.isArray(row) ? { ...row } : {},
     );
   }
-  return ledger.map((row, i) => {
+  return Array.from({ length: rn.length }, (_, i) => {
+    const row = ledger[i];
     const o =
       typeof row === "object" && row && !Array.isArray(row) ? { ...row } : {};
     for (const { key } of HISTORY_LINE_FIELDS) {
@@ -399,35 +426,36 @@ export function mergeCellTimes(
         ? new Date(legacySheetUpdatedAt)
         : now;
 
-  const next = Array.from({ length: ROW_COUNT }, (_, i) => {
+  const n = newRows.length;
+  const next = Array.from({ length: n }, (_, i) => {
     const prev = prevCellTimes?.[i];
     return prev && typeof prev === "object" && !Array.isArray(prev)
       ? { ...prev }
       : {};
   });
 
-  for (let i = 0; i < ROW_COUNT; i++) {
+  for (let i = 0; i < n; i++) {
     const oldR = prevRows?.[i];
     const newR = newRows[i];
     for (const { key } of HISTORY_LINE_FIELDS) {
       const o = oldR && typeof oldR === "object" ? parseMoney(oldR[key]) : 0;
-      const n = newR && typeof newR === "object" ? parseMoney(newR[key]) : 0;
+      const nv = newR && typeof newR === "object" ? parseMoney(newR[key]) : 0;
 
-      if (n === 0) {
+      if (nv === 0) {
         if (key in next[i]) delete next[i][key];
         continue;
       }
-      if (o !== n) {
+      if (o !== nv) {
         next[i][key] = now;
       }
     }
   }
 
-  for (let i = 0; i < ROW_COUNT; i++) {
+  for (let i = 0; i < n; i++) {
     const newR = newRows[i];
     for (const { key } of HISTORY_LINE_FIELDS) {
-      const n = newR && typeof newR === "object" ? parseMoney(newR[key]) : 0;
-      if (n > 0 && next[i][key] == null) {
+      const nz = newR && typeof newR === "object" ? parseMoney(newR[key]) : 0;
+      if (nz > 0 && next[i][key] == null) {
         next[i][key] = fallbackTime;
       }
     }
@@ -453,7 +481,7 @@ function historyRecordedAt(doc, rowIndex, key) {
 }
 
 /**
- * @param {number} rowIndex 0..ROW_COUNT-1
+ * @param {number} rowIndex 0..ROW_COUNT_MAX-1
  * @param {HistoryDocLike[]} docs
  */
 export function buildPersonHistory(rowIndex, docs) {
@@ -610,7 +638,7 @@ function emptyTierBuckets(steps) {
  * @param {Record<string, number>} buckets
  */
 function mergeTierBuckets(buckets, ledger, fieldKey, steps) {
-  for (let i = 0; i < ROW_COUNT; i++) {
+  for (let i = 0; i < ledger.length; i++) {
     const entries = ledger[i]?.[fieldKey];
     if (!Array.isArray(entries)) continue;
     for (const e of entries) {
@@ -654,7 +682,7 @@ export function aggregateSheetsInsight(docs) {
   for (const doc of docs) {
     const rows = normalizeRows(Array.isArray(doc.rows) ? doc.rows : []);
     if (!rows) continue;
-    const ledger = normalizeCellLedger(doc.cellLedger, serverNow);
+    const ledger = normalizeCellLedger(doc.cellLedger, serverNow, rows.length);
     const t = computeTotals(rows, doc.conNoLedger);
     sumMoney.san += t.san;
     sumMoney.cuonCan += t.cuonCan;
@@ -666,7 +694,7 @@ export function aggregateSheetsInsight(docs) {
     sumMoney.homNayTra += t.homNayTra;
     sumMoney.conNo += t.conNo;
 
-    for (let i = 0; i < ROW_COUNT; i++) {
+    for (let i = 0; i < rows.length; i++) {
       for (const { key } of HISTORY_LINE_FIELDS) {
         const entries = ledger[i]?.[key];
         const n = Array.isArray(entries) ? entries.length : 0;
@@ -748,8 +776,8 @@ export function aggregatePersonConNoLedgerLines(nameNorm, sheetDocs) {
     if (!rows) continue;
     const reportDate = doc.reportDate;
     if (typeof reportDate !== "string") continue;
-    const cnNorm = normalizeConNoLedger(doc.conNoLedger);
-    for (let i = 0; i < ROW_COUNT; i++) {
+    const cnNorm = normalizeConNoLedger(doc.conNoLedger, new Date(), rows.length);
+    for (let i = 0; i < rows.length; i++) {
       if (rowNameNorm(rows[i].ten) !== nameNorm) continue;
       const rowLines = cnNorm[i] || [];
       for (const entry of rowLines) {
@@ -853,9 +881,9 @@ export function aggregatePersonDebtByYearMonth(nameNorm, sheetDocs) {
       month = meta.month;
     }
 
-    const cnNorm = normalizeConNoLedger(doc.conNoLedger);
+    const cnNorm = normalizeConNoLedger(doc.conNoLedger, new Date(), rows.length);
     const mKey = `${year}-${month}`;
-    for (let i = 0; i < ROW_COUNT; i++) {
+    for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
       if (rowNameNorm(r.ten) !== nameNorm) continue;
       const { doanhThu, conNo: conNoBase } = computeRow(r);

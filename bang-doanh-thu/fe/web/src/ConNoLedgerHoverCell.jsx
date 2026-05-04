@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { formatMoney } from "./formatMoney.js";
-import { ROW_COUNT } from "./sheetConstants.js";
+import { ROW_COUNT_DEFAULT, sheetRowCountFromLength } from "./sheetConstants.js";
 
 function roundAmt(n) {
   if (!Number.isFinite(n)) return 0;
@@ -22,17 +22,22 @@ function parseMoney(v) {
   return Number.isFinite(n) ? n : 0;
 }
 
-export function emptyClientConNoLedger() {
-  return Array.from({ length: ROW_COUNT }, () => []);
+export function emptyClientConNoLedger(rowCount = ROW_COUNT_DEFAULT) {
+  const n = sheetRowCountFromLength(rowCount);
+  return Array.from({ length: n }, () => []);
 }
 
 /** @typedef {{ kind: "cong" | "tru" | "ghi"; amount: number; at: string; note: string }} ConNoLine */
 
-/** @param {unknown} raw */
-export function normalizeApiConNoLedger(raw) {
-  const out = emptyClientConNoLedger();
+/** @param {unknown} raw @param {number} [rowCount] */
+export function normalizeApiConNoLedger(raw, rowCount) {
+  const n =
+    rowCount != null && Number.isFinite(rowCount)
+      ? sheetRowCountFromLength(rowCount)
+      : sheetRowCountFromLength(Array.isArray(raw) ? raw.length : 0);
+  const out = emptyClientConNoLedger(n);
   if (!Array.isArray(raw)) return out;
-  for (let i = 0; i < ROW_COUNT; i++) {
+  for (let i = 0; i < n; i++) {
     const arr = raw[i];
     if (!Array.isArray(arr)) continue;
     /** @type {ConNoLine[]} */
