@@ -497,6 +497,7 @@ export default function App() {
   const [quickName, setQuickName] = useState("");
   const [quickNick, setQuickNick] = useState("");
   const [quickPhone, setQuickPhone] = useState("");
+  const [quickRegCode, setQuickRegCode] = useState("");
   const [quickBusy, setQuickBusy] = useState(false);
   const [quickMsg, setQuickMsg] = useState(
     /** @type {{ type: "ok" | "err"; text: string } | null} */ (null),
@@ -516,6 +517,7 @@ export default function App() {
   useEffect(() => {
     if (searchParams.get("quickRegister") !== "1") return;
     setQuickMsg(null);
+    setQuickRegCode("");
     setQuickRegisterOpen(true);
     setSearchParams(
       (prev) => {
@@ -939,12 +941,17 @@ export default function App() {
       });
       return;
     }
+    const registrationCode = quickRegCode.trim();
+    if (!registrationCode) {
+      setQuickMsg({ type: "err", text: "Nhập mã đăng ký (do quản trị cấp)." });
+      return;
+    }
     setQuickBusy(true);
     try {
       const r = await apiFetch("/api/revenue/people", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, nickname, phone }),
+        body: JSON.stringify({ name, nickname, phone, registrationCode }),
       });
       const j = await r.json().catch(() => ({}));
       if (r.status === 409) {
@@ -953,6 +960,17 @@ export default function App() {
       }
       if (r.status === 400 && j.error === "invalid_phone") {
         setQuickMsg({ type: "err", text: "Số điện thoại không hợp lệ." });
+        return;
+      }
+      if (r.status === 403 && j.error === "invalid_registration_code") {
+        setQuickMsg({ type: "err", text: typeof j.message === "string" ? j.message : "Mã đăng ký không đúng." });
+        return;
+      }
+      if (r.status === 403 && j.error === "registration_disabled") {
+        setQuickMsg({
+          type: "err",
+          text: typeof j.message === "string" ? j.message : "Đăng ký chưa bật trên server.",
+        });
         return;
       }
       if (!r.ok) {
@@ -966,6 +984,7 @@ export default function App() {
       setQuickName("");
       setQuickNick("");
       setQuickPhone("");
+      setQuickRegCode("");
       if (quickRegisterCloseTimerRef.current) clearTimeout(quickRegisterCloseTimerRef.current);
       quickRegisterCloseTimerRef.current = window.setTimeout(() => {
         quickRegisterCloseTimerRef.current = null;
@@ -988,6 +1007,7 @@ export default function App() {
           <MainNavBar
             onQuickRegisterClick={() => {
               setQuickMsg(null);
+              setQuickRegCode("");
               setQuickRegisterOpen(true);
             }}
           />
@@ -1284,8 +1304,8 @@ export default function App() {
                 </button>
               </div>
               <p className="quick-register-lead">
-                Tên bắt buộc; biệt danh và số điện thoại tuỳ chọn. Sau khi lưu, gõ ô <strong>Tên</strong> trên bảng để
-                gợi ý (có SĐT thì có thể tìm theo số).
+                Cần <strong>mã đăng ký</strong> do quản trị cấp. Tên bắt buộc; biệt danh và số điện thoại tuỳ chọn. Sau
+                khi lưu, gõ ô <strong>Tên</strong> trên bảng để gợi ý (có SĐT thì có thể tìm theo số).
               </p>
               <form className="quick-register-form quick-register-form--modal" onSubmit={handleQuickRegister}>
                 <label className="quick-register-field">
@@ -1326,6 +1346,19 @@ export default function App() {
                     onChange={(e) => setQuickPhone(e.target.value)}
                     placeholder="Để trống hoặc 0912 345 678"
                     maxLength={22}
+                    disabled={quickBusy}
+                  />
+                </label>
+                <label className="quick-register-field">
+                  <span>Mã đăng ký</span>
+                  <input
+                    type="password"
+                    name="quick-registration-code"
+                    autoComplete="off"
+                    value={quickRegCode}
+                    onChange={(e) => setQuickRegCode(e.target.value)}
+                    placeholder="Do quản trị cấp"
+                    maxLength={200}
                     disabled={quickBusy}
                   />
                 </label>

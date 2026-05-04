@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { ObjectId } from "mongodb";
+import { config } from "./config.js";
 import { getPeopleCollection, getSheetsCollection } from "./db.js";
+import { verifyRegistrationCode } from "./registrationCode.js";
 import {
   aggregatePersonConNoLedgerLines,
   aggregatePersonLedgerSignedByCalendarMonth,
@@ -358,8 +360,21 @@ peopleRouter.get("/:id", async (req, res) => {
   });
 });
 
-/** POST /api/revenue/people — { name, nickname?, phone? } (phone để trống được) */
+/** POST /api/revenue/people — { name, nickname?, phone?, registrationCode } */
 peopleRouter.post("/", async (req, res) => {
+  if (!config.registrationCode?.trim()) {
+    return res.status(403).json({
+      error: "registration_disabled",
+      message: "Đăng ký chưa bật — cần đặt REGISTRATION_CODE trên server.",
+    });
+  }
+  if (!verifyRegistrationCode(req.body?.registrationCode)) {
+    return res.status(403).json({
+      error: "invalid_registration_code",
+      message: "Mã đăng ký không đúng.",
+    });
+  }
+
   const name = String(req.body?.name ?? "")
     .trim()
     .replace(/\s+/g, " ");

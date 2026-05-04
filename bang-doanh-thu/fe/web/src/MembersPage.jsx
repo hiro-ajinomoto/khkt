@@ -17,6 +17,7 @@ export default function MembersPage() {
   const [formName, setFormName] = useState("");
   const [formNick, setFormNick] = useState("");
   const [formPhone, setFormPhone] = useState("");
+  const [formRegCode, setFormRegCode] = useState("");
   const [formMsg, setFormMsg] = useState(/** @type {{ type: "ok" | "err"; text: string } | null} */ (null));
 
   const load = useCallback(async () => {
@@ -41,6 +42,7 @@ export default function MembersPage() {
     setFormName("");
     setFormNick("");
     setFormPhone("");
+    setFormRegCode("");
     setFormMsg(null);
   }
 
@@ -66,13 +68,22 @@ export default function MembersPage() {
       setFormMsg({ type: "err", text: "Nhập họ tên." });
       return;
     }
+    if (editingId === "new" && !formRegCode.trim()) {
+      setFormMsg({ type: "err", text: "Nhập mã đăng ký (do quản trị cấp)." });
+      return;
+    }
     setBusy(true);
     try {
       if (editingId === "new") {
         const r = await apiFetch("/api/revenue/people", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, nickname: formNick.trim(), phone: formPhone.trim() }),
+          body: JSON.stringify({
+            name,
+            nickname: formNick.trim(),
+            phone: formPhone.trim(),
+            registrationCode: formRegCode.trim(),
+          }),
         });
         const j = await r.json().catch(() => ({}));
         if (r.status === 409) {
@@ -83,6 +94,13 @@ export default function MembersPage() {
           setFormMsg({
             type: "err",
             text: "Số điện thoại không hợp lệ (để trống hoặc 9–12 chữ số).",
+          });
+          return;
+        }
+        if (r.status === 403 && (j.error === "invalid_registration_code" || j.error === "registration_disabled")) {
+          setFormMsg({
+            type: "err",
+            text: typeof j.message === "string" ? j.message : "Mã đăng ký không đúng.",
           });
           return;
         }
@@ -199,6 +217,19 @@ export default function MembersPage() {
                 autoComplete="tel"
               />
             </label>
+            {editingId === "new" ? (
+              <label className="quick-register-field members-form-field">
+                <span>Mã đăng ký</span>
+                <input
+                  type="password"
+                  autoComplete="off"
+                  value={formRegCode}
+                  onChange={(e) => setFormRegCode(e.target.value)}
+                  placeholder="Do quản trị cấp"
+                  maxLength={200}
+                />
+              </label>
+            ) : null}
             {formMsg && (
               <p
                 className={

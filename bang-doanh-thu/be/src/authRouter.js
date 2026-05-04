@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { config } from "./config.js";
 import { getUsersCollection } from "./db.js";
 import { requireAuth } from "./authMiddleware.js";
+import { verifyRegistrationCode } from "./registrationCode.js";
 
 export const authRouter = Router();
 
@@ -28,6 +29,19 @@ authRouter.get("/me", requireAuth, (req, res) => {
 });
 
 authRouter.post("/register", async (req, res) => {
+  if (!config.registrationCode?.trim()) {
+    return res.status(403).json({
+      error: "registration_disabled",
+      message: "Đăng ký chưa bật — cần đặt REGISTRATION_CODE trên server.",
+    });
+  }
+  if (!verifyRegistrationCode(req.body?.registrationCode)) {
+    return res.status(403).json({
+      error: "invalid_registration_code",
+      message: "Mã đăng ký không đúng.",
+    });
+  }
+
   const usernameNorm = normalizeUsername(req.body?.username);
   const password = String(req.body?.password ?? "");
 

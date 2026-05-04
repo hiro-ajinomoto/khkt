@@ -25,6 +25,7 @@ export function NameSuggestInput({ rowIndex, value, onChange }) {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [nickDraft, setNickDraft] = useState("");
+  const [createRegCode, setCreateRegCode] = useState("");
   const [createSaving, setCreateSaving] = useState(false);
 
   const qTrim = String(value ?? "").trim();
@@ -137,12 +138,17 @@ export function NameSuggestInput({ rowIndex, value, onChange }) {
   async function submitCreate(nicknameExtra) {
     const name = qTrim || String(value ?? "").trim();
     if (!name) return;
+    const registrationCode = createRegCode.trim();
+    if (!registrationCode) {
+      window.alert("Nhập mã đăng ký (do quản trị cấp).");
+      return;
+    }
     setCreateSaving(true);
     try {
       const r = await apiFetch("/api/revenue/people", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, nickname: nicknameExtra, phone: "" }),
+        body: JSON.stringify({ name, nickname: nicknameExtra, phone: "", registrationCode }),
       });
       const j = await r.json().catch(() => ({}));
       if (r.status === 409) {
@@ -154,11 +160,17 @@ export function NameSuggestInput({ rowIndex, value, onChange }) {
         setCreateSaving(false);
         return;
       }
+      if (r.status === 403) {
+        window.alert(typeof j.message === "string" ? j.message : "Mã đăng ký không đúng.");
+        setCreateSaving(false);
+        return;
+      }
       if (!r.ok) throw new Error("save_person_failed");
       onChange(j.name ?? name);
       setCreateOpen(false);
       setPanelOpen(false);
       setNickDraft("");
+      setCreateRegCode("");
     } catch {
       window.alert("Không lưu được. Kiểm tra kết nối API.");
     } finally {
@@ -168,6 +180,7 @@ export function NameSuggestInput({ rowIndex, value, onChange }) {
 
   function openCreateModal() {
     setNickDraft("");
+    setCreateRegCode("");
     setCreateOpen(true);
     setPanelOpen(true);
     queueMicrotask(() => updatePosition());
@@ -265,6 +278,17 @@ export function NameSuggestInput({ rowIndex, value, onChange }) {
                   value={nickDraft}
                   placeholder="vd. Béo, A2, …"
                   onChange={(e) => setNickDraft(e.target.value)}
+                />
+              </label>
+              <label className="name-modal-field">
+                <span>Mã đăng ký</span>
+                <input
+                  type="password"
+                  autoComplete="off"
+                  value={createRegCode}
+                  placeholder="Do quản trị cấp"
+                  maxLength={200}
+                  onChange={(e) => setCreateRegCode(e.target.value)}
                 />
               </label>
               <div className="name-modal-actions">

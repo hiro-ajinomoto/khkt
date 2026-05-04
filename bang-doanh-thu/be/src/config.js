@@ -1,6 +1,10 @@
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
-dotenv.config();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Luôn đọc `be/.env` dù chạy `node src/index.js` từ thư mục khác (cwd).
+dotenv.config({ path: path.join(__dirname, "../.env") });
 
 /** Cùng key env với backend KHKT (`be/src/config.js`). */
 export const config = {
@@ -12,4 +16,6 @@ export const config = {
     secret: process.env.JWT_SECRET || "bang-doanh-thu-dev-secret-change-me",
     expiresIn: process.env.JWT_EXPIRES_IN || "7d",
   },
+  /** Đặt trong `.env` — đăng ký tài khoản & đăng ký nhanh (people) bắt buộc khớp mã này. */
+  registrationCode: process.env.REGISTRATION_CODE ?? "",
 };
