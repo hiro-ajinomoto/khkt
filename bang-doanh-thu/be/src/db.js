@@ -3,6 +3,7 @@ import { config } from "./config.js";
 
 const COLL = "bang_doanh_thu_sheets";
 const PEOPLE_COLL = "bang_doanh_thu_people";
+const USERS_COLL = "bang_doanh_thu_users";
 
 let client = null;
 let db = null;
@@ -29,7 +30,11 @@ export async function connectDB() {
     { nameNorm: 1 },
     { unique: true, name: "bdt_people_nameNorm_u" },
   );
-  console.log(`MongoDB: db=${config.mongodb.dbName} collection=${COLL}, ${PEOPLE_COLL}`);
+  await db.collection(USERS_COLL).createIndex(
+    { usernameNorm: 1 },
+    { unique: true, name: "bdt_users_usernameNorm_u" },
+  );
+  console.log(`MongoDB: db=${config.mongodb.dbName} collection=${COLL}, ${PEOPLE_COLL}, ${USERS_COLL}`);
   return db;
 }
 
@@ -44,6 +49,10 @@ export function getSheetsCollection() {
 
 export function getPeopleCollection() {
   return getDB().collection(PEOPLE_COLL);
+}
+
+export function getUsersCollection() {
+  return getDB().collection(USERS_COLL);
 }
 
 export async function closeDB() {

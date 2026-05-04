@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import HeaderUserBox from "./HeaderUserBox.jsx";
 import { getISOWeek, getISOWeekYear } from "date-fns";
+import { apiFetch } from "./apiClient.js";
 import { formatMoney, formatViDate } from "./formatMoney.js";
 import { getCalendarWeekSpansInMonth } from "./calendarSpans.js";
 import { getCauClicksPerQua } from "./cauShuttleRates.js";
@@ -191,7 +193,7 @@ export default function AggregateReport() {
       params.set("year", String(filterIsoYear));
       params.set("week", String(filterIsoWeek));
     }
-    fetch(`/api/revenue/aggregate?${params}`)
+    apiFetch(`/api/revenue/aggregate?${params}`)
       .then(async (r) => {
         if (!r.ok) {
           let msg = `HTTP ${r.status}`;
@@ -264,6 +266,7 @@ export default function AggregateReport() {
           <Link to="/thanh-vien" className="header-nav-link">
             Trả nợ
           </Link>
+          <HeaderUserBox />
         </div>
         <div className="sheet-header-brand aggregate-header-brand">
           <p className="ocean-page-eyebrow">Báo cáo</p>

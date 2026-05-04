@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useSearchParams } from "react-router-dom";
-import { getISOWeek, getISOWeekYear } from "date-fns";
-import { formatMoney, formatViDate, formatViDateTime, parseMoney } from "./formatMoney.js";
+import { apiFetch } from "./apiClient.js";
+import HeaderUserBox from "./HeaderUserBox.jsx";
+import { formatMoney, formatViDateTime, parseMoney } from "./formatMoney.js";
 import { NameSuggestInput } from "./NameSuggestInput.jsx";
 import ConNoLedgerHoverCell, { emptyClientConNoLedger, normalizeApiConNoLedger } from "./ConNoLedgerHoverCell.jsx";
-import { getCalendarWeekSpansInMonth } from "./calendarSpans.js";
 import { ROW_COUNT } from "./sheetConstants.js";
 import "./App.css";
 const SAN_STEP = 15;
@@ -437,20 +437,11 @@ export default function App() {
   const [rows, setRows] = useState(() => Array.from({ length: ROW_COUNT }, () => emptyRow()));
   const [hydrated, setHydrated] = useState(false);
   const [loadError, setLoadError] = useState(null);
-  const [saveState, setSaveState] = useState("idle");
   const [mongoOk, setMongoOk] = useState(null);
 
-  const [listMode, setListMode] = useState("month");
   const [filterYear, setFilterYear] = useState(now.getFullYear());
   const [filterMonth, setFilterMonth] = useState(now.getMonth() + 1);
-  /** "" = cả tháng; "1","2",… = tuần dương lịch trong tháng (1–7, 8–14, …) */
-  const [filterCalendarWeek, setFilterCalendarWeek] = useState("");
-  const [filterIsoYear, setFilterIsoYear] = useState(() => getISOWeekYear(now));
-  const [filterIsoWeek, setFilterIsoWeek] = useState(() => getISOWeek(now));
   const [sheetList, setSheetList] = useState([]);
-  const [listSummary, setListSummary] = useState(null);
-  /** Mốc từ MongoDB (ISO), hiển thị theo giờ VN */
-  const [mongoTimestamps, setMongoTimestamps] = useState({ createdAt: null, updatedAt: null });
   /** Chi tiết từng lần bán (ghi Mongo `cellLedger`) */
   const [cellLedger, setCellLedger] = useState(emptyClientLedger);
   const [conNoLedger, setConNoLedger] = useState(() => emptyClientConNoLedger());
@@ -494,7 +485,7 @@ export default function App() {
     const ac = new AbortController();
     (async () => {
       try {
-        const r = await fetch(`/api/revenue/sheets/${reportDate}`, { signal: ac.signal });
+        const r = await apiFetch(`/api/revenue/sheets/${reportDate}`, { signal: ac.signal });
         if (!r.ok) throw new Error("load_failed");
         const data = await r.json();
         const rowsNorm = normalizeRowsFromApi(data.rows);
@@ -504,16 +495,11 @@ export default function App() {
         setRows(merged);
         setCellLedger(led);
         setConNoLedger(normalizeApiConNoLedger(data.conNoLedger));
-        setMongoTimestamps({
-          createdAt: data.createdAt ?? null,
-          updatedAt: data.updatedAt ?? null,
-        });
         setHydrated(true);
         setLoadError(null);
       } catch (e) {
         if (e.name === "AbortError") return;
         setLoadError("Không tải được phiếu từ server.");
-        setMongoTimestamps({ createdAt: null, updatedAt: null });
         setCellLedger(emptyClientLedger());
         setConNoLedger(emptyClientConNoLedger());
         setRows(Array.from({ length: ROW_COUNT }, () => emptyRow()));
@@ -551,9 +537,8 @@ export default function App() {
   }, [quickRegisterOpen]);
 
   const persist = useCallback(async (date, bodyRows, bodyLedger, bodyConNoLedger) => {
-    setSaveState("saving");
     try {
-      const r = await fetch(`/api/revenue/sheets/${date}`, {
+      const r = await apiFetch(`/api/revenue/sheets/${date}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ rows: bodyRows, cellLedger: bodyLedger, conNoLedger: bodyConNoLedger }),
@@ -564,16 +549,13 @@ export default function App() {
         createdAt: saved.createdAt ?? null,
         updatedAt: saved.updatedAt ?? null,
       };
-      setMongoTimestamps(nextTs);
       setSheetList((prev) =>
         prev.some((s) => s.reportDate === date)
           ? prev.map((s) => (s.reportDate === date ? { ...s, ...nextTs } : s))
           : prev,
       );
-      setSaveState("saved");
-      window.setTimeout(() => setSaveState("idle"), 2000);
     } catch {
-      setSaveState("error");
+      /* im lặng — có thể bổ sung toast sau */
     }
   }, []);
 
@@ -589,41 +571,25 @@ export default function App() {
   }, [rows, cellLedger, conNoLedger, reportDate, hydrated, persist]);
 
   useEffect(() => {
-    setFilterCalendarWeek("");
-  }, [filterYear, filterMonth]);
-
-  useEffect(() => {
     let cancelled = false;
     const params = new URLSearchParams();
-    if (listMode === "year") {
-      params.set("year", String(filterYear));
-    } else if (listMode === "month") {
-      params.set("year", String(filterYear));
-      params.set("month", String(filterMonth));
-      if (filterCalendarWeek !== "") {
-        params.set("calendarWeek", String(filterCalendarWeek));
-      }
-    } else {
-      params.set("year", String(filterIsoYear));
-      params.set("week", String(filterIsoWeek));
-    }
-    fetch(`/api/revenue/sheets?${params}`)
+    params.set("year", String(filterYear));
+    params.set("month", String(filterMonth));
+    apiFetch(`/api/revenue/sheets?${params}`)
       .then((r) => r.json())
       .then((data) => {
         if (cancelled) return;
         setSheetList(data.sheets || []);
-        setListSummary(data.summary || null);
       })
       .catch(() => {
         if (!cancelled) {
           setSheetList([]);
-          setListSummary(null);
         }
       });
     return () => {
       cancelled = true;
     };
-  }, [listMode, filterYear, filterMonth, filterCalendarWeek, filterIsoYear, filterIsoWeek]);
+  }, [filterYear, filterMonth]);
 
   const derived = useMemo(() => {
     return rows.map((r, i) => {
@@ -739,7 +705,7 @@ export default function App() {
     }
     setQuickBusy(true);
     try {
-      const r = await fetch("/api/revenue/people", {
+      const r = await apiFetch("/api/revenue/people", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, nickname, phone }),
@@ -776,22 +742,6 @@ export default function App() {
     }
   }
 
-  function onListModeChange(mode) {
-    setListMode(mode);
-    if (mode !== "month") setFilterCalendarWeek("");
-    if (mode === "week") {
-      const t = new Date();
-      setFilterIsoYear(getISOWeekYear(t));
-      setFilterIsoWeek(getISOWeek(t));
-    }
-  }
-
-  const weekOptions = useMemo(() => Array.from({ length: 53 }, (_, i) => i + 1), []);
-  const monthCalendarWeekSpans = useMemo(
-    () => getCalendarWeekSpansInMonth(filterYear, filterMonth),
-    [filterYear, filterMonth],
-  );
-
   return (
     <div className="app">
       <header className="sheet-header">
@@ -815,8 +765,9 @@ export default function App() {
                 setQuickRegisterOpen(true);
               }}
             >
-              Đăng ký
+              Đăng ký nhanh
             </button>
+            <HeaderUserBox />
           </nav>
         </div>
         <label className="sheet-date">
@@ -828,133 +779,38 @@ export default function App() {
             className="date-input"
           />
         </label>
-        <p className="sheet-date-label">{formatViDate(reportDate)}</p>
-        {mongoTimestamps.updatedAt && (
-          <p className="sheet-server-time">
-            <span className="sheet-server-time-label">Đối chiếu (giờ VN)</span>:{" "}
-            {mongoTimestamps.createdAt &&
-            mongoTimestamps.updatedAt &&
-            formatViDateTime(mongoTimestamps.createdAt) !== formatViDateTime(mongoTimestamps.updatedAt) ? (
-              <>
-                Tạo <time dateTime={String(mongoTimestamps.createdAt)}>{formatViDateTime(mongoTimestamps.createdAt)}</time>
-                {" · "}
-              </>
-            ) : null}
-            Sửa lần cuối{" "}
-            <time dateTime={String(mongoTimestamps.updatedAt)}>
-              {formatViDateTime(mongoTimestamps.updatedAt)}
-            </time>
-          </p>
-        )}
 
-        <div className="status-bar">
-          <span className={`save-badge save-badge--${saveState}`}>
-            {saveState === "saving" && "Đang lưu…"}
-            {saveState === "saved" && "Đã lưu MongoDB"}
-            {saveState === "error" && "Lỗi lưu — thử lại sau"}
-            {saveState === "idle" && "Tự lưu sau khi sửa"}
-          </span>
-          {mongoOk === false && <span className="mongo-warn">API / Mongo không kết nối</span>}
-          {loadError && <span className="mongo-warn">{loadError}</span>}
-        </div>
+        {(mongoOk === false || loadError) && (
+          <div className="status-bar">
+            {mongoOk === false && <span className="mongo-warn">API / Mongo không kết nối</span>}
+            {loadError && <span className="mongo-warn">{loadError}</span>}
+          </div>
+        )}
 
         <div className="browse-panel">
-          <span className="browse-label">Theo dõi theo</span>
+          <span className="browse-label">Danh sách phiếu trong tháng</span>
+          <input
+            type="number"
+            className="num-input"
+            min={2020}
+            max={2040}
+            value={filterYear}
+            onChange={(e) => setFilterYear(Number(e.target.value) || filterYear)}
+            aria-label="Năm"
+          />
           <select
             className="select-input"
-            value={listMode}
-            onChange={(e) => onListModeChange(e.target.value)}
-            aria-label="Chế độ lọc danh sách"
+            value={filterMonth}
+            onChange={(e) => setFilterMonth(Number(e.target.value))}
+            aria-label="Tháng"
           >
-            <option value="year">Năm (dương lịch)</option>
-            <option value="month">Tháng</option>
-            <option value="week">Tuần (ISO)</option>
+            {Array.from({ length: 12 }, (_, i) => (
+              <option key={i + 1} value={i + 1}>
+                Tháng {i + 1}
+              </option>
+            ))}
           </select>
-          {listMode === "year" && (
-            <input
-              type="number"
-              className="num-input"
-              min={2020}
-              max={2040}
-              value={filterYear}
-              onChange={(e) => setFilterYear(Number(e.target.value) || filterYear)}
-              aria-label="Năm"
-            />
-          )}
-          {listMode === "month" && (
-            <>
-              <input
-                type="number"
-                className="num-input"
-                min={2020}
-                max={2040}
-                value={filterYear}
-                onChange={(e) => setFilterYear(Number(e.target.value) || filterYear)}
-                aria-label="Năm"
-              />
-              <select
-                className="select-input"
-                value={filterMonth}
-                onChange={(e) => setFilterMonth(Number(e.target.value))}
-                aria-label="Tháng"
-              >
-                {Array.from({ length: 12 }, (_, i) => (
-                  <option key={i + 1} value={i + 1}>
-                    Tháng {i + 1}
-                  </option>
-                ))}
-              </select>
-              <span className="browse-hint">Tuần trong tháng</span>
-              <select
-                className="select-input"
-                value={filterCalendarWeek}
-                onChange={(e) => setFilterCalendarWeek(e.target.value)}
-                aria-label="Tuần trong tháng (để trống = cả tháng)"
-              >
-                <option value="">Cả tháng</option>
-                {monthCalendarWeekSpans.map((s) => (
-                  <option key={s.index} value={String(s.index)}>
-                    Tuần {s.index} ({s.startDay}–{s.endDay})
-                  </option>
-                ))}
-              </select>
-            </>
-          )}
-          {listMode === "week" && (
-            <>
-              <span className="browse-hint">Năm ISO</span>
-              <input
-                type="number"
-                className="num-input"
-                min={2020}
-                max={2040}
-                value={filterIsoYear}
-                onChange={(e) => setFilterIsoYear(Number(e.target.value) || filterIsoYear)}
-                aria-label="Năm ISO tuần"
-              />
-              <select
-                className="select-input"
-                value={filterIsoWeek}
-                onChange={(e) => setFilterIsoWeek(Number(e.target.value))}
-                aria-label="Số tuần ISO"
-              >
-                {weekOptions.map((w) => (
-                  <option key={w} value={w}>
-                    Tuần {w}
-                  </option>
-                ))}
-              </select>
-            </>
-          )}
         </div>
-
-        {listSummary && (
-          <p className="list-summary">
-            Gộp trong kỳ đang xem:{" "}
-            <strong>{formatMoney(listSummary.totalDoanhThu, { blankZero: false })}</strong> doanh thu ·{" "}
-            {listSummary.sheetCount} ngày có dữ liệu
-          </p>
-        )}
 
         {sheetList.length > 0 && (
           <div className="sheet-pills">

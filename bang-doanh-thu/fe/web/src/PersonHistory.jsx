@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { apiFetch } from "./apiClient.js";
+import HeaderUserBox from "./HeaderUserBox.jsx";
 import { formatMoney, formatViDate, formatViDateTime } from "./formatMoney.js";
 import "./App.css";
 
@@ -9,12 +11,13 @@ export default function PersonHistory() {
 }
 
 function PersonHistoryBody({ stt }) {
+  const { user, logout } = useAuth();
   const [data, setData] = useState(null);
   const [err, setErr] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/revenue/history/${encodeURIComponent(stt)}`)
+    apiFetch(`/api/revenue/history/${encodeURIComponent(stt)}`)
       .then(async (r) => {
         if (!r.ok) {
           if (r.status === 404) {
@@ -50,9 +53,12 @@ function PersonHistoryBody({ stt }) {
   return (
     <div className="app app--history">
       <header className="history-header">
-        <Link to="/" className="history-back">
-          ← Bảng doanh thu
-        </Link>
+        <div className="aggregate-header-toplinks">
+          <Link to="/" className="history-back">
+            ← Bảng doanh thu
+          </Link>
+          <HeaderUserBox />
+        </div>
         <div className="sheet-header-brand history-header-brand">
           <p className="ocean-page-eyebrow">Lịch sử</p>
           <h1 className="sheet-title history-title">

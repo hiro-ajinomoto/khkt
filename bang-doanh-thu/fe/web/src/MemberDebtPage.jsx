@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import HeaderUserBox from "./HeaderUserBox.jsx";
+import { apiFetch } from "./apiClient.js";
 import { formatMoney, formatViDateTime, parseMoney } from "./formatMoney.js";
 import "./App.css";
 
@@ -26,8 +28,8 @@ export default function MemberDebtPage() {
     setBusy(true);
     try {
       const [pr, dr] = await Promise.all([
-        fetch(`/api/revenue/people/${encodeURIComponent(personId)}`),
-        fetch(`/api/revenue/people/${encodeURIComponent(personId)}/debt?year=${year}`),
+        apiFetch(`/api/revenue/people/${encodeURIComponent(personId)}`),
+        apiFetch(`/api/revenue/people/${encodeURIComponent(personId)}/debt?year=${year}`),
       ]);
       if (pr.status === 404) {
         setPerson(null);
@@ -68,7 +70,7 @@ export default function MemberDebtPage() {
     }
     setTruBusy(true);
     try {
-      const r = await fetch(`/api/revenue/people/${encodeURIComponent(personId)}/debt/tru`, {
+      const r = await apiFetch(`/api/revenue/people/${encodeURIComponent(personId)}/debt/tru`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount: amt, note: truNote.trim(), year }),
@@ -118,6 +120,7 @@ export default function MemberDebtPage() {
             <Link to="/thanh-vien" className="header-nav-link">
               Trả nợ
             </Link>
+            <HeaderUserBox />
           </nav>
         </div>
         {person && (

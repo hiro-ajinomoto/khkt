@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { apiFetch } from "./apiClient.js";
+import HeaderUserBox from "./HeaderUserBox.jsx";
 import { formatViDateTime } from "./formatMoney.js";
 import "./App.css";
 
@@ -19,7 +21,7 @@ export default function MembersPage() {
   const load = useCallback(async () => {
     setLoadErr(null);
     try {
-      const r = await fetch("/api/revenue/people");
+      const r = await apiFetch("/api/revenue/people");
       if (!r.ok) throw new Error("load_failed");
       const j = await r.json();
       setPeople(Array.isArray(j.people) ? j.people : []);
@@ -66,7 +68,7 @@ export default function MembersPage() {
     setBusy(true);
     try {
       if (editingId === "new") {
-        const r = await fetch("/api/revenue/people", {
+        const r = await apiFetch("/api/revenue/people", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name, nickname: formNick.trim(), phone: formPhone.trim() }),
@@ -90,7 +92,7 @@ export default function MembersPage() {
         await load();
         closeForm();
       } else if (editingId) {
-        const r = await fetch(`/api/revenue/people/${encodeURIComponent(editingId)}`, {
+        const r = await apiFetch(`/api/revenue/people/${encodeURIComponent(editingId)}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name, nickname: formNick.trim(), phone: formPhone.trim() }),
@@ -127,7 +129,7 @@ export default function MembersPage() {
     setBusy(true);
     setLoadErr(null);
     try {
-      const r = await fetch(`/api/revenue/people/${encodeURIComponent(p.id)}`, { method: "DELETE" });
+      const r = await apiFetch(`/api/revenue/people/${encodeURIComponent(p.id)}`, { method: "DELETE" });
       if (r.status === 404) {
         setLoadErr("Bản ghi không còn tồn tại.");
         await load();
@@ -158,6 +160,7 @@ export default function MembersPage() {
             <Link to="/tong-hop" className="header-nav-link">
               Tổng hợp kỳ
             </Link>
+            <HeaderUserBox />
           </nav>
         </div>
         <p className="members-intro">

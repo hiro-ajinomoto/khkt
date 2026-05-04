@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { apiFetch } from "./apiClient.js";
 
 /** Giống `normalizePersonKey` phía BE (chuẩn so khớp tên). */
 function normalizeKey(name) {
@@ -104,7 +105,7 @@ export function NameSuggestInput({ rowIndex, value, onChange }) {
       setLoading(true);
       (async () => {
         try {
-          const r = await fetch(`/api/revenue/people/suggest?q=${encodeURIComponent(qTrim)}`, {
+          const r = await apiFetch(`/api/revenue/people/suggest?q=${encodeURIComponent(qTrim)}`, {
             signal: ac.signal,
           });
           const j = await r.json();
@@ -138,7 +139,7 @@ export function NameSuggestInput({ rowIndex, value, onChange }) {
     if (!name) return;
     setCreateSaving(true);
     try {
-      const r = await fetch("/api/revenue/people", {
+      const r = await apiFetch("/api/revenue/people", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, nickname: nicknameExtra, phone: "" }),

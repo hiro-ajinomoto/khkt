@@ -2,6 +2,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
 import { connectDB, getDB } from "./db.js";
+import { requireAuth } from "./authMiddleware.js";
+import { authRouter } from "./authRouter.js";
 import { revenueRouter } from "./revenueRouter.js";
 
 dotenv.config();
@@ -34,7 +36,8 @@ app.get("/api/health", (_req, res) => {
   res.json({ ok: true, service: "bang-doanh-thu-backend", mongo: mongoOk });
 });
 
-app.use("/api/revenue", revenueRouter);
+app.use("/api/auth", authRouter);
+app.use("/api/revenue", requireAuth, revenueRouter);
 
 async function main() {
   await connectDB();
