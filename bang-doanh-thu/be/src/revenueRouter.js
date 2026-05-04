@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { getSheetsCollection } from "./db.js";
 import { peopleRouter } from "./peopleRouter.js";
+import { normalizeCauDoQueue } from "./cauDoQueue.js";
 import {
   aggregateSheetsInsight,
   buildPersonHistory,
@@ -253,6 +254,7 @@ revenueRouter.get("/sheets/:reportDate", async (req, res) => {
       totals: computeTotals(blankRows, blankCn),
       cellLedger: emptyCellLedger(ROW_COUNT_DEFAULT),
       conNoLedger: blankCn,
+      cauDoQueue: [],
       createdAt: null,
       updatedAt: null,
     });
@@ -265,6 +267,7 @@ revenueRouter.get("/sheets/:reportDate", async (req, res) => {
     doc.conNoLedger != null
       ? normalizeConNoLedger(doc.conNoLedger, new Date(), rowLen)
       : emptyConNoLedger(rowLen);
+  const cauDoQueue = normalizeCauDoQueue(doc.cauDoQueue, new Date(), rowLen);
   res.json({
     reportDate: doc.reportDate,
     year: doc.year,
@@ -279,6 +282,7 @@ revenueRouter.get("/sheets/:reportDate", async (req, res) => {
         ? normalizeCellLedger(doc.cellLedger, new Date(), rowLen)
         : emptyCellLedger(rowLen),
     conNoLedger: conNoLedgerSafe,
+    cauDoQueue,
     createdAt: doc.createdAt ?? null,
     updatedAt: doc.updatedAt ?? null,
   });
@@ -366,6 +370,12 @@ revenueRouter.put("/sheets/:reportDate", async (req, res) => {
 
   const totals = computeTotals(rowsSynced, conNoLedger);
 
+  const bodyCauDoQueueProvided =
+    req.body != null && Object.hasOwn(/** @type {object} */ (req.body), "cauDoQueue");
+  const cauDoQueue = bodyCauDoQueueProvided
+    ? normalizeCauDoQueue(req.body.cauDoQueue, now, rowLen)
+    : normalizeCauDoQueue(existing?.cauDoQueue, now, rowLen);
+
   const cellTimes = mergeCellTimes(
     existing?.rows,
     existing?.cellTimes,
@@ -384,6 +394,7 @@ revenueRouter.put("/sheets/:reportDate", async (req, res) => {
         updatedAt: now,
         cellLedger: ledger,
         conNoLedger,
+        cauDoQueue,
         cellTimes,
       },
       $setOnInsert: { createdAt: now },
@@ -398,6 +409,7 @@ revenueRouter.put("/sheets/:reportDate", async (req, res) => {
     doc.conNoLedger != null
       ? normalizeConNoLedger(doc.conNoLedger, new Date(), outLen)
       : emptyConNoLedger(outLen);
+  const cauDoQueueOut = normalizeCauDoQueue(doc.cauDoQueue, new Date(), outLen);
   res.json({
     reportDate: doc.reportDate,
     year: doc.year,
@@ -411,6 +423,7 @@ revenueRouter.put("/sheets/:reportDate", async (req, res) => {
         ? normalizeCellLedger(doc.cellLedger, new Date(), outLen)
         : emptyCellLedger(outLen),
     conNoLedger: conNoOut,
+    cauDoQueue: cauDoQueueOut,
     createdAt: doc.createdAt ?? null,
     updatedAt: doc.updatedAt ?? null,
   });

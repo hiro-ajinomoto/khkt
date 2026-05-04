@@ -5,10 +5,12 @@ import { Link, useSearchParams } from "react-router-dom";
 import { apiFetch } from "./apiClient.js";
 import MainNavBar from "./MainNavBar.jsx";
 import BrandBlock from "./BrandBlock.jsx";
-import { formatMoney, parseMoney } from "./formatMoney.js";
+import { formatMoney, formatViDateTime, parseMoney } from "./formatMoney.js";
 import { NameSuggestInput } from "./NameSuggestInput.jsx";
 import ConNoLedgerHoverCell, { emptyClientConNoLedger, normalizeApiConNoLedger } from "./ConNoLedgerHoverCell.jsx";
+import CauDoEnqueueDialog from "./CauDoEnqueueDialog.jsx";
 import ChiaCauDialog from "./ChiaCauDialog.jsx";
+import { newCauDoQueueItem, normalizeCauDoQueueClient } from "./cauDoQueueModel.js";
 import { splitTotalEvenInt } from "./chiaCauUtils.js";
 import { ROW_COUNT_DEFAULT, ROW_COUNT_MAX, sheetRowCountFromLength } from "./sheetConstants.js";
 import "./App.css";
@@ -252,6 +254,16 @@ function initialReportDateFromSearch() {
 }
 
 /** `isoDate` dạng `yyyy-MM-dd` (theo lịch local); `deltaDays` âm = ngày trước, dương = ngày sau. */
+/** Tìm lại STT dòng người lấy cầu trên phiếu hiện tại (theo tên đã lưu trong hàng đợi). */
+function pickupIndexForQueueItem(players, item) {
+  const t = String(item.pickupTen ?? "").trim().toLowerCase();
+  if (!t) return NaN;
+  const at = players.find((p) => p.index === item.pickupRowIndex);
+  if (at && at.name.trim().toLowerCase() === t) return item.pickupRowIndex;
+  const byName = players.find((p) => p.name.trim().toLowerCase() === t);
+  return byName ? byName.index : NaN;
+}
+
 function shiftISODateByDays(isoDate, deltaDays) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
   if (!m) return isoDate;
@@ -471,6 +483,14 @@ export default function App() {
   const [chiaCauOpen, setChiaCauOpen] = useState(false);
   /** Đổi key mỗi lần mở để form Chia cầu reset sạch (tránh reset trong effect). */
   const [chiaCauDialogKey, setChiaCauDialogKey] = useState(0);
+  const [cauDoQueue, setCauDoQueue] = useState(/** @type {Array<{ id: string, pickupRowIndex: number, pickupTen: string, priceVnd: number, queuedAt: string }>} */ ([]));
+  const [cauDoEnqueueOpen, setCauDoEnqueueOpen] = useState(false);
+  const [cauDoEnqueueKey, setCauDoEnqueueKey] = useState(0);
+  const [cauDoResolveOpen, setCauDoResolveOpen] = useState(false);
+  const [cauDoResolveKey, setCauDoResolveKey] = useState(0);
+  const [cauDoResolveItem, setCauDoResolveItem] = useState(
+    /** @type {{ id: string, pickupRowIndex: number, pickupTen: string, priceVnd: number, queuedAt: string } | null} */ (null),
+  );
   const [quickRegisterOpen, setQuickRegisterOpen] = useState(false);
   const [quickName, setQuickName] = useState("");
   const [quickNick, setQuickNick] = useState("");
@@ -549,6 +569,7 @@ export default function App() {
         setRows(merged);
         setCellLedger(led);
         setConNoLedger(normalizeApiConNoLedger(data.conNoLedger, rowsNorm.length));
+        setCauDoQueue(normalizeCauDoQueueClient(data.cauDoQueue, rowsNorm.length));
         setHydrated(true);
         setLoadError(null);
       } catch (e) {
@@ -557,6 +578,7 @@ export default function App() {
         setCellLedger(emptyClientLedger(ROW_COUNT_DEFAULT));
         setConNoLedger(emptyClientConNoLedger(ROW_COUNT_DEFAULT));
         setRows(Array.from({ length: ROW_COUNT_DEFAULT }, () => emptyRow()));
+        setCauDoQueue([]);
         setHydrated(true);
       }
     })();
@@ -590,12 +612,17 @@ export default function App() {
     };
   }, [quickRegisterOpen]);
 
-  const persist = useCallback(async (date, bodyRows, bodyLedger, bodyConNoLedger) => {
+  const persist = useCallback(async (date, bodyRows, bodyLedger, bodyConNoLedger, bodyCauDoQueue) => {
     try {
       const r = await apiFetch(`/api/revenue/sheets/${date}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rows: bodyRows, cellLedger: bodyLedger, conNoLedger: bodyConNoLedger }),
+        body: JSON.stringify({
+          rows: bodyRows,
+          cellLedger: bodyLedger,
+          conNoLedger: bodyConNoLedger,
+          cauDoQueue: bodyCauDoQueue ?? [],
+        }),
       });
       if (!r.ok) throw new Error("save_failed");
       await r.json();
@@ -608,12 +635,12 @@ export default function App() {
     if (!hydrated) return;
     if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
     saveTimerRef.current = window.setTimeout(() => {
-      persist(reportDate, rows, cellLedger, conNoLedger);
+      persist(reportDate, rows, cellLedger, conNoLedger, cauDoQueue);
     }, 1400);
     return () => {
       if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
     };
-  }, [rows, cellLedger, conNoLedger, reportDate, hydrated, persist]);
+  }, [rows, cellLedger, conNoLedger, cauDoQueue, reportDate, hydrated, persist]);
 
   const derived = useMemo(() => {
     return rows.map((r, i) => {
@@ -821,7 +848,9 @@ export default function App() {
       const sorted = [...new Set(payload.participantIndices)]
         .filter((i) => Number.isFinite(i) && i >= 0 && i < rows.length)
         .sort((a, b) => a - b);
-      if (sorted.length === 0 || !sorted.includes(payload.pickupIndex)) return;
+      if (sorted.length === 0) return;
+      const cauDoResolve = Boolean(payload.queueItemId);
+      if (!cauDoResolve && !sorted.includes(payload.pickupIndex)) return;
       const shares = splitTotalEvenInt(payload.priceVnd, sorted.length);
       if (shares.length !== sorted.length) return;
       let nr = rows;
@@ -833,9 +862,24 @@ export default function App() {
       }
       setRows(nr);
       setCellLedger(nl);
-      setChiaCauOpen(false);
+      if (payload.queueItemId) {
+        setCauDoQueue((q) => q.filter((x) => x.id !== payload.queueItemId));
+        setCauDoResolveOpen(false);
+        setCauDoResolveItem(null);
+      } else {
+        setChiaCauOpen(false);
+      }
     },
     [rows, cellLedger],
+  );
+
+  const handleSaveCauDoQueue = useCallback(
+    (p) => {
+      const item = newCauDoQueueItem(p);
+      setCauDoQueue((prev) => [...prev, item]);
+      setCauDoEnqueueOpen(false);
+    },
+    [],
   );
 
   function appendGhiNoLine(rowIdx, amountNum) {
@@ -860,7 +904,8 @@ export default function App() {
     setRows(blank);
     setCellLedger(blankLed);
     setConNoLedger(blankConNo);
-    persist(reportDate, blank, blankLed, blankConNo);
+    setCauDoQueue([]);
+    persist(reportDate, blank, blankLed, blankConNo, []);
   }
 
   async function handleQuickRegister(e) {
@@ -921,72 +966,144 @@ export default function App() {
 
   return (
     <div className="app app--revenue-sheet">
-      <header className="sheet-header">
-        <button
-          type="button"
-          className="sheet-chia-cau-open"
-          onClick={() => {
-            setChiaCauDialogKey((k) => k + 1);
-            setChiaCauOpen(true);
-          }}
-          title="Chia tiền cầu cho người chơi hôm nay"
-        >
-          Chia cầu
-        </button>
-        <div className="sheet-header-top">
-          <BrandBlock subtitle="Phiếu doanh thu theo ngày" />
+      <div className="sheet-revenue-layout">
+        <aside className="sheet-revenue-sidebar" aria-label="Thương hiệu và điều hướng">
+          <div className="sheet-sidebar-brand">
+            <BrandBlock subtitle="Phiếu doanh thu theo ngày" />
+          </div>
           <MainNavBar
             onQuickRegisterClick={() => {
               setQuickMsg(null);
               setQuickRegisterOpen(true);
             }}
           />
-        </div>
-        <div className="sheet-date-row" role="group" aria-label="Chọn ngày phiếu">
-          <button
-            type="button"
-            className="sheet-date-step"
-            onClick={() => bumpReportDate(shiftISODateByDays(reportDate, -1))}
-            aria-label="Ngày trước"
-            title="Ngày trước"
-          >
-            ‹
-          </button>
-          <label className="sheet-date">
-            <span className="visually-hidden">Ngày</span>
-            <input
-              type="date"
-              value={reportDate}
-              onChange={(e) => bumpReportDate(e.target.value)}
-              className="date-input"
-            />
-          </label>
-          <button
-            type="button"
-            className="sheet-date-step"
-            onClick={() => bumpReportDate(shiftISODateByDays(reportDate, 1))}
-            aria-label="Ngày sau"
-            title="Ngày sau"
-          >
-            ›
-          </button>
-        </div>
+        </aside>
 
-        {(mongoOk === false || loadError) && (
-          <div className="status-bar">
-            {mongoOk === false && <span className="mongo-warn">API / Mongo không kết nối</span>}
-            {loadError && <span className="mongo-warn">{loadError}</span>}
-          </div>
-        )}
+        <div className="sheet-revenue-work">
+          <header className="sheet-header sheet-header--work">
+            <div className="sheet-header-work-top">
+              <div className="sheet-date-row" role="group" aria-label="Chọn ngày phiếu">
+                <button
+                  type="button"
+                  className="sheet-date-step"
+                  onClick={() => bumpReportDate(shiftISODateByDays(reportDate, -1))}
+                  aria-label="Ngày trước"
+                  title="Ngày trước"
+                >
+                  ‹
+                </button>
+                <label className="sheet-date">
+                  <span className="visually-hidden">Ngày</span>
+                  <input
+                    type="date"
+                    value={reportDate}
+                    onChange={(e) => bumpReportDate(e.target.value)}
+                    className="date-input"
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="sheet-date-step"
+                  onClick={() => bumpReportDate(shiftISODateByDays(reportDate, 1))}
+                  aria-label="Ngày sau"
+                  title="Ngày sau"
+                >
+                  ›
+                </button>
+              </div>
+              <div className="sheet-header-actions sheet-header-actions--inline">
+                <button
+                  type="button"
+                  className="sheet-header-fab sheet-chia-cau-open"
+                  onClick={() => {
+                    setChiaCauDialogKey((k) => k + 1);
+                    setChiaCauOpen(true);
+                  }}
+                  title="Chia tiền cầu cho người chơi hôm nay"
+                >
+                  Chia cầu
+                </button>
+                <button
+                  type="button"
+                  className="sheet-header-fab sheet-cau-do-open"
+                  onClick={() => {
+                    setCauDoEnqueueKey((k) => k + 1);
+                    setCauDoEnqueueOpen(true);
+                  }}
+                  title="Ghi cầu đánh độ vào hàng đợi — chia tiền sau khi đánh xong"
+                >
+                  Cầu độ
+                </button>
+              </div>
+            </div>
 
-        <div className="toolbar">
-          <button type="button" className="btn-ghost" onClick={clearAll}>
-            Làm mới bảng
-          </button>
-        </div>
-      </header>
+            <section
+              className="cau-do-queue-panel cau-do-queue-panel--sheet-below-actions"
+              aria-label="Hàng đợi cầu đánh độ"
+            >
+              <h2 className="cau-do-queue-title">Hàng đợi cầu độ</h2>
+              {cauDoQueue.length === 0 ? (
+                <p className="cau-do-queue-empty">Chưa có mục nào — bấm «Cầu độ» để ghi người lấy cầu và giá.</p>
+              ) : (
+                <ul className="cau-do-queue-list">
+                  {cauDoQueue.map((item) => (
+                    <li key={item.id} className="cau-do-queue-row">
+                      <span className="cau-do-queue-name">{item.pickupTen}</span>
+                      <span className="cau-do-queue-meta">
+                        {formatMoney(item.priceVnd, { blankZero: false })}đ · {formatViDateTime(item.queuedAt)}
+                      </span>
+                      <span className="cau-do-queue-actions">
+                        <button
+                          type="button"
+                          className="cau-do-queue-btn"
+                          onClick={() => {
+                            const idx = pickupIndexForQueueItem(playersForChiaCau, item);
+                            if (!Number.isFinite(idx)) {
+                              window.alert(
+                                `Không tìm thấy «${item.pickupTen}» trên phiếu — kiểm tra tên hoặc xóa mục hàng đợi.`,
+                              );
+                              return;
+                            }
+                            setCauDoResolveKey((k) => k + 1);
+                            setCauDoResolveItem(item);
+                            setCauDoResolveOpen(true);
+                          }}
+                        >
+                          Chia tiền
+                        </button>
+                        <button
+                          type="button"
+                          className="cau-do-queue-btn cau-do-queue-btn--ghost"
+                          onClick={() => {
+                            if (!window.confirm(`Xóa «${item.pickupTen}» khỏi hàng đợi?`)) return;
+                            setCauDoQueue((q) => q.filter((x) => x.id !== item.id));
+                          }}
+                        >
+                          Xóa
+                        </button>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
 
-      <div className="table-wrap">
+            {(mongoOk === false || loadError) && (
+              <div className="status-bar">
+                {mongoOk === false && <span className="mongo-warn">API / Mongo không kết nối</span>}
+                {loadError && <span className="mongo-warn">{loadError}</span>}
+              </div>
+            )}
+
+            <div className="toolbar toolbar--work">
+              <button type="button" className="btn-ghost" onClick={clearAll}>
+                Làm mới bảng
+              </button>
+            </div>
+          </header>
+
+          <div className="sheet-revenue-table-solo">
+            <div className="table-wrap">
         <table className="revenue-table revenue-sheet">
           <colgroup>
             <col className="col-w-equal" />
@@ -1061,6 +1178,9 @@ export default function App() {
             </tr>
           </tbody>
         </table>
+              </div>
+          </div>
+        </div>
       </div>
 
       {chiaCauOpen &&
@@ -1074,6 +1194,45 @@ export default function App() {
           />,
           document.body,
         )}
+
+      {cauDoEnqueueOpen &&
+        createPortal(
+          <CauDoEnqueueDialog
+            key={cauDoEnqueueKey}
+            open
+            onClose={() => setCauDoEnqueueOpen(false)}
+            players={playersForChiaCau}
+            onSaveQueue={handleSaveCauDoQueue}
+          />,
+          document.body,
+        )}
+
+      {cauDoResolveOpen &&
+        cauDoResolveItem &&
+        (() => {
+          const idx = pickupIndexForQueueItem(playersForChiaCau, cauDoResolveItem);
+          if (!Number.isFinite(idx)) return null;
+          const preset = {
+            pickupIndex: idx,
+            priceVnd: cauDoResolveItem.priceVnd,
+            pickupTenLabel: cauDoResolveItem.pickupTen,
+            queueItemId: cauDoResolveItem.id,
+          };
+          return createPortal(
+            <ChiaCauDialog
+              key={`${cauDoResolveKey}-${cauDoResolveItem.id}`}
+              open
+              onClose={() => {
+                setCauDoResolveOpen(false);
+                setCauDoResolveItem(null);
+              }}
+              players={playersForChiaCau}
+              onApply={applyChiaCau}
+              queueResolvePreset={preset}
+            />,
+            document.body,
+          );
+        })()}
 
       {quickRegisterOpen &&
         createPortal(

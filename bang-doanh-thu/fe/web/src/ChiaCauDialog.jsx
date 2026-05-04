@@ -3,14 +3,19 @@ import { formatMoney } from "./formatMoney.js";
 import { CHIA_CAU_PRICE_OPTIONS, splitTotalEvenInt } from "./chiaCauUtils.js";
 
 /**
+ * @typedef {{ pickupIndex: number, priceVnd: number, pickupTenLabel: string, queueItemId: string }} QueueResolvePreset
  * @param {boolean} open
  * @param {() => void} onClose
  * @param {Array<{ index: number, stt: number, name: string }>} players — chỉ dòng đã có tên hôm nay
- * @param {(p: { pickupIndex: number, participantIndices: number[], priceVnd: number }) => void} onApply
+ * @param {(p: { pickupIndex: number, participantIndices: number[], priceVnd: number, queueItemId?: string }) => void} onApply
+ * @param {QueueResolvePreset | null} [queueResolvePreset] — nếu có: đã có người lấy + giá từ hàng đợi cầu độ
  */
-export default function ChiaCauDialog({ open, onClose, players, onApply }) {
-  const [pickup, setPickup] = useState("");
-  const [priceVnd, setPriceVnd] = useState(/** @type {number | null} */ (null));
+export default function ChiaCauDialog({ open, onClose, players, onApply, queueResolvePreset = null }) {
+  const isResolve = queueResolvePreset != null;
+  const [pickup, setPickup] = useState(() => (isResolve ? String(queueResolvePreset.pickupIndex) : ""));
+  const [priceVnd, setPriceVnd] = useState(
+    () => (isResolve ? queueResolvePreset.priceVnd : /** @type {number | null} */ (null)),
+  );
   const [participants, setParticipants] = useState(/** @type {number[]} */ ([]));
   const [err, setErr] = useState(/** @type {string | null} */ (null));
 
@@ -39,6 +44,7 @@ export default function ChiaCauDialog({ open, onClose, players, onApply }) {
   }, [priceVnd, participants]);
 
   function onPickupChange(raw) {
+    if (isResolve) return;
     setErr(null);
     if (raw === "") {
       setPickup("");
@@ -73,7 +79,7 @@ export default function ChiaCauDialog({ open, onClose, players, onApply }) {
       setErr("Tích chọn ít nhất một người cùng trả.");
       return;
     }
-    if (!participants.includes(pickupNum)) {
+    if (!isResolve && !participants.includes(pickupNum)) {
       setErr("Người lấy cầu phải được tích trong danh sách cùng trả.");
       return;
     }
@@ -81,6 +87,7 @@ export default function ChiaCauDialog({ open, onClose, players, onApply }) {
       pickupIndex: pickupNum,
       participantIndices: [...participants],
       priceVnd: Math.round(priceVnd),
+      ...(isResolve ? { queueItemId: queueResolvePreset.queueItemId } : {}),
     });
   }
 
@@ -97,15 +104,24 @@ export default function ChiaCauDialog({ open, onClose, players, onApply }) {
       <div className="name-modal chia-cau-dialog" role="dialog" aria-modal="true" aria-labelledby="chia-cau-title">
         <div className="chia-cau-dialog-head">
           <h2 id="chia-cau-title" className="name-modal-title chia-cau-dialog-title">
-            Chia cầu
+            {isResolve ? "Chia cầu độ — chọn người trả" : "Chia cầu"}
           </h2>
           <button type="button" className="quick-register-dialog-close" aria-label="Đóng" onClick={onClose}>
             ×
           </button>
         </div>
         <p className="chia-cau-lead">
-          Chỉ hiện <strong>người đã có tên</strong> trên phiếu hôm nay. Tiền <strong>chia đều</strong> cho những người được
-          tích; mỗi người sẽ thấy dòng <strong>Cầu</strong> trong lịch sử (STT trên bảng).
+          {isResolve ? (
+            <>
+              Chọn <strong>ai cùng trả</strong> cho loại cầu đã ghi trong hàng đợi. Bấm <strong>Chia cầu</strong> để cộng
+              tiền vào ô <strong>Cầu</strong> và xoá khỏi hàng đợi.
+            </>
+          ) : (
+            <>
+              Chỉ hiện <strong>người đã có tên</strong> trên phiếu hôm nay. Tiền <strong>chia đều</strong> cho những người
+              được tích; mỗi người sẽ thấy dòng <strong>Cầu</strong> trong lịch sử (STT trên bảng).
+            </>
+          )}
         </p>
 
         {players.length === 0 ? (
@@ -119,46 +135,67 @@ export default function ChiaCauDialog({ open, onClose, players, onApply }) {
           </>
         ) : (
           <form className="chia-cau-form" onSubmit={handleSubmit}>
-            <div className="chia-cau-block">
-              <span className="chia-cau-label" id="chia-cau-pickup-label">
-                Ai lấy cầu?
-              </span>
-              <select
-                className="chia-cau-select"
-                aria-labelledby="chia-cau-pickup-label"
-                value={pickup === "" ? "" : String(pickup)}
-                onChange={(e) => onPickupChange(e.target.value)}
-              >
-                <option value="">— Chọn —</option>
-                {players.map((p) => (
-                  <option key={p.index} value={String(p.index)}>
-                    STT {p.stt} · {p.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <fieldset className="chia-cau-block chia-cau-fieldset">
-              <legend className="chia-cau-label">Giá cầu (1 loại)</legend>
-              <div className="chia-cau-price-grid" role="group" aria-label="Giá cầu">
-                {CHIA_CAU_PRICE_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.vnd}
-                    type="button"
-                    className={`chia-cau-price-btn${priceVnd === opt.vnd ? " chia-cau-price-btn--on" : ""}`}
-                    onClick={() => {
-                      setErr(null);
-                      setPriceVnd(opt.vnd);
-                    }}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+            {isResolve && queueResolvePreset ? (
+              <div className="chia-cau-queue-readonly">
+                <p className="chia-cau-queue-readonly-line">
+                  <span className="chia-cau-label">Người lấy cầu</span>
+                  <span className="chia-cau-queue-readonly-value">{queueResolvePreset.pickupTenLabel}</span>
+                </p>
+                <p className="chia-cau-queue-readonly-line">
+                  <span className="chia-cau-label">Giá đã ghi</span>
+                  <span className="chia-cau-queue-readonly-value">
+                    {formatMoney(queueResolvePreset.priceVnd, { blankZero: false })}đ
+                  </span>
+                </p>
               </div>
-            </fieldset>
+            ) : (
+              <>
+                <div className="chia-cau-block">
+                  <span className="chia-cau-label" id="chia-cau-pickup-label">
+                    Ai lấy cầu?
+                  </span>
+                  <select
+                    className="chia-cau-select"
+                    aria-labelledby="chia-cau-pickup-label"
+                    value={pickup === "" ? "" : String(pickup)}
+                    onChange={(e) => onPickupChange(e.target.value)}
+                  >
+                    <option value="">— Chọn —</option>
+                    {players.map((p) => (
+                      <option key={p.index} value={String(p.index)}>
+                        STT {p.stt} · {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <fieldset className="chia-cau-block chia-cau-fieldset">
+                  <legend className="chia-cau-label">Giá cầu (1 loại)</legend>
+                  <div className="chia-cau-price-grid" role="group" aria-label="Giá cầu">
+                    {CHIA_CAU_PRICE_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.vnd}
+                        type="button"
+                        className={`chia-cau-price-btn${priceVnd === opt.vnd ? " chia-cau-price-btn--on" : ""}`}
+                        onClick={() => {
+                          setErr(null);
+                          setPriceVnd(opt.vnd);
+                        }}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+              </>
+            )}
 
             <fieldset className="chia-cau-block chia-cau-fieldset">
-              <legend className="chia-cau-label">Ai cùng trả? (tích hết người góp, gồm cả người lấy cầu)</legend>
+              <legend className="chia-cau-label">
+                {isResolve
+                  ? "Ai cùng trả? (tích người góp — không bắt buộc gồm người lấy cầu)"
+                  : "Ai cùng trả? (tích hết người góp, gồm cả người lấy cầu)"}
+              </legend>
               <div className="chia-cau-check-list">
                 {players.map((p) => (
                   <label key={p.index} className="chia-cau-check-row">
