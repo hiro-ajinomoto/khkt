@@ -670,6 +670,17 @@ export default function App() {
     [rows],
   );
 
+  /** Chia cầu độ: chỉ người đã tích «Ai đánh» lúc lưu hàng đợi (bản cũ không có list → cả ngày). */
+  const playersForCauDoResolveDialog = useMemo(() => {
+    const item = cauDoResolveItem;
+    const all = playersForChiaCau;
+    if (!item) return all;
+    const raw = item.participantRowIndices;
+    if (!Array.isArray(raw) || raw.length === 0) return all;
+    const allow = new Set(raw);
+    return all.filter((p) => allow.has(p.index));
+  }, [cauDoResolveItem, playersForChiaCau]);
+
   const totals = useMemo(() => {
     let san = 0;
     let cuonCan = 0;
@@ -1235,7 +1246,7 @@ export default function App() {
                 setCauDoResolveOpen(false);
                 setCauDoResolveItem(null);
               }}
-              players={playersForChiaCau}
+              players={playersForCauDoResolveDialog}
               onApply={applyChiaCau}
               queueResolvePreset={preset}
             />,

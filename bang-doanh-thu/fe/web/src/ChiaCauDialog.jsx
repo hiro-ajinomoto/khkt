@@ -147,8 +147,8 @@ export default function ChiaCauDialog({ open, onClose, players, onApply, queueRe
         <p className="chia-cau-lead">
           {isResolve ? (
             <>
-              Chọn <strong>ai cùng trả</strong> cho loại cầu đã ghi trong hàng đợi. Bấm <strong>Chia cầu</strong> để cộng
-              tiền vào ô <strong>Cầu</strong> và xoá khỏi hàng đợi.
+              Dưới đây chỉ có <strong>người đã tích khi ghi cầu độ</strong>. Chọn <strong>ai cùng trả</strong>, rồi bấm{" "}
+              <strong>Chia cầu</strong> để cộng tiền vào ô <strong>Cầu</strong> và xoá khỏi hàng đợi.
             </>
           ) : (
             <>
@@ -160,7 +160,11 @@ export default function ChiaCauDialog({ open, onClose, players, onApply, queueRe
 
         {players.length === 0 ? (
           <>
-            <p className="chia-cau-msg chia-cau-msg--err">Chưa có ai trong danh sách — nhập tên ở cột Tên trước.</p>
+            <p className="chia-cau-msg chia-cau-msg--err">
+              {isResolve
+                ? "Không còn ai từ danh sách cầu độ trên phiếu — kiểm tra tên các dòng đã tích lúc ghi hàng đợi, hoặc xóa mục hàng đợi và ghi lại."
+                : "Chưa có ai trong danh sách — nhập tên ở cột Tên trước."}
+            </p>
             <div className="chia-cau-actions">
               <button type="button" className="quick-register-dialog-cancel" onClick={onClose}>
                 Đóng
