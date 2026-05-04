@@ -796,7 +796,10 @@ export default function App() {
     <div className="app">
       <header className="sheet-header">
         <div className="sheet-header-top">
-          <h1 className="sheet-title">DOANH THU</h1>
+          <div className="sheet-header-brand">
+            <p className="ocean-page-eyebrow">Theo ngày</p>
+            <h1 className="sheet-title">DOANH THU</h1>
+          </div>
           <nav className="header-nav-links" aria-label="Điều hướng">
             <Link to="/tong-hop" className="header-nav-link">
               Tổng hợp kỳ
@@ -1160,23 +1163,6 @@ export default function App() {
           </tbody>
         </table>
       </div>
-
-      <p className="hint">
-        Doanh thu = Sân + Cuốn cán + Cầu + Suối + Nước ngọt + Đồ ăn. Cột <strong>Còn nợ</strong> là <strong>theo ngày phiếu đang mở</strong>{" "}
-        (mỗi dòng), = Doanh thu − Hôm nay trả + (nếu có) điều chỉnh <strong>cộng/trừ</strong> —{" "}
-        <strong>không</strong> phải tổng nợ cả tháng trong ô đó. Bấm số <strong>Còn nợ</strong> — panel <strong>Ghi nợ</strong> hiện dưới ô (lịch sử
-        Trả nợ, không đổi số trong ô). Tổng theo từng người (gộp nhiều ngày): <Link to="/thanh-vien">Trả nợ</Link>{" "}
-        → bấm họ tên (tên dòng cần trùng tên trong Trả nợ). Lưu trữ:
-        MongoDB (cùng biến <code>MONGODB_URI</code>, <code>MONGODB_DB</code>{" "}
-        với backend KHKT), collection <code>bang_doanh_thu_sheets</code>. Tuần lọc theo chuẩn ISO (thứ
-        Hai đầu tuần). Cột <strong>Sân</strong> / <strong>Cuốn cán</strong> / <strong>Cầu</strong> /{" "}
-        <strong>Suối</strong> / <strong>Nước ngọt</strong> / <strong>Đồ ăn</strong>: bấm hoặc focus ô tiền — panel{" "}
-        <strong>cộng / trừ</strong> hiện <strong>ngay dưới ô</strong> (như trước; đóng: bấm ra ngoài hoặc Esc). Bước{" "}
-        <strong>{SAN_STEP}</strong> / <strong>{CUON_CAN_STEP}</strong> /{" "}
-        <strong>6·7·7,5·8</strong> (cầu) / <strong>{SUOI_STEP}</strong> / <strong>{NUOC_NGOT_STEP}</strong> /{" "}
-        <strong>5·6·7·8·9·10</strong> (đồ ăn). Bấm <strong>STT</strong> để xem{" "}
-        <strong>lịch sử mua hàng</strong> theo dòng đó (tab mới).
-      </p>
 
       {quickRegisterOpen &&
         createPortal(

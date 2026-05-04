@@ -107,7 +107,10 @@ export default function MemberDebtPage() {
     <div className="app app--members">
       <header className="sheet-header members-header">
         <div className="sheet-header-top">
-          <h1 className="sheet-title">Nợ theo người</h1>
+          <div className="sheet-header-brand">
+            <p className="ocean-page-eyebrow">Cộng dồn</p>
+            <h1 className="sheet-title">Nợ theo người</h1>
+          </div>
           <nav className="header-nav-links" aria-label="Điều hướng">
             <Link to="/" className="header-nav-link">
               Bảng doanh thu

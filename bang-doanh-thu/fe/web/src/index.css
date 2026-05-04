@@ -4,15 +4,54 @@
   box-sizing: border-box;
 }
 
+/**
+ * Thẻ màu KHKT — Ocean Flame (sáng), đồng bộ fe/khkt/src/index.css (html:not(.dark))
+ */
+:root {
+  --ocean-bg-deep: #f8fbff;
+  --ocean-border: rgba(79, 143, 232, 0.16);
+  --ocean-border-strong: rgba(255, 180, 100, 0.28);
+  --ocean-surface-glass: rgba(255, 255, 255, 0.72);
+  --ocean-surface-raised: rgba(255, 255, 255, 0.9);
+  --ocean-shadow-panel: 0 20px 45px -12px rgba(86, 132, 214, 0.12);
+  --ocean-text: #0f172a;
+  --ocean-text-muted: #64748b;
+  --ocean-text-body: #334155;
+  --ocean-eyebrow: rgba(14, 116, 200, 0.75);
+  --ocean-gradient-banner: linear-gradient(
+    135deg,
+    rgba(143, 194, 255, 0.85),
+    rgba(255, 211, 106, 0.55),
+    rgba(255, 141, 77, 0.65)
+  );
+  --ocean-gradient-button: linear-gradient(135deg, #ffd36a 0%, #ff9b3d 55%, #ff7a2f 100%);
+  --ocean-link: #0369a1;
+  --ocean-link-hover: #0c4a6e;
+  --ocean-focus-ring: rgba(14, 165, 233, 0.45);
+  --ocean-table-edge: rgba(125, 180, 255, 0.28);
+}
+
 body {
   margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
   font-family:
     system-ui,
     -apple-system,
-    Segoe UI,
+    "Segoe UI",
     Roboto,
     sans-serif;
   line-height: 1.5;
-  color: #0f172a;
-  background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: var(--ocean-text-body);
+  background-color: var(--ocean-bg-deep);
+}
+
+/* Dòng phụ đề uppercase — giống OceanListPageHeader */
+.ocean-page-eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
+  color: var(--ocean-eyebrow);
 }

@@ -53,8 +53,10 @@ function PersonHistoryBody({ stt }) {
         <Link to="/" className="history-back">
           ← Bảng doanh thu
         </Link>
-        <h1 className="sheet-title history-title">
-          Lịch sử mua hàng · STT {stt}
+        <div className="sheet-header-brand history-header-brand">
+          <p className="ocean-page-eyebrow">Lịch sử</p>
+          <h1 className="sheet-title history-title">
+            Lịch sử mua hàng · STT {stt}
           {data?.ten ? (
             <>
               {" "}
@@ -62,6 +64,7 @@ function PersonHistoryBody({ stt }) {
             </>
           ) : null}
         </h1>
+        </div>
         <p className="history-note">
           Theo <strong>dòng {stt}</strong> trên mọi phiếu đã lưu. <strong>Mỗi lần bấm +</strong> trên các ô có
           bước (Sân, Cầu, …) tạo <strong>một dòng lịch sử riêng</strong>, kể cả cùng mặt hàng — không gộp

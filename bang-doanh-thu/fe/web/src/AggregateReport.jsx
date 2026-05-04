@@ -265,7 +265,10 @@ export default function AggregateReport() {
             Trả nợ
           </Link>
         </div>
-        <h1 className="sheet-title aggregate-title">Tổng hợp doanh thu theo kỳ</h1>
+        <div className="sheet-header-brand aggregate-header-brand">
+          <p className="ocean-page-eyebrow">Báo cáo</p>
+          <h1 className="sheet-title aggregate-title">Tổng hợp doanh thu theo kỳ</h1>
+        </div>
         <p className="aggregate-intro">
           Gộp tất cả phiếu ngày trong kỳ: <strong>tổng tiền</strong> theo mặt hàng,{" "}
           <strong>số lần bán qua ±</strong> (mỗi dòng trong sổ chi tiết = một lần vào đúng mức tiền), và ô nhập không
