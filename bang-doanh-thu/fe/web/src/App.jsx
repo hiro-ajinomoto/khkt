@@ -8,6 +8,8 @@ import BrandBlock from "./BrandBlock.jsx";
 import { formatMoney, parseMoney } from "./formatMoney.js";
 import { NameSuggestInput } from "./NameSuggestInput.jsx";
 import ConNoLedgerHoverCell, { emptyClientConNoLedger, normalizeApiConNoLedger } from "./ConNoLedgerHoverCell.jsx";
+import ChiaCauDialog from "./ChiaCauDialog.jsx";
+import { splitTotalEvenInt } from "./chiaCauUtils.js";
 import { ROW_COUNT_DEFAULT, ROW_COUNT_MAX, sheetRowCountFromLength } from "./sheetConstants.js";
 import "./App.css";
 const SAN_STEP = 15;
@@ -463,6 +465,9 @@ export default function App() {
   const [cellLedger, setCellLedger] = useState(() => emptyClientLedger(ROW_COUNT_DEFAULT));
   const [conNoLedger, setConNoLedger] = useState(() => emptyClientConNoLedger(ROW_COUNT_DEFAULT));
 
+  const [chiaCauOpen, setChiaCauOpen] = useState(false);
+  /** Đổi key mỗi lần mở để form Chia cầu reset sạch (tránh reset trong effect). */
+  const [chiaCauDialogKey, setChiaCauDialogKey] = useState(0);
   const [quickRegisterOpen, setQuickRegisterOpen] = useState(false);
   const [quickName, setQuickName] = useState("");
   const [quickNick, setQuickNick] = useState("");
@@ -620,6 +625,18 @@ export default function App() {
       return { ...b, conNo };
     });
   }, [rows, conNoLedger]);
+
+  const playersForChiaCau = useMemo(
+    () =>
+      rows
+        .map((r, i) => ({
+          index: i,
+          stt: i + 1,
+          name: String(r.ten ?? "").trim(),
+        }))
+        .filter((p) => p.name.length > 0),
+    [rows],
+  );
 
   const totals = useMemo(() => {
     let san = 0;
@@ -795,6 +812,28 @@ export default function App() {
     });
   }
 
+  const applyChiaCau = useCallback(
+    (payload) => {
+      const sorted = [...new Set(payload.participantIndices)]
+        .filter((i) => Number.isFinite(i) && i >= 0 && i < rows.length)
+        .sort((a, b) => a - b);
+      if (sorted.length === 0 || !sorted.includes(payload.pickupIndex)) return;
+      const shares = splitTotalEvenInt(payload.priceVnd, sorted.length);
+      if (shares.length !== sorted.length) return;
+      let nr = rows;
+      let nl = cellLedger;
+      for (let j = 0; j < sorted.length; j++) {
+        const out = bumpHistoryLedger(nr, nl, sorted[j], "cau", shares[j]);
+        nr = out.rows;
+        nl = out.ledger;
+      }
+      setRows(nr);
+      setCellLedger(nl);
+      setChiaCauOpen(false);
+    },
+    [rows, cellLedger],
+  );
+
   function appendGhiNoLine(rowIdx, amountNum) {
     setConNoLedger((prev) => {
       const next = prev.map((row) => [...row]);
@@ -879,6 +918,17 @@ export default function App() {
   return (
     <div className="app app--revenue-sheet">
       <header className="sheet-header">
+        <button
+          type="button"
+          className="sheet-chia-cau-open"
+          onClick={() => {
+            setChiaCauDialogKey((k) => k + 1);
+            setChiaCauOpen(true);
+          }}
+          title="Chia tiền cầu cho người chơi hôm nay"
+        >
+          Chia cầu
+        </button>
         <div className="sheet-header-top">
           <BrandBlock subtitle="Phiếu doanh thu theo ngày" />
           <MainNavBar
@@ -1008,6 +1058,18 @@ export default function App() {
           </tbody>
         </table>
       </div>
+
+      {chiaCauOpen &&
+        createPortal(
+          <ChiaCauDialog
+            key={chiaCauDialogKey}
+            open
+            onClose={() => setChiaCauOpen(false)}
+            players={playersForChiaCau}
+            onApply={applyChiaCau}
+          />,
+          document.body,
+        )}
 
       {quickRegisterOpen &&
         createPortal(
