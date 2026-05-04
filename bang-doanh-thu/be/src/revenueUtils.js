@@ -586,12 +586,15 @@ export function buildPersonHistory(rowIndex, docs) {
   return { ten, items: outward, grandTotal, totalPaid };
 }
 
-/** Ước số chai / lượt theo đơn giá bấm ± cố định (±15 sân, ±10 cuốn, ±5 suối, ±10 NN). Không áp cố định cho cầu / đồ ăn. */
+/**
+ * Ước số lần bấm ± theo **tiền VNĐ mỗi lần** (nút vẫn hiện «15» nhưng thực tế +15.000đ).
+ * Không áp cố định cho cầu / đồ ăn (xem tier).
+ */
 const IMPLIED_UNIT_PRICE = {
-  san: 15,
-  cuonCan: 10,
-  suoi5k: 5,
-  nuocNgot10k: 10,
+  san: 15000,
+  cuonCan: 10000,
+  suoi5k: 5000,
+  nuocNgot10k: 10000,
 };
 
 /** Khớp bước giá ô Cầu (web App.jsx `CAU_STEPS`). */
@@ -615,8 +618,12 @@ function classifyLedgerTxnByPriceStep(amount, steps) {
   const aNorm = normalizeLedgerLineAmount(amount);
   const cents = Math.round(aNorm * 100);
   for (const s of steps) {
-    const sc = Math.round(Math.abs(Number(s)) * 100);
-    if (sc === cents) return s;
+    const sn = Math.abs(Number(s));
+    const scLegacy = Math.round(sn * 100);
+    if (scLegacy === cents) return s;
+    /** Web: nhãn «6» = 6.000đ — khớp cả dòng sổ cũ (6) và mới (6000). */
+    const scVnd = Math.round(sn * 1000 * 100);
+    if (scVnd === cents) return s;
   }
   return null;
 }

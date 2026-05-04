@@ -23,6 +23,9 @@ const DO_AN_STEPS = [5, 6, 7, 8, 9, 10];
 const HISTORY_FIELD_LIST = ["san", "cuonCan", "cau", "suoi5k", "nuocNgot10k", "doAn"];
 const HISTORY_KEYS = new Set(HISTORY_FIELD_LIST);
 
+/** Nút ± hiển thị «6», «15»… nhưng mỗi lần bấm cộng/trừ đúng nghìn VNĐ (×1000). */
+const STEPPER_DISPLAY_TO_VND = 1000;
+
 function emptyClientLedger(rowCount = ROW_COUNT_DEFAULT) {
   const n = sheetRowCountFromLength(rowCount);
   return Array.from({ length: n }, () => ({}));
@@ -425,7 +428,7 @@ function HoverStepperCell({
                     className="cell-stepper-btn cell-stepper-btn--plus"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => onBump(rowIndex, field, s)}
-                    aria-label={`Cộng ${String(s).replace(".", ",")}`}
+                    aria-label={`Cộng ${String(s).replace(".", ",")} nghìn`}
                   >
                     <span className="cell-stepper-glyph" aria-hidden>
                       +
@@ -437,7 +440,7 @@ function HoverStepperCell({
                     className="cell-stepper-btn cell-stepper-btn--minus"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => onBump(rowIndex, field, -s)}
-                    aria-label={`Trừ ${String(s).replace(".", ",")}`}
+                    aria-label={`Trừ ${String(s).replace(".", ",")} nghìn`}
                   >
                     <span className="cell-stepper-glyph" aria-hidden>
                       −
@@ -797,7 +800,8 @@ export default function App() {
 
   function bumpMoneyField(i, field, delta) {
     if (HISTORY_KEYS.has(field)) {
-      const { rows: nr, ledger: nl } = bumpHistoryLedger(rows, cellLedger, i, field, delta);
+      const vndDelta = roundLedgerAmt(Number(delta) * STEPPER_DISPLAY_TO_VND);
+      const { rows: nr, ledger: nl } = bumpHistoryLedger(rows, cellLedger, i, field, vndDelta);
       setRows(nr);
       setCellLedger(nl);
       return;
@@ -805,7 +809,7 @@ export default function App() {
     setRows((prev) => {
       const next = [...prev];
       const cur = parseMoney(prev[i][field]);
-      let v = Math.round(cur + delta);
+      let v = Math.round(cur + Number(delta) * STEPPER_DISPLAY_TO_VND);
       if (v < 0) v = 0;
       next[i] = { ...next[i], [field]: v === 0 ? "" : String(v) };
       return next;

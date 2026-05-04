@@ -39,6 +39,14 @@ function fmtPriceStep(step) {
   return String(step).replace(".", ",");
 }
 
+/** BE trả `impliedUnitPrices` là VNĐ/lần bấm (15000); bản cũ có thể là 15 — chuẩn hoá số trên nút ±. */
+function fmtStepperDenomForUi(denom) {
+  const d = Number(denom);
+  if (!Number.isFinite(d) || d <= 0) return null;
+  if (d >= 1000) return Math.round(d / 1000);
+  return d;
+}
+
 /** @param {Record<string, number> | undefined} tiers */
 function sumKnownTierTxns(tiers, stepOrder) {
   if (!tiers || typeof tiers !== "object") return 0;
@@ -410,13 +418,14 @@ export default function AggregateReport() {
               <tbody>
                 {PRODUCT_ROWS.map(({ key, label }) => {
                   const denom = /** @type {number | undefined} */ (data.impliedUnitPrices?.[key]);
+                  const stepUi = denom != null ? fmtStepperDenomForUi(denom) : null;
                   const note =
                     key === "cau"
                       ? "Không phải 1 lần ± = 1 quả — số lần / 1 quả theo từng mức: chỉnh src/cauShuttleRates.js (±6 đang 4 lần = 1 quả)"
                       : key === "doAn"
                         ? "Quy ước 1 lần ± khớp bước = 1 suất — tổng = cộng các mức (xem ô bên)"
                         : denom
-                            ? `Tổng tiền ÷ ${denom} (đơn một lần bấm ±${denom})`
+                            ? `Tổng tiền ÷ ${formatMoney(denom, { blankZero: false })}đ (mỗi lần bấm ±${stepUi ?? "?"} nghìn)`
                             : "—";
 
                   const imp = /** @type {number | null} */ (
@@ -518,8 +527,10 @@ export default function AggregateReport() {
           <footer className="aggregate-footnotes">
             <p>
               <strong>* Ước đơn vị</strong> chỉ có nghĩa nếu mọi lần bán đều đúng bước cố định (±
-              {data.impliedUnitPrices?.san ?? 15} sân, ±{data.impliedUnitPrices?.cuonCan ?? 10} cuốn, ±
-              {data.impliedUnitPrices?.suoi5k ?? 5} suối, ±{data.impliedUnitPrices?.nuocNgot10k ?? 10} NN). Với{" "}
+              {fmtStepperDenomForUi(data.impliedUnitPrices?.san) ?? 15} nghìn sân, ±
+              {fmtStepperDenomForUi(data.impliedUnitPrices?.cuonCan) ?? 10} nghìn cuốn, ±
+              {fmtStepperDenomForUi(data.impliedUnitPrices?.suoi5k) ?? 5} nghìn suối, ±
+              {fmtStepperDenomForUi(data.impliedUnitPrices?.nuocNgot10k) ?? 10} nghìn NN). Với{" "}
               <strong>cầu</strong>, tổng <strong>số quả là ước</strong>: cộng theo đúng{' '}
               <strong>bao nhiêu lần ± / 1 quả</strong> tại từng mức (đang cấu hình trong{" "}
               <code className="aggregate-code-ref">src/cauShuttleRates.js</code>). Với <strong>đồ ăn</strong>, hiện vẫn{" "}
