@@ -82,6 +82,95 @@
   margin: 0;
 }
 
+/* Phan Dat Badminton — logo + chữ (navy + viền sáng như logo) */
+.sheet-header-brand--phan-dat {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.6rem 1rem;
+}
+
+.sheet-header-brand-logo {
+  width: clamp(3.25rem, 10vw, 4.75rem);
+  height: auto;
+  object-fit: contain;
+  flex-shrink: 0;
+  border-radius: 0.75rem;
+  box-shadow: 0 2px 14px rgba(10, 22, 40, 0.16);
+}
+
+.sheet-header-brand-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: min(100%, 16rem);
+  text-align: center;
+}
+
+.sheet-title.sheet-title--phan-dat {
+  margin: 0;
+  font-family:
+    ui-rounded,
+    "Nunito",
+    "Segoe UI",
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-size: clamp(1.12rem, 3.5vw, 1.72rem);
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  line-height: 1.12;
+  color: #0a1628;
+  text-shadow:
+    1px 0 0 #fff,
+    -1px 0 0 #fff,
+    0 1px 0 #fff,
+    0 -1px 0 #fff,
+    1px 1px 0 #fff,
+    -1px -1px 0 #fff,
+    1px -1px 0 #fff,
+    -1px 1px 0 #fff,
+    2px 0 0 rgba(255, 255, 255, 0.92),
+    -2px 0 0 rgba(255, 255, 255, 0.92),
+    0 2px 0 rgba(255, 255, 255, 0.85),
+    0 -2px 0 rgba(255, 255, 255, 0.85);
+}
+
+.sheet-header-brand-subtitle {
+  margin: 0.28rem 0 0;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #0369a1;
+  line-height: 1.4;
+  max-width: 26rem;
+}
+
+.aggregate-brand-subtitle {
+  text-transform: none;
+  letter-spacing: 0.05em;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0c4a6e;
+  max-width: min(100%, 38rem);
+}
+
+.history-brand-subtitle {
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #0f172a;
+  max-width: min(40rem, 100%);
+  line-height: 1.35;
+}
+
+.history-brand-subtitle .history-ten {
+  font-weight: 700;
+}
+
 .header-nav-link {
   font-size: 0.88rem;
   font-weight: 600;
@@ -140,28 +229,39 @@
   gap: 0.55rem 0.75rem;
 }
 
+/* Pill cam: mặc định = không chọn (nhạt); aria-current = tab đang mở */
 .header-nav-link--primary {
   text-decoration: none;
   padding: 0.38rem 0.95rem;
   border-radius: 999px;
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.01em;
-  color: #7c2d12;
-  background: linear-gradient(135deg, rgba(255, 224, 130, 0.92), rgba(255, 173, 120, 0.78));
-  border: 1px solid rgba(255, 130, 70, 0.5);
-  box-shadow: 0 2px 10px rgba(255, 122, 47, 0.22);
+  color: #9a3412;
+  background: linear-gradient(135deg, rgba(255, 237, 213, 0.72), rgba(255, 215, 190, 0.55));
+  border: 1px solid rgba(251, 146, 60, 0.35);
+  box-shadow: none;
   white-space: nowrap;
+  opacity: 0.92;
 }
 
 .header-nav-link.header-nav-link--primary:hover {
-  filter: brightness(1.05);
-  color: #431407;
+  filter: brightness(1.04);
+  color: #7c2d12;
   text-decoration: none;
+  opacity: 1;
 }
 
 .header-nav-link--primary[aria-current="page"] {
-  box-shadow: 0 0 0 2px rgba(14, 116, 200, 0.35), 0 2px 10px rgba(255, 122, 47, 0.22);
+  font-weight: 800;
+  color: #431407;
+  opacity: 1;
+  background: linear-gradient(135deg, rgba(255, 210, 100, 0.98), rgba(255, 130, 72, 0.9));
+  border: 2px solid rgba(234, 88, 12, 0.78);
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.9),
+    0 0 0 5px rgba(14, 116, 200, 0.42),
+    0 4px 16px rgba(234, 88, 12, 0.28);
 }
 
 /* Tổng hợp kỳ / Đăng ký nhanh — có màu nhưng kém nổi hơn pill cam */
@@ -191,9 +291,23 @@
   border-color: rgba(125, 180, 255, 0.42);
 }
 
-.header-nav-link--secondary[aria-current="page"] {
-  box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.22);
-  border-color: rgba(14, 165, 233, 0.38);
+/* Link Tổng hợp kỳ khi không phải trang hiện tại — hơi nhạt; nút Đăng ký nhanh giữ nguyên độ nổi */
+a.header-nav-link.header-nav-link--secondary:not([aria-current="page"]) {
+  opacity: 0.88;
+  font-weight: 600;
+}
+
+a.header-nav-link.header-nav-link--secondary[aria-current="page"] {
+  opacity: 1;
+  font-weight: 800;
+  color: #0c4a6e;
+  border-width: 2px;
+  border-color: rgba(2, 132, 199, 0.55);
+  background: linear-gradient(135deg, rgba(224, 242, 254, 0.98), rgba(186, 230, 253, 0.88));
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.85),
+    0 0 0 4px rgba(14, 165, 233, 0.35),
+    0 3px 12px rgba(14, 116, 200, 0.15);
 }
 
 .app--aggregate .header-nav-links .header-nav-link--primary,
@@ -970,11 +1084,6 @@
   text-align: center;
 }
 
-.history-title {
-  margin: 0 0 0.35rem;
-  font-size: 1.35rem;
-}
-
 .history-ten {
   font-weight: 600;
   color: #0f172a;
@@ -1397,10 +1506,6 @@
   margin-right: auto;
 }
 
-.aggregate-title {
-  font-size: 1.35rem;
-}
-
 .aggregate-back {
   display: inline-block;
   margin-bottom: 0.5rem;
@@ -1569,10 +1674,6 @@
 }
 
 /* —— Trả nợ /thanh-vien —— */
-
-.members-header .sheet-title {
-  font-size: 1.35rem;
-}
 
 .members-intro {
   margin: 0.35rem auto 0.85rem;

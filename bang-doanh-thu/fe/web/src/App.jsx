@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Link, useSearchParams } from "react-router-dom";
 import { apiFetch } from "./apiClient.js";
 import MainNavBar from "./MainNavBar.jsx";
+import BrandBlock from "./BrandBlock.jsx";
 import { formatMoney, formatViDateTime, parseMoney } from "./formatMoney.js";
 import { NameSuggestInput } from "./NameSuggestInput.jsx";
 import ConNoLedgerHoverCell, { emptyClientConNoLedger, normalizeApiConNoLedger } from "./ConNoLedgerHoverCell.jsx";
@@ -760,10 +761,7 @@ export default function App() {
     <div className="app app--revenue-sheet">
       <header className="sheet-header">
         <div className="sheet-header-top">
-          <div className="sheet-header-brand">
-            <p className="ocean-page-eyebrow">Theo ngày</p>
-            <h1 className="sheet-title">DOANH THU</h1>
-          </div>
+          <BrandBlock subtitle="Phiếu doanh thu theo ngày" />
           <MainNavBar
             onQuickRegisterClick={() => {
               setQuickMsg(null);

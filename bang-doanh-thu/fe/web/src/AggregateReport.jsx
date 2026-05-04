@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import MainNavBar from "./MainNavBar.jsx";
+import BrandBlock from "./BrandBlock.jsx";
 import { getISOWeek, getISOWeekYear } from "date-fns";
 import { apiFetch } from "./apiClient.js";
 import { formatMoney, formatViDate } from "./formatMoney.js";
@@ -259,10 +260,11 @@ export default function AggregateReport() {
     <div className="app app--aggregate">
       <header className="aggregate-header">
         <div className="sheet-header-top">
-          <div className="sheet-header-brand aggregate-header-brand">
-            <p className="ocean-page-eyebrow">Báo cáo</p>
-            <h1 className="sheet-title aggregate-title">Tổng hợp doanh thu theo kỳ</h1>
-          </div>
+          <BrandBlock
+            extraBrandClass="aggregate-header-brand"
+            subtitle="Tổng hợp doanh thu theo kỳ"
+            subtitleClassName="aggregate-brand-subtitle"
+          />
           <MainNavBar />
         </div>
 

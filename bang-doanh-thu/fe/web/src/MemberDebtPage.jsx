@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import MainNavBar from "./MainNavBar.jsx";
+import BrandBlock from "./BrandBlock.jsx";
 import { apiFetch } from "./apiClient.js";
 import { formatMoney, formatViDateTime, parseMoney } from "./formatMoney.js";
 import "./App.css";
@@ -109,10 +110,7 @@ export default function MemberDebtPage() {
     <div className="app app--members">
       <header className="sheet-header members-header">
         <div className="sheet-header-top">
-          <div className="sheet-header-brand">
-            <p className="ocean-page-eyebrow">Cộng dồn</p>
-            <h1 className="sheet-title">Nợ theo người</h1>
-          </div>
+          <BrandBlock subtitle="Nợ theo người · cộng dồn" />
           <MainNavBar />
         </div>
         {person && (

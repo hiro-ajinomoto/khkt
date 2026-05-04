@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { apiFetch } from "./apiClient.js";
 import MainNavBar from "./MainNavBar.jsx";
+import BrandBlock from "./BrandBlock.jsx";
 import { formatMoney, formatViDate, formatViDateTime } from "./formatMoney.js";
 import "./App.css";
 
@@ -53,18 +54,21 @@ function PersonHistoryBody({ stt }) {
     <div className="app app--history">
       <header className="history-header">
         <div className="sheet-header-top">
-          <div className="sheet-header-brand history-header-brand">
-            <p className="ocean-page-eyebrow">Lịch sử</p>
-            <h1 className="sheet-title history-title">
-              Lịch sử mua hàng · STT {stt}
-              {data?.ten ? (
-                <>
-                  {" "}
-                  · <span className="history-ten">{data.ten}</span>
-                </>
-              ) : null}
-            </h1>
-          </div>
+          <BrandBlock
+            extraBrandClass="history-header-brand"
+            subtitle={
+              <>
+                Lịch sử mua hàng · STT {stt}
+                {data?.ten ? (
+                  <>
+                    {" "}
+                    · <span className="history-ten">{data.ten}</span>
+                  </>
+                ) : null}
+              </>
+            }
+            subtitleClassName="history-brand-subtitle"
+          />
           <MainNavBar />
         </div>
         <p className="history-note">
