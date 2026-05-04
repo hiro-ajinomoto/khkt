@@ -265,20 +265,6 @@ export default function AggregateReport() {
           </div>
           <MainNavBar />
         </div>
-        <p className="aggregate-intro">
-          Gộp tất cả phiếu ngày trong kỳ: <strong>tổng tiền</strong> theo mặt hàng,{" "}
-          <strong>số lần bán qua ±</strong> (mỗi dòng trong sổ chi tiết = một lần vào đúng mức tiền), và ô nhập không
-          có chi tiết (phiếu cũ). Với đơn giá cố định (±{data?.impliedUnitPrices?.san ?? 15} sân · ±
-          {data?.impliedUnitPrices?.cuonCan ?? 10} cuốn · ±{data?.impliedUnitPrices?.suoi5k ?? 5} suối · ±
-          {data?.impliedUnitPrices?.nuocNgot10k ?? 10} NN) có <strong>số đơn vị ước lượng</strong>. Với{" "}
-          <strong>cầu</strong>, mỗi lần ± chỉ là <strong>một phần thanh toán theo bước</strong> — cần{" "}
-          <strong>đủ N lần</strong> (theo mức giá) mới tương đương <strong>1 quả</strong>; số N chỉnh trong{" "}
-          <code className="aggregate-code-ref">src/cauShuttleRates.js</code> (hiện <strong>4 lần ±6k = 1 quả</strong>).
-          Chọn kiểu kỳ theo{" "}
-          <strong>cả tháng, một ngày, tuần trong tháng hoặc tuần ISO</strong>. <strong> Đồ ăn</strong> đang giữ{" "}
-          <strong>mỗi lần ± khớp bước = 1 suất</strong>. Phần chỉ gõ tay không chia theo mức
-          được.
-        </p>
 
         <div className="aggregate-toolbar">
           <label className="aggregate-field">
