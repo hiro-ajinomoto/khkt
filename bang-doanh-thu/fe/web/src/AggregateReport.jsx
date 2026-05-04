@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import HeaderUserBox from "./HeaderUserBox.jsx";
+import MainNavBar from "./MainNavBar.jsx";
 import { getISOWeek, getISOWeekYear } from "date-fns";
 import { apiFetch } from "./apiClient.js";
 import { formatMoney, formatViDate } from "./formatMoney.js";
@@ -259,18 +258,12 @@ export default function AggregateReport() {
   return (
     <div className="app app--aggregate">
       <header className="aggregate-header">
-        <div className="aggregate-header-toplinks">
-          <Link to="/" className="history-back aggregate-back">
-            ← Bảng doanh thu
-          </Link>
-          <Link to="/thanh-vien" className="header-nav-link">
-            Trả nợ
-          </Link>
-          <HeaderUserBox />
-        </div>
-        <div className="sheet-header-brand aggregate-header-brand">
-          <p className="ocean-page-eyebrow">Báo cáo</p>
-          <h1 className="sheet-title aggregate-title">Tổng hợp doanh thu theo kỳ</h1>
+        <div className="sheet-header-top">
+          <div className="sheet-header-brand aggregate-header-brand">
+            <p className="ocean-page-eyebrow">Báo cáo</p>
+            <h1 className="sheet-title aggregate-title">Tổng hợp doanh thu theo kỳ</h1>
+          </div>
+          <MainNavBar />
         </div>
         <p className="aggregate-intro">
           Gộp tất cả phiếu ngày trong kỳ: <strong>tổng tiền</strong> theo mặt hàng,{" "}

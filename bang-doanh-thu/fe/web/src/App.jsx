@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { createPortal } from "react-dom";
 import { Link, useSearchParams } from "react-router-dom";
 import { apiFetch } from "./apiClient.js";
-import HeaderUserBox from "./HeaderUserBox.jsx";
+import MainNavBar from "./MainNavBar.jsx";
 import { formatMoney, formatViDateTime, parseMoney } from "./formatMoney.js";
 import { NameSuggestInput } from "./NameSuggestInput.jsx";
 import ConNoLedgerHoverCell, { emptyClientConNoLedger, normalizeApiConNoLedger } from "./ConNoLedgerHoverCell.jsx";
@@ -466,6 +466,20 @@ export default function App() {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    if (searchParams.get("quickRegister") !== "1") return;
+    setQuickMsg(null);
+    setQuickRegisterOpen(true);
+    setSearchParams(
+      (prev) => {
+        const p = new URLSearchParams(prev);
+        p.delete("quickRegister");
+        return p;
+      },
+      { replace: true },
+    );
+  }, [searchParams, setSearchParams]);
+
   const bumpReportDate = useCallback(
     (next) => {
       setReportDate(next);
@@ -743,32 +757,19 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <div className="app app--revenue-sheet">
       <header className="sheet-header">
         <div className="sheet-header-top">
           <div className="sheet-header-brand">
             <p className="ocean-page-eyebrow">Theo ngày</p>
             <h1 className="sheet-title">DOANH THU</h1>
           </div>
-          <nav className="header-nav-links" aria-label="Điều hướng">
-            <Link to="/tong-hop" className="header-nav-link">
-              Tổng hợp kỳ
-            </Link>
-            <Link to="/thanh-vien" className="header-nav-link">
-              Trả nợ
-            </Link>
-            <button
-              type="button"
-              className="header-nav-link header-nav-link--btn"
-              onClick={() => {
-                setQuickMsg(null);
-                setQuickRegisterOpen(true);
-              }}
-            >
-              Đăng ký nhanh
-            </button>
-            <HeaderUserBox />
-          </nav>
+          <MainNavBar
+            onQuickRegisterClick={() => {
+              setQuickMsg(null);
+              setQuickRegisterOpen(true);
+            }}
+          />
         </div>
         <label className="sheet-date">
           <span className="visually-hidden">Ngày</span>

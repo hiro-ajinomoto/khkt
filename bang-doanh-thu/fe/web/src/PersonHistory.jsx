@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { apiFetch } from "./apiClient.js";
-import HeaderUserBox from "./HeaderUserBox.jsx";
+import MainNavBar from "./MainNavBar.jsx";
 import { formatMoney, formatViDate, formatViDateTime } from "./formatMoney.js";
 import "./App.css";
 
@@ -11,7 +11,6 @@ export default function PersonHistory() {
 }
 
 function PersonHistoryBody({ stt }) {
-  const { user, logout } = useAuth();
   const [data, setData] = useState(null);
   const [err, setErr] = useState(null);
 
@@ -53,23 +52,20 @@ function PersonHistoryBody({ stt }) {
   return (
     <div className="app app--history">
       <header className="history-header">
-        <div className="aggregate-header-toplinks">
-          <Link to="/" className="history-back">
-            ← Bảng doanh thu
-          </Link>
-          <HeaderUserBox />
-        </div>
-        <div className="sheet-header-brand history-header-brand">
-          <p className="ocean-page-eyebrow">Lịch sử</p>
-          <h1 className="sheet-title history-title">
-            Lịch sử mua hàng · STT {stt}
-          {data?.ten ? (
-            <>
-              {" "}
-              · <span className="history-ten">{data.ten}</span>
-            </>
-          ) : null}
-        </h1>
+        <div className="sheet-header-top">
+          <div className="sheet-header-brand history-header-brand">
+            <p className="ocean-page-eyebrow">Lịch sử</p>
+            <h1 className="sheet-title history-title">
+              Lịch sử mua hàng · STT {stt}
+              {data?.ten ? (
+                <>
+                  {" "}
+                  · <span className="history-ten">{data.ten}</span>
+                </>
+              ) : null}
+            </h1>
+          </div>
+          <MainNavBar />
         </div>
         <p className="history-note">
           Theo <strong>dòng {stt}</strong> trên mọi phiếu đã lưu. <strong>Mỗi lần bấm +</strong> trên các ô có

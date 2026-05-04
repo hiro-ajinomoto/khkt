@@ -1,9 +1,27 @@
+/**
+ * Chiều ngang tối đa chung cho các trang đã đăng nhập — khớp bảng doanh thu,
+ * tránh lệch nhau khi đổi tab (trước đây bảng full-viewport còn Trả nợ / Tổng hợp hẹp hơn).
+ */
+:root {
+  --khkt-app-shell-max: min(78rem, calc(100vw - 2rem));
+}
+
 .app {
   min-height: 100vh;
   padding: 1rem 1rem 2rem;
   max-width: 100%;
   color: var(--ocean-text-body);
   background: transparent;
+}
+
+.app.app--revenue-sheet,
+.app--members,
+.app--aggregate,
+.app--history {
+  max-width: var(--khkt-app-shell-max);
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
 }
 
 /* Header kính + gradient — cùng ngôn ngữ OceanListPageHeader (KHKT) */
@@ -45,10 +63,11 @@
 
 .sheet-header-top {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem 1.25rem;
+  gap: 0.65rem;
   margin-bottom: 0.35rem;
 }
 
@@ -104,6 +123,89 @@
   align-items: center;
   justify-content: center;
   gap: 0.65rem 1rem;
+}
+
+/* Hai mục dùng nhiều nhất — kề nhau, màu nổi (Ocean / cam) */
+.header-nav-primary-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.header-nav-secondary-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem 0.75rem;
+}
+
+.header-nav-link--primary {
+  text-decoration: none;
+  padding: 0.38rem 0.95rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #7c2d12;
+  background: linear-gradient(135deg, rgba(255, 224, 130, 0.92), rgba(255, 173, 120, 0.78));
+  border: 1px solid rgba(255, 130, 70, 0.5);
+  box-shadow: 0 2px 10px rgba(255, 122, 47, 0.22);
+  white-space: nowrap;
+}
+
+.header-nav-link.header-nav-link--primary:hover {
+  filter: brightness(1.05);
+  color: #431407;
+  text-decoration: none;
+}
+
+.header-nav-link--primary[aria-current="page"] {
+  box-shadow: 0 0 0 2px rgba(14, 116, 200, 0.35), 0 2px 10px rgba(255, 122, 47, 0.22);
+}
+
+/* Tổng hợp kỳ / Đăng ký nhanh — có màu nhưng kém nổi hơn pill cam */
+.header-nav-link.header-nav-link--secondary {
+  text-decoration: none;
+  padding: 0.32rem 0.78rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #334e68;
+  background: linear-gradient(135deg, rgba(240, 249, 255, 0.95), rgba(224, 242, 254, 0.72));
+  border: 1px solid rgba(125, 180, 255, 0.28);
+  box-shadow: 0 1px 4px rgba(86, 132, 214, 0.08);
+  white-space: nowrap;
+}
+
+.header-nav-link.header-nav-link--btn.header-nav-link--secondary {
+  border: 1px solid rgba(125, 180, 255, 0.28);
+  background: linear-gradient(135deg, rgba(240, 249, 255, 0.95), rgba(224, 242, 254, 0.72));
+}
+
+.header-nav-link.header-nav-link--secondary:hover,
+.header-nav-link.header-nav-link--btn.header-nav-link--secondary:hover:not(:disabled) {
+  color: #0c4a6e;
+  text-decoration: none;
+  filter: brightness(1.03);
+  border-color: rgba(125, 180, 255, 0.42);
+}
+
+.header-nav-link--secondary[aria-current="page"] {
+  box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.22);
+  border-color: rgba(14, 165, 233, 0.38);
+}
+
+.app--aggregate .header-nav-links .header-nav-link--primary,
+.app--history .header-nav-links .header-nav-link--primary {
+  font-size: 0.8rem;
+  padding: 0.34rem 0.82rem;
+}
+
+.app--aggregate .header-nav-links .header-nav-link--secondary,
+.app--history .header-nav-links .header-nav-link--secondary {
+  font-size: 0.76rem;
+  padding: 0.28rem 0.68rem;
 }
 
 /* Tên + đăng xuất trong một ô */
@@ -864,8 +966,8 @@
 }
 
 .history-header-brand {
-  align-items: flex-start;
-  text-align: left;
+  align-items: center;
+  text-align: center;
 }
 
 .history-title {
@@ -1286,16 +1388,11 @@
 }
 
 /* —— Báo cáo /tong-hop —— */
-.app--aggregate {
-  max-width: 58rem;
-  margin-left: auto;
-  margin-right: auto;
-}
 
 .aggregate-header-brand {
-  align-items: flex-start;
-  text-align: left;
-  max-width: 52rem;
+  align-items: center;
+  text-align: center;
+  max-width: 100%;
   margin-left: auto;
   margin-right: auto;
 }
@@ -1473,11 +1570,6 @@
 }
 
 /* —— Trả nợ /thanh-vien —— */
-.app--members {
-  max-width: 52rem;
-  margin-left: auto;
-  margin-right: auto;
-}
 
 .members-header .sheet-title {
   font-size: 1.35rem;
@@ -1629,15 +1721,6 @@
   color: #64748b;
   font-size: 0.88rem;
   padding: 1.25rem 0.5rem !important;
-}
-
-.aggregate-header-toplinks {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem 1rem;
-  margin-bottom: 0.35rem;
 }
 
 .cell-conno-cell {

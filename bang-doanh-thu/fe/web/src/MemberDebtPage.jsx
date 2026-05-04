@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import HeaderUserBox from "./HeaderUserBox.jsx";
+import MainNavBar from "./MainNavBar.jsx";
 import { apiFetch } from "./apiClient.js";
 import { formatMoney, formatViDateTime, parseMoney } from "./formatMoney.js";
 import "./App.css";
@@ -113,15 +113,7 @@ export default function MemberDebtPage() {
             <p className="ocean-page-eyebrow">Cộng dồn</p>
             <h1 className="sheet-title">Nợ theo người</h1>
           </div>
-          <nav className="header-nav-links" aria-label="Điều hướng">
-            <Link to="/" className="header-nav-link">
-              Bảng doanh thu
-            </Link>
-            <Link to="/thanh-vien" className="header-nav-link">
-              Trả nợ
-            </Link>
-            <HeaderUserBox />
-          </nav>
+          <MainNavBar />
         </div>
         {person && (
           <p className="members-intro member-debt-headline">

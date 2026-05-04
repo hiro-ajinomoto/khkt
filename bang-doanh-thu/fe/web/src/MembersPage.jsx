@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiFetch } from "./apiClient.js";
-import HeaderUserBox from "./HeaderUserBox.jsx";
+import MainNavBar from "./MainNavBar.jsx";
 import { formatViDateTime } from "./formatMoney.js";
 import "./App.css";
 
@@ -153,15 +153,7 @@ export default function MembersPage() {
             <p className="ocean-page-eyebrow">Danh sách</p>
             <h1 className="sheet-title">Trả nợ</h1>
           </div>
-          <nav className="header-nav-links" aria-label="Điều hướng">
-            <Link to="/" className="header-nav-link">
-              Bảng doanh thu
-            </Link>
-            <Link to="/tong-hop" className="header-nav-link">
-              Tổng hợp kỳ
-            </Link>
-            <HeaderUserBox />
-          </nav>
+          <MainNavBar />
         </div>
         <p className="members-intro">
           Quản lý họ tên, biệt danh và số điện thoại dùng cho gợi ý ô Tên trên bảng doanh thu. Bấm{" "}
