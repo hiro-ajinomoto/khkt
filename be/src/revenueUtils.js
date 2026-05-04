@@ -782,6 +782,52 @@ export function aggregatePersonConNoLedgerLines(nameNorm, sheetDocs) {
 }
 
 /**
+ * Tổng có dấu từ từng dòng `conNoLedger` (ghi / cộng: +, trả: −), gộp theo tháng dương lịch của **ngày phiếu**.
+ * Khớp khi cộng tay các dòng trong «Lịch sử ghi nợ / trả nợ / ghi nhận» (cột số tiền có dấu).
+ */
+export function aggregatePersonLedgerSignedByCalendarMonth(nameNorm, sheetDocs) {
+  const { debtLedgerLines } = aggregatePersonConNoLedgerLines(nameNorm, sheetDocs);
+  if (!nameNorm || !Array.isArray(sheetDocs)) {
+    return { months: [], yearTotal: 0 };
+  }
+
+  /** @type {Map<string, { year: number; month: number; totalSigned: number; lineCount: number }>} */
+  const monthMap = new Map();
+
+  for (const ln of debtLedgerLines) {
+    const meta = metaFromReportDate(ln.reportDate);
+    if (!meta) continue;
+    const amt = roundConNoLedgerAmt(ln.amount);
+    const signed = ln.kind === "tru" ? -amt : amt;
+    const mKey = `${meta.year}-${meta.month}`;
+    let mAgg = monthMap.get(mKey);
+    if (!mAgg) {
+      mAgg = { year: meta.year, month: meta.month, totalSigned: 0, lineCount: 0 };
+      monthMap.set(mKey, mAgg);
+    }
+    mAgg.totalSigned += signed;
+    mAgg.lineCount += 1;
+  }
+
+  const months = Array.from(monthMap.values())
+    .map((m) => ({
+      year: m.year,
+      month: m.month,
+      totalConNo: roundSignedMoney(m.totalSigned),
+      lineCount: m.lineCount,
+      days: [],
+    }))
+    .sort((a, b) => (a.year !== b.year ? a.year - b.year : a.month - b.month));
+
+  let yearTotal = 0;
+  for (const mo of months) {
+    yearTotal += mo.totalConNo;
+  }
+
+  return { months, yearTotal: roundSignedMoney(yearTotal) };
+}
+
+/**
  * Còn nợ hiển thị (phiếu + ghi nợ/trả nợ) gộp theo tháng cho dòng trùng `nameNorm`.
  */
 export function aggregatePersonDebtByYearMonth(nameNorm, sheetDocs) {

@@ -143,11 +143,11 @@ export default function MemberDebtPage() {
       </header>
 
       {!busy && payload && (
-        <section className="member-debt-balance-card" aria-label="Tổng còn nợ">
-          <div className="member-debt-balance-card-label">Tổng còn nợ (năm {payload.year})</div>
+        <section className="member-debt-balance-card" aria-label="Tổng có dấu theo lịch sử">
+          <div className="member-debt-balance-card-label">Tổng có dấu (năm {payload.year})</div>
           <div className="member-debt-balance-card-value">{formatMoney(yearTotalConNo, { blankZero: false })}</div>
           <p className="member-debt-balance-card-hint">
-            Tổng các dòng trùng tên trên phiếu trong năm (đã gồm trả / trừ nợ trên phiếu).
+            Bằng cộng tay bảng lịch sử: ghi / ghi nhận (+), trả (−). Khớp tổng theo tháng bên dưới.
           </p>
         </section>
       )}
@@ -157,7 +157,7 @@ export default function MemberDebtPage() {
           <h2 className="member-debt-tru-title">Trừ nợ (trả nợ)</h2>
           <p className="member-debt-tru-intro">
             Ghi một lần trừ nợ: hệ thống lưu <strong>thời điểm giao dịch</strong> (theo giờ máy chủ) và hiển thị trong
-            bảng lịch sử dưới đây (loại «Trả nợ»). Số «Còn nợ» tổng và theo tháng sẽ cập nhật.
+            bảng lịch sử dưới đây (loại «Trả nợ»). Tổng có dấu năm / theo tháng sẽ cập nhật.
           </p>
           <form className="member-debt-tru-form" onSubmit={submitTruNo}>
             <label className="member-debt-tru-field">
@@ -266,14 +266,14 @@ export default function MemberDebtPage() {
 
       <div className="table-wrap members-table-wrap" style={{ marginTop: "1.5rem" }}>
         <h2 className="aggregate-section-title" style={{ marginBottom: "0.5rem" }}>
-          Còn nợ theo tháng (trên phiếu)
+          Tổng theo tháng (cộng có dấu từ lịch sử)
         </h2>
         <table className="revenue-table members-table member-debt-table">
           <thead>
             <tr>
               <th>Tháng</th>
               <th className="cell-num-report">Số dòng</th>
-              <th className="cell-num-report">Tổng còn nợ</th>
+              <th className="cell-num-report">Tổng (±)</th>
             </tr>
           </thead>
           <tbody>

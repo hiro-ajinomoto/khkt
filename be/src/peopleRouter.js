@@ -3,7 +3,7 @@ import { ObjectId } from "mongodb";
 import { getPeopleCollection, getSheetsCollection } from "./db.js";
 import {
   aggregatePersonConNoLedgerLines,
-  aggregatePersonDebtByYearMonth,
+  aggregatePersonLedgerSignedByCalendarMonth,
   computeRow,
   computeTotals,
   emptyConNoLedger,
@@ -165,7 +165,7 @@ peopleRouter.get("/:id/debt", async (req, res) => {
     .sort({ reportDate: 1 })
     .toArray();
 
-  const { months, yearTotal } = aggregatePersonDebtByYearMonth(nameNorm, sheetDocs);
+  const { months, yearTotal } = aggregatePersonLedgerSignedByCalendarMonth(nameNorm, sheetDocs);
   const { debtLedgerLines, debtLedgerTotals } = aggregatePersonConNoLedgerLines(
     nameNorm,
     sheetDocs,
@@ -185,7 +185,7 @@ peopleRouter.get("/:id/debt", async (req, res) => {
     debtLedgerTotals,
     help: {
       conNo:
-        "«Còn nợ» trên phiếu = (Doanh thu − Hôm nay trả) + nếu có điều chỉnh cộng/trừ (loại cong/tru). Bấm ô Còn nợ → Ghi nợ: lưu đúng số đang hiển thị vào lịch sử (không đổi số trong ô). Tổng theo người = các dòng trùng tên trên phiếu trong năm. Trừ nợ: form trên trang này (có thời điểm server, lưu vào phiếu mới nhất có dòng trùng tên).",
+        "Bảng lịch sử: mỗi dòng ghi / ghi nhận (+), trả (−). Tổng theo tháng và tổng năm = cộng có dấu các dòng đó (khớp cộng tay). «Còn nợ» trên phiếu = Doanh thu − Hôm nay trả + chỉnh cong/tru (dòng ghi nhận không đổi ô). Bấm ô Còn nợ để ghi nhận. Trừ nợ: form trên trang (lưu trả vào phiếu).",
     },
   });
 });
