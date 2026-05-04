@@ -11,7 +11,7 @@ import ConNoLedgerHoverCell, { emptyClientConNoLedger, normalizeApiConNoLedger }
 import CauDoEnqueueDialog from "./CauDoEnqueueDialog.jsx";
 import ChiaCauDialog from "./ChiaCauDialog.jsx";
 import { newCauDoQueueItem, normalizeCauDoQueueClient } from "./cauDoQueueModel.js";
-import { splitTotalEvenInt } from "./chiaCauUtils.js";
+import { CHIA_CAU_MAX_PARTICIPANTS, splitTotalEvenInt } from "./chiaCauUtils.js";
 import { ROW_COUNT_DEFAULT, ROW_COUNT_MAX, sheetRowCountFromLength } from "./sheetConstants.js";
 import "./App.css";
 const SAN_STEP = 15;
@@ -483,7 +483,9 @@ export default function App() {
   const [chiaCauOpen, setChiaCauOpen] = useState(false);
   /** Đổi key mỗi lần mở để form Chia cầu reset sạch (tránh reset trong effect). */
   const [chiaCauDialogKey, setChiaCauDialogKey] = useState(0);
-  const [cauDoQueue, setCauDoQueue] = useState(/** @type {Array<{ id: string, pickupRowIndex: number, pickupTen: string, priceVnd: number, queuedAt: string }>} */ ([]));
+  const [cauDoQueue, setCauDoQueue] = useState(
+    /** @type {Array<{ id: string, pickupRowIndex: number, pickupTen: string, priceVnd: number, queuedAt: string, participantRowIndices: number[] }>} */ ([]),
+  );
   const [cauDoEnqueueOpen, setCauDoEnqueueOpen] = useState(false);
   const [cauDoEnqueueKey, setCauDoEnqueueKey] = useState(0);
   const [cauDoResolveOpen, setCauDoResolveOpen] = useState(false);
@@ -849,6 +851,7 @@ export default function App() {
         .filter((i) => Number.isFinite(i) && i >= 0 && i < rows.length)
         .sort((a, b) => a - b);
       if (sorted.length === 0) return;
+      if (sorted.length > CHIA_CAU_MAX_PARTICIPANTS) return;
       const cauDoResolve = Boolean(payload.queueItemId);
       if (!cauDoResolve && !sorted.includes(payload.pickupIndex)) return;
       const shares = splitTotalEvenInt(payload.priceVnd, sorted.length);
@@ -875,11 +878,11 @@ export default function App() {
 
   const handleSaveCauDoQueue = useCallback(
     (p) => {
-      const item = newCauDoQueueItem(p);
+      const item = newCauDoQueueItem({ ...p, rowLen: rows.length });
       setCauDoQueue((prev) => [...prev, item]);
       setCauDoEnqueueOpen(false);
     },
-    [],
+    [rows.length],
   );
 
   function appendGhiNoLine(rowIdx, amountNum) {
@@ -1051,6 +1054,9 @@ export default function App() {
                       <span className="cau-do-queue-name">{item.pickupTen}</span>
                       <span className="cau-do-queue-meta">
                         {formatMoney(item.priceVnd, { blankZero: false })}đ · {formatViDateTime(item.queuedAt)}
+                        {item.participantRowIndices?.length > 0
+                          ? ` · ${item.participantRowIndices.length} người đánh`
+                          : ""}
                       </span>
                       <span className="cau-do-queue-actions">
                         <button
@@ -1217,6 +1223,9 @@ export default function App() {
             priceVnd: cauDoResolveItem.priceVnd,
             pickupTenLabel: cauDoResolveItem.pickupTen,
             queueItemId: cauDoResolveItem.id,
+            initialParticipantIndices: Array.isArray(cauDoResolveItem.participantRowIndices)
+              ? cauDoResolveItem.participantRowIndices
+              : [],
           };
           return createPortal(
             <ChiaCauDialog

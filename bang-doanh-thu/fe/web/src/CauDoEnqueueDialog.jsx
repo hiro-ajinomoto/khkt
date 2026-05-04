@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
-import { CHIA_CAU_PRICE_OPTIONS } from "./chiaCauUtils.js";
+import { CHIA_CAU_MAX_PARTICIPANTS, CHIA_CAU_PRICE_OPTIONS } from "./chiaCauUtils.js";
 
 /**
  * Lưu «cầu đánh độ» vào hàng đợi (chưa chia tiền).
  * @param {boolean} open
  * @param {() => void} onClose
  * @param {Array<{ index: number, stt: number, name: string }>} players
- * @param {(p: { pickupRowIndex: number, pickupTen: string, priceVnd: number }) => void} onSaveQueue
+ * @param {(p: { pickupRowIndex: number, pickupTen: string, priceVnd: number, participantRowIndices: number[] }) => void} onSaveQueue
  */
 export default function CauDoEnqueueDialog({ open, onClose, players, onSaveQueue }) {
   const [pickup, setPickup] = useState("");
   const [priceVnd, setPriceVnd] = useState(/** @type {number | null} */ (null));
+  const [participantIndices, setParticipantIndices] = useState(/** @type {number[]} */ ([]));
   const [err, setErr] = useState(/** @type {string | null} */ (null));
 
   const pickupNum = pickup === "" ? NaN : Number(pickup);
@@ -24,6 +25,28 @@ export default function CauDoEnqueueDialog({ open, onClose, players, onSaveQueue
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
+  useEffect(() => {
+    if (!open) {
+      setPickup("");
+      setPriceVnd(null);
+      setParticipantIndices([]);
+      setErr(null);
+    }
+  }, [open]);
+
+  function togglePlayer(idx) {
+    setErr(null);
+    setParticipantIndices((prev) => {
+      const has = prev.includes(idx);
+      if (has) return prev.filter((x) => x !== idx).sort((a, b) => a - b);
+      if (prev.length >= CHIA_CAU_MAX_PARTICIPANTS) {
+        queueMicrotask(() => setErr(`Chỉ được chọn tối đa ${CHIA_CAU_MAX_PARTICIPANTS} người đánh.`));
+        return prev;
+      }
+      return [...prev, idx].sort((a, b) => a - b);
+    });
+  }
+
   function handleSubmit(e) {
     e.preventDefault();
     setErr(null);
@@ -35,6 +58,14 @@ export default function CauDoEnqueueDialog({ open, onClose, players, onSaveQueue
       setErr("Chọn giá cầu.");
       return;
     }
+    if (participantIndices.length === 0) {
+      setErr("Tích ít nhất một người đánh (gợi ý khi chia tiền).");
+      return;
+    }
+    if (participantIndices.length > CHIA_CAU_MAX_PARTICIPANTS) {
+      setErr(`Chỉ được chọn tối đa ${CHIA_CAU_MAX_PARTICIPANTS} người đánh.`);
+      return;
+    }
     const p = players.find((x) => x.index === pickupNum);
     if (!p) {
       setErr("Không tìm thấy người đã chọn.");
@@ -44,6 +75,7 @@ export default function CauDoEnqueueDialog({ open, onClose, players, onSaveQueue
       pickupRowIndex: pickupNum,
       pickupTen: p.name,
       priceVnd: Math.round(priceVnd),
+      participantRowIndices: [...participantIndices],
     });
   }
 
@@ -67,8 +99,8 @@ export default function CauDoEnqueueDialog({ open, onClose, players, onSaveQueue
           </button>
         </div>
         <p className="chia-cau-lead">
-          Ghi lại <strong>ai lấy cầu</strong> và <strong>giá</strong>. Sau khi đánh xong, quay lại bấm{" "}
-          <strong>Chia tiền</strong> ở dòng hàng đợi để chọn đội / người cùng trả — khi đó tiền mới vào cột Cầu.
+          Chọn <strong>người lấy cầu</strong>, <strong>ai đánh</strong> (để sau bấm <strong>Chia tiền</strong> danh sách
+          cùng trả đã được tích sẵn) và <strong>giá</strong>. Tiền chỉ vào cột Cầu sau khi chia từ hàng đợi.
         </p>
 
         {players.length === 0 ? (
@@ -92,7 +124,26 @@ export default function CauDoEnqueueDialog({ open, onClose, players, onSaveQueue
                 value={pickup === "" ? "" : String(pickup)}
                 onChange={(e) => {
                   setErr(null);
-                  setPickup(e.target.value === "" ? "" : e.target.value);
+                  const raw = e.target.value;
+                  if (raw === "") {
+                    setPickup("");
+                    return;
+                  }
+                  const n = Number(raw);
+                  setPickup(raw);
+                  if (Number.isFinite(n)) {
+                    setErr(null);
+                    setParticipantIndices((prev) => {
+                      if (prev.includes(n)) return prev;
+                      if (prev.length >= CHIA_CAU_MAX_PARTICIPANTS) {
+                        queueMicrotask(() =>
+                          setErr(`Chỉ được chọn tối đa ${CHIA_CAU_MAX_PARTICIPANTS} người đánh.`),
+                        );
+                        return prev;
+                      }
+                      return [...prev, n].sort((a, b) => a - b);
+                    });
+                  }
                 }}
               >
                 <option value="">— Chọn —</option>
@@ -103,6 +154,28 @@ export default function CauDoEnqueueDialog({ open, onClose, players, onSaveQueue
                 ))}
               </select>
             </div>
+
+            <fieldset className="chia-cau-block chia-cau-fieldset">
+              <legend className="chia-cau-label">{`Ai đánh? (tối đa ${CHIA_CAU_MAX_PARTICIPANTS} người — khi «Chia tiền» sẽ tích sẵn cùng trả)`}</legend>
+              <div className="chia-cau-check-list">
+                {players.map((p) => (
+                  <label key={p.index} className="chia-cau-check-row">
+                    <input
+                      type="checkbox"
+                      checked={participantIndices.includes(p.index)}
+                      disabled={
+                        participantIndices.length >= CHIA_CAU_MAX_PARTICIPANTS &&
+                        !participantIndices.includes(p.index)
+                      }
+                      onChange={() => togglePlayer(p.index)}
+                    />
+                    <span>
+                      STT {p.stt} · {p.name}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
 
             <fieldset className="chia-cau-block chia-cau-fieldset">
               <legend className="chia-cau-label">Giá cầu (1 loại)</legend>

@@ -1,3 +1,6 @@
+/** Số người tối đa được tích «cùng trả» (Chia cầu) và «ai đánh» (Cầu độ). */
+export const CHIA_CAU_MAX_PARTICIPANTS = 4;
+
 /** Giá 1 loại cầu (VNĐ). */
 export const CHIA_CAU_PRICE_OPTIONS = Object.freeze([
   { vnd: 24000, label: "24.000đ" },

@@ -1,9 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
 import { formatMoney } from "./formatMoney.js";
-import { CHIA_CAU_PRICE_OPTIONS, splitTotalEvenInt } from "./chiaCauUtils.js";
+import { CHIA_CAU_MAX_PARTICIPANTS, CHIA_CAU_PRICE_OPTIONS, splitTotalEvenInt } from "./chiaCauUtils.js";
 
 /**
- * @typedef {{ pickupIndex: number, priceVnd: number, pickupTenLabel: string, queueItemId: string }} QueueResolvePreset
+ * @typedef {{ pickupIndex: number, priceVnd: number, pickupTenLabel: string, queueItemId: string, initialParticipantIndices?: number[] }} QueueResolvePreset
+ */
+
+/**
+ * @param {number[]} indices
+ * @param {Array<{ index: number }>} players
+ */
+function participantIndicesKnownToPlayers(indices, players) {
+  const allowed = new Set(players.map((p) => p.index));
+  return [...new Set(indices)]
+    .filter((i) => Number.isFinite(i) && allowed.has(i))
+    .sort((a, b) => a - b)
+    .slice(0, CHIA_CAU_MAX_PARTICIPANTS);
+}
+
+/**
  * @param {boolean} open
  * @param {() => void} onClose
  * @param {Array<{ index: number, stt: number, name: string }>} players — chỉ dòng đã có tên hôm nay
@@ -16,7 +31,10 @@ export default function ChiaCauDialog({ open, onClose, players, onApply, queueRe
   const [priceVnd, setPriceVnd] = useState(
     () => (isResolve ? queueResolvePreset.priceVnd : /** @type {number | null} */ (null)),
   );
-  const [participants, setParticipants] = useState(/** @type {number[]} */ ([]));
+  const [participants, setParticipants] = useState(() => {
+    if (!isResolve || !queueResolvePreset?.initialParticipantIndices?.length) return [];
+    return participantIndicesKnownToPlayers(queueResolvePreset.initialParticipantIndices, players);
+  });
   const [err, setErr] = useState(/** @type {string | null} */ (null));
 
   const pickupNum = pickup === "" ? NaN : Number(pickup);
@@ -52,7 +70,15 @@ export default function ChiaCauDialog({ open, onClose, players, onApply, queueRe
     }
     const v = Number(raw);
     setPickup(v);
-    setParticipants((prev) => (prev.includes(v) ? prev : [...prev, v].sort((a, b) => a - b)));
+    setErr(null);
+    setParticipants((prev) => {
+      if (prev.includes(v)) return prev;
+      if (prev.length >= CHIA_CAU_MAX_PARTICIPANTS) {
+        queueMicrotask(() => setErr(`Chỉ được chọn tối đa ${CHIA_CAU_MAX_PARTICIPANTS} người cùng trả.`));
+        return prev;
+      }
+      return [...prev, v].sort((a, b) => a - b);
+    });
   }
 
   function toggleParticipant(idx) {
@@ -60,6 +86,10 @@ export default function ChiaCauDialog({ open, onClose, players, onApply, queueRe
     setParticipants((prev) => {
       const has = prev.includes(idx);
       if (has) return prev.filter((x) => x !== idx).sort((a, b) => a - b);
+      if (prev.length >= CHIA_CAU_MAX_PARTICIPANTS) {
+        queueMicrotask(() => setErr(`Chỉ được chọn tối đa ${CHIA_CAU_MAX_PARTICIPANTS} người cùng trả.`));
+        return prev;
+      }
       return [...prev, idx].sort((a, b) => a - b);
     });
   }
@@ -77,6 +107,10 @@ export default function ChiaCauDialog({ open, onClose, players, onApply, queueRe
     }
     if (participants.length === 0) {
       setErr("Tích chọn ít nhất một người cùng trả.");
+      return;
+    }
+    if (participants.length > CHIA_CAU_MAX_PARTICIPANTS) {
+      setErr(`Chỉ được chọn tối đa ${CHIA_CAU_MAX_PARTICIPANTS} người cùng trả.`);
       return;
     }
     if (!isResolve && !participants.includes(pickupNum)) {
@@ -193,8 +227,8 @@ export default function ChiaCauDialog({ open, onClose, players, onApply, queueRe
             <fieldset className="chia-cau-block chia-cau-fieldset">
               <legend className="chia-cau-label">
                 {isResolve
-                  ? "Ai cùng trả? (tích người góp — không bắt buộc gồm người lấy cầu)"
-                  : "Ai cùng trả? (tích hết người góp, gồm cả người lấy cầu)"}
+                  ? `Ai cùng trả? (tối đa ${CHIA_CAU_MAX_PARTICIPANTS} người — không bắt buộc gồm người lấy cầu)`
+                  : `Ai cùng trả? (tối đa ${CHIA_CAU_MAX_PARTICIPANTS} người — gồm cả người lấy cầu)`}
               </legend>
               <div className="chia-cau-check-list">
                 {players.map((p) => (
@@ -202,6 +236,9 @@ export default function ChiaCauDialog({ open, onClose, players, onApply, queueRe
                     <input
                       type="checkbox"
                       checked={participants.includes(p.index)}
+                      disabled={
+                        participants.length >= CHIA_CAU_MAX_PARTICIPANTS && !participants.includes(p.index)
+                      }
                       onChange={() => toggleParticipant(p.index)}
                     />
                     <span>
