@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { addDays, format } from "date-fns";
 import { Link, useSearchParams } from "react-router-dom";
 import { apiFetch } from "./apiClient.js";
 import MainNavBar from "./MainNavBar.jsx";
 import BrandBlock from "./BrandBlock.jsx";
-import { formatMoney, formatViDateTime, parseMoney } from "./formatMoney.js";
+import { formatMoney, parseMoney } from "./formatMoney.js";
 import { NameSuggestInput } from "./NameSuggestInput.jsx";
 import ConNoLedgerHoverCell, { emptyClientConNoLedger, normalizeApiConNoLedger } from "./ConNoLedgerHoverCell.jsx";
 import { ROW_COUNT_DEFAULT, ROW_COUNT_MAX, sheetRowCountFromLength } from "./sheetConstants.js";
@@ -245,6 +246,18 @@ function initialReportDateFromSearch() {
   return todayISODate();
 }
 
+/** `isoDate` dạng `yyyy-MM-dd` (theo lịch local); `deltaDays` âm = ngày trước, dương = ngày sau. */
+function shiftISODateByDays(isoDate, deltaDays) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
+  if (!m) return isoDate;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const da = Number(m[3]);
+  const d = new Date(y, mo - 1, da);
+  if (!Number.isFinite(d.getTime())) return isoDate;
+  return format(addDays(d, deltaDays), "yyyy-MM-dd");
+}
+
 function computeRow(r) {
   const doanhThu =
     parseMoney(r.san) +
@@ -440,17 +453,12 @@ function HoverStepperCell({
 }
 
 export default function App() {
-  const now = useMemo(() => new Date(), []);
   const [searchParams, setSearchParams] = useSearchParams();
   const [reportDate, setReportDate] = useState(initialReportDateFromSearch);
   const [rows, setRows] = useState(() => Array.from({ length: ROW_COUNT_DEFAULT }, () => emptyRow()));
   const [hydrated, setHydrated] = useState(false);
   const [loadError, setLoadError] = useState(null);
   const [mongoOk, setMongoOk] = useState(null);
-
-  const [filterYear, setFilterYear] = useState(now.getFullYear());
-  const [filterMonth, setFilterMonth] = useState(now.getMonth() + 1);
-  const [sheetList, setSheetList] = useState([]);
   /** Chi tiết từng lần bán (ghi Mongo `cellLedger`) */
   const [cellLedger, setCellLedger] = useState(() => emptyClientLedger(ROW_COUNT_DEFAULT));
   const [conNoLedger, setConNoLedger] = useState(() => emptyClientConNoLedger(ROW_COUNT_DEFAULT));
@@ -582,16 +590,7 @@ export default function App() {
         body: JSON.stringify({ rows: bodyRows, cellLedger: bodyLedger, conNoLedger: bodyConNoLedger }),
       });
       if (!r.ok) throw new Error("save_failed");
-      const saved = await r.json();
-      const nextTs = {
-        createdAt: saved.createdAt ?? null,
-        updatedAt: saved.updatedAt ?? null,
-      };
-      setSheetList((prev) =>
-        prev.some((s) => s.reportDate === date)
-          ? prev.map((s) => (s.reportDate === date ? { ...s, ...nextTs } : s))
-          : prev,
-      );
+      await r.json();
     } catch {
       /* im lặng — có thể bổ sung toast sau */
     }
@@ -607,27 +606,6 @@ export default function App() {
       if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
     };
   }, [rows, cellLedger, conNoLedger, reportDate, hydrated, persist]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const params = new URLSearchParams();
-    params.set("year", String(filterYear));
-    params.set("month", String(filterMonth));
-    apiFetch(`/api/revenue/sheets?${params}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (cancelled) return;
-        setSheetList(data.sheets || []);
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setSheetList([]);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [filterYear, filterMonth]);
 
   const derived = useMemo(() => {
     return rows.map((r, i) => {
@@ -910,70 +888,40 @@ export default function App() {
             }}
           />
         </div>
-        <label className="sheet-date">
-          <span className="visually-hidden">Ngày</span>
-          <input
-            type="date"
-            value={reportDate}
-            onChange={(e) => bumpReportDate(e.target.value)}
-            className="date-input"
-          />
-        </label>
+        <div className="sheet-date-row" role="group" aria-label="Chọn ngày phiếu">
+          <button
+            type="button"
+            className="sheet-date-step"
+            onClick={() => bumpReportDate(shiftISODateByDays(reportDate, -1))}
+            aria-label="Ngày trước"
+            title="Ngày trước"
+          >
+            ‹
+          </button>
+          <label className="sheet-date">
+            <span className="visually-hidden">Ngày</span>
+            <input
+              type="date"
+              value={reportDate}
+              onChange={(e) => bumpReportDate(e.target.value)}
+              className="date-input"
+            />
+          </label>
+          <button
+            type="button"
+            className="sheet-date-step"
+            onClick={() => bumpReportDate(shiftISODateByDays(reportDate, 1))}
+            aria-label="Ngày sau"
+            title="Ngày sau"
+          >
+            ›
+          </button>
+        </div>
 
         {(mongoOk === false || loadError) && (
           <div className="status-bar">
             {mongoOk === false && <span className="mongo-warn">API / Mongo không kết nối</span>}
             {loadError && <span className="mongo-warn">{loadError}</span>}
-          </div>
-        )}
-
-        <div className="browse-panel">
-          <span className="browse-label">Danh sách phiếu trong tháng</span>
-          <input
-            type="number"
-            className="num-input"
-            min={2020}
-            max={2040}
-            value={filterYear}
-            onChange={(e) => setFilterYear(Number(e.target.value) || filterYear)}
-            aria-label="Năm"
-          />
-          <select
-            className="select-input"
-            value={filterMonth}
-            onChange={(e) => setFilterMonth(Number(e.target.value))}
-            aria-label="Tháng"
-          >
-            {Array.from({ length: 12 }, (_, i) => (
-              <option key={i + 1} value={i + 1}>
-                Tháng {i + 1}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {sheetList.length > 0 && (
-          <div className="sheet-pills">
-            {sheetList.map((s) => (
-              <button
-                key={s.reportDate}
-                type="button"
-                className={`sheet-pill ${s.reportDate === reportDate ? "sheet-pill--active" : ""}`}
-                title={
-                  s.updatedAt
-                    ? `Cập nhật lần cuối (${formatViDateTime(s.updatedAt)} giờ VN)`
-                    : s.reportDate
-                }
-                onClick={() => bumpReportDate(s.reportDate)}
-              >
-                <span className="sheet-pill-date">{s.reportDate}</span>
-                {s.updatedAt ? (
-                  <span className="sheet-pill-time">{formatViDateTime(s.updatedAt)}</span>
-                ) : (
-                  <span className="sheet-pill-time sheet-pill-time--muted">—</span>
-                )}
-              </button>
-            ))}
           </div>
         )}
 
