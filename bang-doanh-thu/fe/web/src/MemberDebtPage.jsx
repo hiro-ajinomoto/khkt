@@ -124,6 +124,10 @@ export default function MemberDebtPage() {
             {person.phone ? ` · ${person.phone}` : ""}
           </p>
         )}
+        <p className="members-intro member-debt-scope-note">
+          Trên <Link to="/">bảng doanh thu</Link>, cột <strong>Còn nợ</strong> là <strong>theo từng ngày phiếu</strong> (mỗi dòng một
+          ngày), không phải tổng cả tháng trong ô. Trang này gộp <strong>theo năm</strong> nhiều phiếu và dòng sổ bên dưới.
+        </p>
         <div className="members-toolbar member-debt-toolbar">
           <label className="member-debt-year-label">
             <span>Năm</span>

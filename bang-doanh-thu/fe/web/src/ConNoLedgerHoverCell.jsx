@@ -143,7 +143,7 @@ export default function ConNoLedgerHoverCell({ rowIndex, ten, doanhThu, effectiv
           setOpen(true);
           requestAnimationFrame(() => reposition());
         }}
-        title="Bấm để ghi nợ (Danh bạ)"
+        title="Còn nợ theo ngày phiếu đang mở (dòng này) — bấm để ghi nhận vào Danh bạ"
       >
         {formatMoney(effectiveConNo, { blankZero: doanhThu === 0 && effectiveConNo === 0 })}
       </button>

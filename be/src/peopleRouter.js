@@ -185,7 +185,7 @@ peopleRouter.get("/:id/debt", async (req, res) => {
     debtLedgerTotals,
     help: {
       conNo:
-        "Bảng lịch sử: mỗi dòng ghi / ghi nhận (+), trả (−). Tổng theo tháng và tổng năm = cộng có dấu các dòng đó (khớp cộng tay). «Còn nợ» trên phiếu = Doanh thu − Hôm nay trả + chỉnh cong/tru (dòng ghi nhận không đổi ô). Bấm ô Còn nợ để ghi nhận. Trừ nợ: form trên trang (lưu trả vào phiếu).",
+        "«Còn nợ» trên phiếu doanh thu là theo một ngày / một dòng (không phải tổng cả tháng trong ô đó). Bảng lịch sử bên dưới: ghi / ghi nhận (+), trả (−). Tổng theo tháng và tổng năm ở đây = cộng có dấu các dòng lịch sử (khớp cộng tay). Bấm ô Còn nợ trên phiếu để ghi nhận. Trừ nợ: form trên trang (lưu trả vào phiếu).",
     },
   });
 });

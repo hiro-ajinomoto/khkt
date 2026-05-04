@@ -971,7 +971,9 @@ export default function App() {
               <th>Đồ ăn</th>
               <th className="col-computed">Doanh thu</th>
               <th className="col-computed col-hom-nay-tra th-compact">Hôm nay trả</th>
-              <th>Còn nợ</th>
+              <th title="Theo ngày phiếu đang mở (mỗi dòng): Doanh thu − Hôm nay trả + chỉnh cộng/trừ. Không phải tổng nợ cả tháng trong ô này.">
+                Còn nợ
+              </th>
               <th className="col-note">Ghi chú</th>
             </tr>
           </thead>
@@ -1118,9 +1120,10 @@ export default function App() {
       </div>
 
       <p className="hint">
-        Doanh thu = Sân + Cuốn cán + Cầu + Suối + Nước ngọt + Đồ ăn. Còn nợ hiển thị = Doanh thu − Hôm nay trả + (nếu có)
-        điều chỉnh <strong>cộng/trừ</strong> trên phiếu. Bấm <strong>Còn nợ</strong> — panel <strong>Ghi nợ</strong> hiện dưới ô (lịch sử
-        Danh bạ, không đổi số trong ô). Tổng theo từng người: <Link to="/thanh-vien">Danh bạ</Link>{" "}
+        Doanh thu = Sân + Cuốn cán + Cầu + Suối + Nước ngọt + Đồ ăn. Cột <strong>Còn nợ</strong> là <strong>theo ngày phiếu đang mở</strong>{" "}
+        (mỗi dòng), = Doanh thu − Hôm nay trả + (nếu có) điều chỉnh <strong>cộng/trừ</strong> —{" "}
+        <strong>không</strong> phải tổng nợ cả tháng trong ô đó. Bấm số <strong>Còn nợ</strong> — panel <strong>Ghi nợ</strong> hiện dưới ô (lịch sử
+        Danh bạ, không đổi số trong ô). Tổng theo từng người (gộp nhiều ngày): <Link to="/thanh-vien">Danh bạ</Link>{" "}
         → bấm họ tên (tên dòng cần trùng chuẩn danh bạ). Lưu trữ:
         MongoDB (cùng biến <code>MONGODB_URI</code>, <code>MONGODB_DB</code>{" "}
         với backend KHKT), collection <code>bang_doanh_thu_sheets</code>. Tuần lọc theo chuẩn ISO (thứ
