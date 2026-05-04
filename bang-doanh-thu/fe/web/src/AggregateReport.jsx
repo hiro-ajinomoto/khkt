@@ -262,7 +262,7 @@ export default function AggregateReport() {
             ← Bảng doanh thu
           </Link>
           <Link to="/thanh-vien" className="header-nav-link">
-            Danh bạ
+            Trả nợ
           </Link>
         </div>
         <h1 className="sheet-title aggregate-title">Tổng hợp doanh thu theo kỳ</h1>

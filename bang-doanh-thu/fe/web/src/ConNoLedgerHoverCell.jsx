@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { formatMoney } from "./formatMoney.js";
+import { ROW_COUNT } from "./sheetConstants.js";
 
 function roundAmt(n) {
   if (!Number.isFinite(n)) return 0;
@@ -22,7 +23,7 @@ function parseMoney(v) {
 }
 
 export function emptyClientConNoLedger() {
-  return Array.from({ length: 40 }, () => []);
+  return Array.from({ length: ROW_COUNT }, () => []);
 }
 
 /** @typedef {{ kind: "cong" | "tru" | "ghi"; amount: number; at: string; note: string }} ConNoLine */
@@ -31,7 +32,7 @@ export function emptyClientConNoLedger() {
 export function normalizeApiConNoLedger(raw) {
   const out = emptyClientConNoLedger();
   if (!Array.isArray(raw)) return out;
-  for (let i = 0; i < 40; i++) {
+  for (let i = 0; i < ROW_COUNT; i++) {
     const arr = raw[i];
     if (!Array.isArray(arr)) continue;
     /** @type {ConNoLine[]} */
@@ -143,7 +144,7 @@ export default function ConNoLedgerHoverCell({ rowIndex, ten, doanhThu, effectiv
           setOpen(true);
           requestAnimationFrame(() => reposition());
         }}
-        title="Còn nợ theo ngày phiếu đang mở (dòng này) — bấm để ghi nhận vào Danh bạ"
+        title="Còn nợ theo ngày phiếu đang mở (dòng này) — bấm để ghi nhận vào Trả nợ"
       >
         {formatMoney(effectiveConNo, { blankZero: doanhThu === 0 && effectiveConNo === 0 })}
       </button>

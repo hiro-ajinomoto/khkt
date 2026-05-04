@@ -359,7 +359,7 @@ peopleRouter.get("/:id", async (req, res) => {
   });
 });
 
-/** POST /api/revenue/people — { name, nickname?, phone? } */
+/** POST /api/revenue/people — { name, nickname?, phone? } (phone để trống được) */
 peopleRouter.post("/", async (req, res) => {
   const name = String(req.body?.name ?? "")
     .trim()

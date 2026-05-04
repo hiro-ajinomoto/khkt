@@ -6,9 +6,8 @@ import { formatMoney, formatViDate, formatViDateTime, parseMoney } from "./forma
 import { NameSuggestInput } from "./NameSuggestInput.jsx";
 import ConNoLedgerHoverCell, { emptyClientConNoLedger, normalizeApiConNoLedger } from "./ConNoLedgerHoverCell.jsx";
 import { getCalendarWeekSpansInMonth } from "./calendarSpans.js";
+import { ROW_COUNT } from "./sheetConstants.js";
 import "./App.css";
-
-const ROW_COUNT = 40;
 const SAN_STEP = 15;
 const CUON_CAN_STEP = 10;
 const SUOI_STEP = 5;
@@ -456,6 +455,7 @@ export default function App() {
   const [cellLedger, setCellLedger] = useState(emptyClientLedger);
   const [conNoLedger, setConNoLedger] = useState(() => emptyClientConNoLedger());
 
+  const [quickRegisterOpen, setQuickRegisterOpen] = useState(false);
   const [quickName, setQuickName] = useState("");
   const [quickNick, setQuickNick] = useState("");
   const [quickPhone, setQuickPhone] = useState("");
@@ -463,6 +463,8 @@ export default function App() {
   const [quickMsg, setQuickMsg] = useState(
     /** @type {{ type: "ok" | "err"; text: string } | null} */ (null),
   );
+  const quickRegisterNameRef = useRef(/** @type {HTMLInputElement | null} */ (null));
+  const quickRegisterCloseTimerRef = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null));
 
   const saveTimerRef = useRef(null);
 
@@ -527,6 +529,26 @@ export default function App() {
       .then((j) => setMongoOk(!!j.mongo))
       .catch(() => setMongoOk(false));
   }, []);
+
+  useEffect(() => {
+    if (!quickRegisterOpen && quickRegisterCloseTimerRef.current) {
+      clearTimeout(quickRegisterCloseTimerRef.current);
+      quickRegisterCloseTimerRef.current = null;
+    }
+  }, [quickRegisterOpen]);
+
+  useEffect(() => {
+    if (!quickRegisterOpen) return;
+    const id = requestAnimationFrame(() => quickRegisterNameRef.current?.focus());
+    const onKey = (e) => {
+      if (e.key === "Escape") setQuickRegisterOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      cancelAnimationFrame(id);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [quickRegisterOpen]);
 
   const persist = useCallback(async (date, bodyRows, bodyLedger, bodyConNoLedger) => {
     setSaveState("saving");
@@ -708,8 +730,11 @@ export default function App() {
       setQuickMsg({ type: "err", text: "Nhập họ tên." });
       return;
     }
-    if (phone.length < 9 || phone.length > 12) {
-      setQuickMsg({ type: "err", text: "Số điện thoại cần 9–12 chữ số (vd. 0912345678)." });
+    if (phone.length > 0 && (phone.length < 9 || phone.length > 12)) {
+      setQuickMsg({
+        type: "err",
+        text: "Số điện thoại để trống hoặc nhập đủ 9–12 chữ số (vd. 0912345678).",
+      });
       return;
     }
     setQuickBusy(true);
@@ -721,7 +746,7 @@ export default function App() {
       });
       const j = await r.json().catch(() => ({}));
       if (r.status === 409) {
-        setQuickMsg({ type: "err", text: "Tên này đã có trong danh bạ." });
+        setQuickMsg({ type: "err", text: "Tên này đã có trong Trả nợ." });
         return;
       }
       if (r.status === 400 && j.error === "invalid_phone") {
@@ -734,11 +759,16 @@ export default function App() {
       }
       setQuickMsg({
         type: "ok",
-        text: `Đã lưu «${j.name ?? name}». Gõ ô Tên trên bảng để gợi ý — có biệt danh và SĐT.`,
+        text: `Đã lưu «${j.name ?? name}». Gõ ô Tên trên bảng để gợi ý.`,
       });
       setQuickName("");
       setQuickNick("");
       setQuickPhone("");
+      if (quickRegisterCloseTimerRef.current) clearTimeout(quickRegisterCloseTimerRef.current);
+      quickRegisterCloseTimerRef.current = window.setTimeout(() => {
+        quickRegisterCloseTimerRef.current = null;
+        setQuickRegisterOpen(false);
+      }, 1000);
     } catch {
       setQuickMsg({ type: "err", text: "Mất kết nối API." });
     } finally {
@@ -767,12 +797,24 @@ export default function App() {
       <header className="sheet-header">
         <div className="sheet-header-top">
           <h1 className="sheet-title">DOANH THU</h1>
-          <Link to="/tong-hop" className="header-nav-link">
-            Tổng hợp kỳ
-          </Link>
-          <Link to="/thanh-vien" className="header-nav-link">
-            Danh bạ
-          </Link>
+          <nav className="header-nav-links" aria-label="Điều hướng">
+            <Link to="/tong-hop" className="header-nav-link">
+              Tổng hợp kỳ
+            </Link>
+            <Link to="/thanh-vien" className="header-nav-link">
+              Trả nợ
+            </Link>
+            <button
+              type="button"
+              className="header-nav-link header-nav-link--btn"
+              onClick={() => {
+                setQuickMsg(null);
+                setQuickRegisterOpen(true);
+              }}
+            >
+              Đăng ký
+            </button>
+          </nav>
         </div>
         <label className="sheet-date">
           <span className="visually-hidden">Ngày</span>
@@ -1123,8 +1165,8 @@ export default function App() {
         Doanh thu = Sân + Cuốn cán + Cầu + Suối + Nước ngọt + Đồ ăn. Cột <strong>Còn nợ</strong> là <strong>theo ngày phiếu đang mở</strong>{" "}
         (mỗi dòng), = Doanh thu − Hôm nay trả + (nếu có) điều chỉnh <strong>cộng/trừ</strong> —{" "}
         <strong>không</strong> phải tổng nợ cả tháng trong ô đó. Bấm số <strong>Còn nợ</strong> — panel <strong>Ghi nợ</strong> hiện dưới ô (lịch sử
-        Danh bạ, không đổi số trong ô). Tổng theo từng người (gộp nhiều ngày): <Link to="/thanh-vien">Danh bạ</Link>{" "}
-        → bấm họ tên (tên dòng cần trùng chuẩn danh bạ). Lưu trữ:
+        Trả nợ, không đổi số trong ô). Tổng theo từng người (gộp nhiều ngày): <Link to="/thanh-vien">Trả nợ</Link>{" "}
+        → bấm họ tên (tên dòng cần trùng tên trong Trả nợ). Lưu trữ:
         MongoDB (cùng biến <code>MONGODB_URI</code>, <code>MONGODB_DB</code>{" "}
         với backend KHKT), collection <code>bang_doanh_thu_sheets</code>. Tuần lọc theo chuẩn ISO (thứ
         Hai đầu tuần). Cột <strong>Sân</strong> / <strong>Cuốn cán</strong> / <strong>Cầu</strong> /{" "}
@@ -1136,72 +1178,106 @@ export default function App() {
         <strong>lịch sử mua hàng</strong> theo dòng đó (tab mới).
       </p>
 
-      <section className="quick-register" aria-labelledby="quick-register-heading">
-        <h2 id="quick-register-heading" className="quick-register-title">
-          Đăng ký nhanh vào danh bạ
-        </h2>
-        <p className="quick-register-lead">
-          Chỉ cần tên, biệt danh (tuỳ chọn) và số điện thoại. Sau đó gõ ô <strong>Tên</strong> trong bảng sẽ
-          gợi ý; có thể gõ một phần số để tìm.
-        </p>
-        <form className="quick-register-form" onSubmit={handleQuickRegister}>
-          <label className="quick-register-field">
-            <span>Tên</span>
-            <input
-              type="text"
-              name="quick-name"
-              autoComplete="name"
-              value={quickName}
-              onChange={(e) => setQuickName(e.target.value)}
-              placeholder="Họ và tên"
-              maxLength={200}
-              disabled={quickBusy}
-            />
-          </label>
-          <label className="quick-register-field">
-            <span>Biệt danh</span>
-            <input
-              type="text"
-              name="quick-nickname"
-              autoComplete="nickname"
-              value={quickNick}
-              onChange={(e) => setQuickNick(e.target.value)}
-              placeholder="Tuỳ chọn — vd. Béo"
-              maxLength={200}
-              disabled={quickBusy}
-            />
-          </label>
-          <label className="quick-register-field">
-            <span>Số điện thoại</span>
-            <input
-              type="tel"
-              name="quick-phone"
-              inputMode="tel"
-              autoComplete="tel"
-              value={quickPhone}
-              onChange={(e) => setQuickPhone(e.target.value)}
-              placeholder="0912 345 678 hoặc +84…"
-              maxLength={22}
-              disabled={quickBusy}
-            />
-          </label>
-          <div className="quick-register-submit-wrap">
-            <button type="submit" className="quick-register-submit" disabled={quickBusy}>
-              {quickBusy ? "Đang lưu…" : "Đăng ký"}
-            </button>
-          </div>
-        </form>
-        {quickMsg ? (
-          <p
-            className={
-              quickMsg.type === "ok" ? "quick-register-msg quick-register-msg--ok" : "quick-register-msg quick-register-msg--err"
-            }
-            role="status"
+      {quickRegisterOpen &&
+        createPortal(
+          <div
+            className="name-modal-backdrop"
+            role="presentation"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) setQuickRegisterOpen(false);
+            }}
           >
-            {quickMsg.text}
-          </p>
-        ) : null}
-      </section>
+            <div
+              className="name-modal quick-register-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="quick-register-dialog-title"
+            >
+              <div className="quick-register-dialog-head">
+                <h2 id="quick-register-dialog-title" className="quick-register-dialog-title">
+                  Đăng ký Trả nợ
+                </h2>
+                <button
+                  type="button"
+                  className="quick-register-dialog-close"
+                  aria-label="Đóng"
+                  disabled={quickBusy}
+                  onClick={() => setQuickRegisterOpen(false)}
+                >
+                  ×
+                </button>
+              </div>
+              <p className="quick-register-lead">
+                Tên bắt buộc; biệt danh và số điện thoại tuỳ chọn. Sau khi lưu, gõ ô <strong>Tên</strong> trên bảng để
+                gợi ý (có SĐT thì có thể tìm theo số).
+              </p>
+              <form className="quick-register-form quick-register-form--modal" onSubmit={handleQuickRegister}>
+                <label className="quick-register-field">
+                  <span>Tên</span>
+                  <input
+                    ref={quickRegisterNameRef}
+                    type="text"
+                    name="quick-name"
+                    autoComplete="name"
+                    value={quickName}
+                    onChange={(e) => setQuickName(e.target.value)}
+                    placeholder="Họ và tên"
+                    maxLength={200}
+                    disabled={quickBusy}
+                  />
+                </label>
+                <label className="quick-register-field">
+                  <span>Biệt danh</span>
+                  <input
+                    type="text"
+                    name="quick-nickname"
+                    autoComplete="nickname"
+                    value={quickNick}
+                    onChange={(e) => setQuickNick(e.target.value)}
+                    placeholder="Tuỳ chọn — vd. Béo"
+                    maxLength={200}
+                    disabled={quickBusy}
+                  />
+                </label>
+                <label className="quick-register-field">
+                  <span>Số điện thoại (tuỳ chọn)</span>
+                  <input
+                    type="tel"
+                    name="quick-phone"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    value={quickPhone}
+                    onChange={(e) => setQuickPhone(e.target.value)}
+                    placeholder="Để trống hoặc 0912 345 678"
+                    maxLength={22}
+                    disabled={quickBusy}
+                  />
+                </label>
+                {quickMsg ? (
+                  <p
+                    className={
+                      quickMsg.type === "ok"
+                        ? "quick-register-msg quick-register-msg--ok"
+                        : "quick-register-msg quick-register-msg--err"
+                    }
+                    role="status"
+                  >
+                    {quickMsg.text}
+                  </p>
+                ) : null}
+                <div className="quick-register-dialog-actions">
+                  <button type="button" className="quick-register-dialog-cancel" disabled={quickBusy} onClick={() => setQuickRegisterOpen(false)}>
+                    Hủy
+                  </button>
+                  <button type="submit" className="quick-register-submit" disabled={quickBusy}>
+                    {quickBusy ? "Đang lưu…" : "Đăng ký"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

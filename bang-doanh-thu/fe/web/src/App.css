@@ -34,6 +34,27 @@
   text-decoration: underline;
 }
 
+.header-nav-link--btn {
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #2563eb;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.header-nav-link--btn:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.header-nav-link--btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .header-nav-links {
   display: flex;
   flex-wrap: wrap;
@@ -846,7 +867,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Gợi ý tên / danh bạ */
+/* Gợi ý tên / Trả nợ */
 .name-cell-wrap {
   position: relative;
   width: 100%;
@@ -1011,23 +1032,86 @@
   opacity: 0.75;
 }
 
-/* Đăng ký nhanh danh bạ (cuối trang) */
-.quick-register {
-  margin-top: 1.75rem;
-  padding: 1.1rem 1rem 1.25rem;
-  max-width: 36rem;
-  margin-left: auto;
-  margin-right: auto;
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  background: #f8fafc;
-  text-align: left;
+/* Đăng ký Trả nợ — popup từ header (App.jsx) */
+.quick-register-dialog {
+  position: relative;
+  max-width: 22.5rem;
+  width: 100%;
 }
 
-.quick-register-title {
-  margin: 0 0 0.35rem;
+.quick-register-dialog-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.quick-register-dialog-title {
+  margin: 0;
   font-size: 1.05rem;
   color: #0f172a;
+  line-height: 1.25;
+}
+
+.quick-register-dialog-close {
+  flex: 0 0 auto;
+  font: inherit;
+  font-size: 1.35rem;
+  line-height: 1;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.quick-register-dialog-close:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.quick-register-dialog .quick-register-lead {
+  margin-top: 0;
+}
+
+.quick-register-form--modal {
+  flex-direction: column;
+  align-items: stretch;
+  margin-top: 0.35rem;
+}
+
+.quick-register-form--modal .quick-register-field {
+  flex: none;
+  width: 100%;
+  min-width: 0;
+}
+
+.quick-register-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 0.65rem;
+}
+
+.quick-register-dialog-cancel {
+  font: inherit;
+  font-size: 0.875rem;
+  padding: 0.46rem 0.95rem;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #475569;
+  cursor: pointer;
+}
+
+.quick-register-dialog-cancel:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .quick-register-lead {
@@ -1277,7 +1361,7 @@
   margin: 0;
 }
 
-/* —— Danh bạ /thanh-vien —— */
+/* —— Trả nợ /thanh-vien —— */
 .app--members {
   max-width: 52rem;
   margin-left: auto;

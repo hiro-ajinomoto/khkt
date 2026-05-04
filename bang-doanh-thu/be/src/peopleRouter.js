@@ -122,7 +122,7 @@ peopleRouter.get("/", async (req, res) => {
   });
 });
 
-/** GET /api/revenue/people/:id/debt?year= — còn nợ + lịch sử ghi nợ (cộng dồn theo tên trong danh bạ). */
+/** GET /api/revenue/people/:id/debt?year= — còn nợ + lịch sử ghi nợ (cộng dồn theo tên trong Trả nợ). */
 peopleRouter.get("/:id/debt", async (req, res) => {
   let oid;
   try {
@@ -359,7 +359,7 @@ peopleRouter.get("/:id", async (req, res) => {
   });
 });
 
-/** POST /api/revenue/people — { name, nickname?, phone? } */
+/** POST /api/revenue/people — { name, nickname?, phone? } (phone để trống được) */
 peopleRouter.post("/", async (req, res) => {
   const name = String(req.body?.name ?? "")
     .trim()

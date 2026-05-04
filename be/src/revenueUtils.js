@@ -1,6 +1,6 @@
 import { getISOWeek, getISOWeekYear, parseISO } from "date-fns";
 
-export const ROW_COUNT = 40;
+export const ROW_COUNT = 30;
 
 export const emptyRow = () => ({
   ten: "",
@@ -242,7 +242,7 @@ export function emptyConNoLedger() {
   );
 }
 
-/** `cong` cộng vào còn nợ hiển thị, `tru` trừ (đã trả). `ghi` chỉ lịch sử (Danh bạ), không đổi ô. */
+/** `cong` cộng vào còn nợ hiển thị, `tru` trừ (đã trả). `ghi` chỉ lịch sử (Trả nợ), không đổi ô. */
 export function sumConNoLedgerNetForRow(lines) {
   if (!Array.isArray(lines)) return 0;
   let net = 0;

@@ -73,7 +73,7 @@ export default function MembersPage() {
         });
         const j = await r.json().catch(() => ({}));
         if (r.status === 409) {
-          setFormMsg({ type: "err", text: "Tên này đã có trong danh bạ." });
+          setFormMsg({ type: "err", text: "Tên này đã có trong Trả nợ." });
           return;
         }
         if (r.status === 400 && j.error === "invalid_phone") {
@@ -123,7 +123,7 @@ export default function MembersPage() {
 
   /** @param {Person} p */
   async function deletePerson(p) {
-    if (!window.confirm(`Xóa «${p.name}» khỏi danh bạ?`)) return;
+    if (!window.confirm(`Xóa «${p.name}» khỏi Trả nợ?`)) return;
     setBusy(true);
     setLoadErr(null);
     try {
@@ -147,7 +147,7 @@ export default function MembersPage() {
     <div className="app app--members">
       <header className="sheet-header members-header">
         <div className="sheet-header-top">
-          <h1 className="sheet-title">Danh bạ thành viên</h1>
+          <h1 className="sheet-title">Trả nợ</h1>
           <nav className="header-nav-links" aria-label="Điều hướng">
             <Link to="/" className="header-nav-link">
               Bảng doanh thu
@@ -194,7 +194,7 @@ export default function MembersPage() {
               <input value={formNick} onChange={(e) => setFormNick(e.target.value)} maxLength={200} />
             </label>
             <label className="quick-register-field members-form-field">
-              <span>Số điện thoại</span>
+              <span>Số điện thoại (tuỳ chọn)</span>
               <input
                 value={formPhone}
                 onChange={(e) => setFormPhone(e.target.value)}

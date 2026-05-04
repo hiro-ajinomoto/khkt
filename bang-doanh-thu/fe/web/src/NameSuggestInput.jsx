@@ -147,8 +147,8 @@ export function NameSuggestInput({ rowIndex, value, onChange }) {
       if (r.status === 409) {
         window.alert(
           typeof j?.error === "string"
-            ? "Tên này đã có trong danh bạ. Chọn ở gợi ý hoặc đổi tên một chút."
-            : "Tên này đã có trong danh bạ.",
+            ? "Tên này đã có trong Trả nợ. Chọn ở gợi ý hoặc đổi tên một chút."
+            : "Tên này đã có trong Trả nợ.",
         );
         setCreateSaving(false);
         return;
@@ -186,14 +186,14 @@ export function NameSuggestInput({ rowIndex, value, onChange }) {
               width: pos.width,
             }}
             role="listbox"
-            aria-label="Gợi ý khách trong danh bạ"
+            aria-label="Gợi ý khách trong Trả nợ"
           >
             {!hasQuery && (
               <div className="name-suggest-hint">Gõ tên, biệt danh hoặc một phần số điện thoại để tìm.</div>
             )}
             {loading && <div className="name-suggest-hint">Đang tìm…</div>}
             {!loading && hasQuery && people.length === 0 && (
-              <div className="name-suggest-hint">Không có tên khớp trong danh bạ.</div>
+              <div className="name-suggest-hint">Không có tên khớp trong Trả nợ.</div>
             )}
             {people.map((p) => (
               <button
@@ -227,7 +227,7 @@ export function NameSuggestInput({ rowIndex, value, onChange }) {
                 <span aria-hidden className="name-suggest-add-glyph">
                   +
                 </span>{" "}
-                Thêm «{qTrim.length > 42 ? `${qTrim.slice(0, 41)}…` : qTrim}» vào danh bạ
+                Thêm «{qTrim.length > 42 ? `${qTrim.slice(0, 41)}…` : qTrim}» vào Trả nợ
               </button>
             )}
           </div>,
@@ -250,7 +250,7 @@ export function NameSuggestInput({ rowIndex, value, onChange }) {
           >
             <div className="name-modal">
               <h2 id={`name-modal-title-${rowIndex}`} className="name-modal-title">
-                Lưu người vào danh bạ
+                Lưu người vào Trả nợ
               </h2>
               <label className="name-modal-field">
                 <span>Tên trong bảng</span>

@@ -113,7 +113,7 @@ export default function MemberDebtPage() {
               Bảng doanh thu
             </Link>
             <Link to="/thanh-vien" className="header-nav-link">
-              Danh bạ
+              Trả nợ
             </Link>
           </nav>
         </div>
